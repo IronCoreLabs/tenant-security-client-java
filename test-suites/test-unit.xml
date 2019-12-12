@@ -1,0 +1,14 @@
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+
+<suite name="onlyUnit">
+    <test name="unitTests">
+        <groups>
+            <run>
+                <include name="unit" />
+            </run>
+        </groups>
+        <packages>
+            <package name=".*" />
+        </packages>
+    </test>
+</suite>

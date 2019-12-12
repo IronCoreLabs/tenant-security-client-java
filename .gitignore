@@ -1,0 +1,13 @@
+bin/
+dist/
+coverage/
+target/
+.vscode/
+.DS_Store
+.awcache
+.project
+integrationTestLogins.txt
+dependency-reduced-pom.xml
+**/.classpath
+**/.settings
+pom.xml.asc

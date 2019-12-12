@@ -1,0 +1,15 @@
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+
+<suite name="localIntegrationSuite">
+    <test name="localTests">
+        <groups>
+            <run>
+                <include name="unit" />
+                <include name="local-integration" />
+            </run>
+        </groups>
+        <packages>
+            <package name=".*" />
+        </packages>
+    </test>
+</suite>

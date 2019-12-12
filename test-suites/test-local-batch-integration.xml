@@ -1,0 +1,15 @@
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+
+<suite name="localIntegrationBatchSuite">
+    <test name="batchTests">
+        <groups>
+            <run>
+                <include name="unit" />
+                <include name="local-batch-integration" />
+            </run>
+        </groups>
+        <packages>
+            <package name=".*" />
+        </packages>
+    </test>
+</suite>
