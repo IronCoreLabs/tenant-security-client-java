@@ -13,7 +13,6 @@ public class TenantSecurityKMSException extends Exception {
     private static final long serialVersionUID = 1L;
     private TenantSecurityKMSErrorCodes errorCode;
     private int httpResponseCode;
-    private String errorMessage;
 
     /**
      * Create a new TenantSecurityKMSException with the provided error code and HTTP
@@ -27,10 +26,9 @@ public class TenantSecurityKMSException extends Exception {
      *                         Tenant Security Proxy for this error.
      */
     public TenantSecurityKMSException(TenantSecurityKMSErrorCodes errorCode, String errorMessage, int httpResponseCode) {
-        super(errorCode.getMessage());
+        super(errorMessage);
         this.errorCode = errorCode;
         this.httpResponseCode = httpResponseCode;
-        this.errorMessage = errorMessage;
     }
 
     /**
@@ -78,13 +76,15 @@ public class TenantSecurityKMSException extends Exception {
     }
 
     /**
-     * Get the HTTP error message sent back from the Tenant Security Proxy. Can contain additional
+     * Get an error message. Can contain additional
      * information about the specifics of why a request failed including errors specific to the KMS
-     * type that failed. May be be an empty string if no error was sent.
+     * type that failed.
      *
-     * @return The readable error message returned from the Tenant Security Proxy.
+     * @return The readable error message.
+     * @deprecated Use {@link #getMessage()} instead.
      */
+    @Deprecated
     public String getErrorMessage(){
-        return errorMessage;
+        return this.getMessage();
     }
 }
