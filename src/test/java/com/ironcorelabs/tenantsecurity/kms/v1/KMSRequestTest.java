@@ -1,6 +1,7 @@
 package com.ironcorelabs.tenantsecurity.kms.v1;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
@@ -40,6 +41,7 @@ public class KMSRequestTest {
         } catch (ExecutionException e) {
             assertTrue(e.getCause() instanceof TenantSecurityKMSException);
             TenantSecurityKMSException esError = (TenantSecurityKMSException) e.getCause();
+            assertNotNull(esError.getCause());
             assertEquals(esError.getErrorCode(), TenantSecurityKMSErrorCodes.UNABLE_TO_MAKE_REQUEST);
         }
     }

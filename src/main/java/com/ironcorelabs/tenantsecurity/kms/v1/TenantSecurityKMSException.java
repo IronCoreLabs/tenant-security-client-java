@@ -20,13 +20,14 @@ public class TenantSecurityKMSException extends Exception {
      *
      * @param errorCode        The EncryptionServiceErrorCode that occured with this
      *                         error.
-     * @param errorMessage     The readable error message returned from the Tenant
-     *                         Security Proxy for this error.
      * @param httpResponseCode The HTTP response code returned from the
      *                         Tenant Security Proxy for this error.
+     * @param errorMessage     The readable error message returned from the Tenant
+     *                         Security Proxy for this error.
+     * @param cause            The Throwable that caused this one.
      */
-    public TenantSecurityKMSException(TenantSecurityKMSErrorCodes errorCode, String errorMessage, int httpResponseCode) {
-        super(errorMessage);
+    public TenantSecurityKMSException(TenantSecurityKMSErrorCodes errorCode, int httpResponseCode, String errorMessage, Throwable cause) {
+        super(errorMessage, cause);
         this.errorCode = errorCode;
         this.httpResponseCode = httpResponseCode;
     }
@@ -39,11 +40,49 @@ public class TenantSecurityKMSException extends Exception {
      *                         error.
      * @param httpResponseCode The HTTP response code returned from the
      *                         Tenant Security Proxy for this error.
+     * @param errorMessage     The readable error message returned from the Tenant
+     *                         Security Proxy for this error.
+     */
+    public TenantSecurityKMSException(TenantSecurityKMSErrorCodes errorCode, int httpResponseCode, String errorMessage) {
+        this(errorCode, httpResponseCode, errorMessage, null);
+    }
+
+    /**
+     * Create a new TenantSecurityKMSException with the provided error code and HTTP
+     * status code.
+     *
+     * @param errorCode        The EncryptionServiceErrorCode that occured with this
+     *                         error.
+     * @param httpResponseCode The HTTP response code returned from the
+     *                         Tenant Security Proxy for this error.
+     * @param cause            The Throwable that caused this one.
+     */
+    public TenantSecurityKMSException(TenantSecurityKMSErrorCodes errorCode, int httpResponseCode, Throwable cause) {
+        this(errorCode, httpResponseCode, errorCode.getMessage(), cause);
+    }
+
+    /**
+     * Create a new TenantSecurityKMSException with the provided error code and HTTP
+     * status code.
+     *
+     * @param errorCode        The EncryptionServiceErrorCode that occured with this
+     *                         error.
+     * @param httpResponseCode The HTTP response code returned from the
+     *                         Tenant Security Proxy for this error.
      */
     public TenantSecurityKMSException(TenantSecurityKMSErrorCodes errorCode, int httpResponseCode) {
-        super(errorCode.getMessage());
-        this.errorCode = errorCode;
-        this.httpResponseCode = httpResponseCode;
+        this(errorCode, httpResponseCode, errorCode.getMessage(), null);
+    }
+
+    /**
+     * Create a new TenantSecurityKMSException when the request to the API couldn't
+     * be made.
+     *
+     * @param errorCode The EncryptionServiceErrorCode that occured with this error.
+     * @param cause     The Throwable that caused this one.
+     */
+    public TenantSecurityKMSException(TenantSecurityKMSErrorCodes errorCode, Throwable cause) {
+        this(errorCode, 0, errorCode.getMessage(), cause);
     }
 
     /**
