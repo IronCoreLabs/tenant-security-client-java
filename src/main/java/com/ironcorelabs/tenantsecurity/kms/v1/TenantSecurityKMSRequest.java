@@ -83,7 +83,7 @@ public final class TenantSecurityKMSRequest {
             ErrorResponse errorResponse = resp.parseAs(ErrorResponse.class);
             if (errorResponse.getCode() > 0 && TenantSecurityKMSErrorCodes.valueOf(errorResponse.getCode()) != null) {
                 return new TenantSecurityKMSException(TenantSecurityKMSErrorCodes.valueOf(errorResponse.getCode()),
-                        errorResponse.getMessage(), resp.getStatusCode());
+                        resp.getStatusCode(), errorResponse.getMessage());
             }
         } catch (Exception e) {
             /* Fall through and return unknown error below */}
@@ -102,16 +102,17 @@ public final class TenantSecurityKMSRequest {
                     return resp.parseAs(WrappedDocumentKey.class);
                 }
                 throw parseFailureFromRequest(resp);
-            } catch (Exception e) {
-                if (e instanceof TenantSecurityKMSException) {
-                    throw new CompletionException(e);
+            } catch (Exception cause) {
+                if (cause instanceof TenantSecurityKMSException) {
+                    throw new CompletionException(cause);
                 }
                 throw new CompletionException(new TenantSecurityKMSException(
                         TenantSecurityKMSErrorCodes.UNABLE_TO_MAKE_REQUEST,
+                        0,
                         String.format(
-                                "Unable to make request to Tenant Security Proxy wrap endpoint. Endpoint requested: %s Error: %s",
-                                this.wrapEndpoint, e),
-                        0));
+                                "Unable to make request to Tenant Security Proxy wrap endpoint. Endpoint requested: %s",
+                                this.wrapEndpoint),
+                        cause));
             }
         }, webRequestExecutor);
     }
@@ -129,16 +130,17 @@ public final class TenantSecurityKMSRequest {
                     return resp.parseAs(UnwrappedDocumentKey.class).getDekBytes();
                 }
                 throw parseFailureFromRequest(resp);
-            } catch (Exception e) {
-                if (e instanceof TenantSecurityKMSException) {
-                    throw new CompletionException(e);
+            } catch (Exception cause) {
+                if (cause instanceof TenantSecurityKMSException) {
+                    throw new CompletionException(cause);
                 }
                 throw new CompletionException(new TenantSecurityKMSException(
                         TenantSecurityKMSErrorCodes.UNABLE_TO_MAKE_REQUEST,
+                        0,
                         String.format(
-                                "Unable to make request to Tenant Security Proxy unwrap endpoint. Endpoint requested: %s Error: %s",
-                                this.wrapEndpoint, e),
-                        0));
+                                "Unable to make request to Tenant Security Proxy unwrap endpoint. Endpoint requested: %s",
+                                this.wrapEndpoint),
+                        cause));
             }
         }, webRequestExecutor);
     }

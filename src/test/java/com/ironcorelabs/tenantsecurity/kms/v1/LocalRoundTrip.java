@@ -62,7 +62,7 @@ public class LocalRoundTrip {
             if (e.getCause() instanceof TenantSecurityKMSException) {
                 TenantSecurityKMSException kmsError = (TenantSecurityKMSException) e.getCause();
                 TenantSecurityKMSErrorCodes errorCode = kmsError.getErrorCode();
-                System.out.println("\nError Message: " + kmsError.getErrorMessage());
+                System.out.println("\nError Message: " + kmsError.getMessage());
                 System.out.println("\nError Code: " + errorCode.getCode());
                 System.out.println("\nError Code Info: " + errorCode.getMessage() + "\n");
             }
