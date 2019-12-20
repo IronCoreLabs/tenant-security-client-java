@@ -45,6 +45,8 @@ jobs:
           ref: refs/heads/master
           path: tenant-security-proxy
           token: ${{ secrets.GitHub_PAT }}
+      - name: use rust beta (remove once ironoxide is on stable)
+        run: rustup update beta && rustup default beta
       - name: cache cargo registry
         uses: actions/cache@v1
         with:
