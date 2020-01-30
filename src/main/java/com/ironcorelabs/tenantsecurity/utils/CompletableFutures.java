@@ -18,7 +18,6 @@ public final class CompletableFutures {
     }
 
     /**
-     * 
      * Try to run the given function, placing the value in a CompletableFuture.
      * Exceptions will be caught in a failed CompletableFuture, fatal Throwables
      * should still bubble up.

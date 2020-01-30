@@ -1,5 +1,6 @@
 package com.ironcorelabs.tenantsecurity.kms.v1;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -38,7 +39,9 @@ public final class TenantSecurityKMSRequest {
 
     private final HttpHeaders httpHeaders;
     private final GenericUrl wrapEndpoint;
+    private final GenericUrl batchWrapEndpoint;
     private final GenericUrl unwrapEndpoint;
+    private final GenericUrl batchUnwrapEndpoint;
 
     public TenantSecurityKMSRequest(String tspDomain, String apiKey, int requestThreadSize) {
         HttpHeaders headers = new HttpHeaders();
@@ -48,7 +51,9 @@ public final class TenantSecurityKMSRequest {
 
         String tspApiPrefix = tspDomain + "/api/1/";
         this.wrapEndpoint = new GenericUrl(tspApiPrefix + "document/wrap");
+        this.batchWrapEndpoint = new GenericUrl(tspApiPrefix + "document/batch-wrap");
         this.unwrapEndpoint = new GenericUrl(tspApiPrefix + "document/unwrap");
+        this.batchUnwrapEndpoint = new GenericUrl(tspApiPrefix + "document/batch-unwrap");
 
         this.webRequestExecutor = Executors.newFixedThreadPool(requestThreadSize);
     }
@@ -91,15 +96,15 @@ public final class TenantSecurityKMSRequest {
     }
 
     /**
-     * Request wrap endpoint to generate a DEK and EDEK.
+     * Generic method for making a request to the provided URL with the provided post data. Returns an instance of the provided generic JSON class
+     * or an error message with the provided error.
      */
-    public CompletableFuture<WrappedDocumentKey> wrapKey(DocumentMetadata metadata) {
-        Map<String, Object> postData = metadata.getAsPostData();
+    private <T> CompletableFuture<T> makeRequestAndParseFailure(GenericUrl url, Map<String, Object> postData, Class<T> jsonType,  String errorMessage) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                HttpResponse resp = this.getApiRequest(postData, this.wrapEndpoint).execute();
+                HttpResponse resp = this.getApiRequest(postData, url).execute();
                 if (resp.isSuccessStatusCode()) {
-                    return resp.parseAs(WrappedDocumentKey.class);
+                    return resp.parseAs(jsonType);
                 }
                 throw parseFailureFromRequest(resp);
             } catch (Exception cause) {
@@ -109,12 +114,33 @@ public final class TenantSecurityKMSRequest {
                 throw new CompletionException(new TenantSecurityKMSException(
                         TenantSecurityKMSErrorCodes.UNABLE_TO_MAKE_REQUEST,
                         0,
-                        String.format(
-                                "Unable to make request to Tenant Security Proxy wrap endpoint. Endpoint requested: %s",
-                                this.wrapEndpoint),
+                        errorMessage,
                         cause));
             }
         }, webRequestExecutor);
+    }
+
+    /**
+     * Request wrap endpoint to generate a DEK and EDEK.
+     */
+    public CompletableFuture<WrappedDocumentKey> wrapKey(DocumentMetadata metadata) {
+        Map<String, Object> postData = metadata.getAsPostData();
+        String error = String.format(
+            "Unable to make request to Tenant Security Proxy wrap endpoint. Endpoint requested: %s",
+            this.wrapEndpoint);
+        return this.makeRequestAndParseFailure(this.wrapEndpoint, postData, WrappedDocumentKey.class, error);
+    }
+
+    /**
+     * Request batch wrap endpoint to generate the provided nuymber of DEK/EDEK pairs.
+     */
+    public CompletableFuture<BatchWrappedDocumentKeys> batchWrapKeys(Collection<String> documentIds, DocumentMetadata metadata) {
+        Map<String, Object> postData = metadata.getAsPostData();
+        postData.put("documentIds", documentIds);
+        String error = String.format(
+            "Unable to make request to Tenant Security Proxy batch wrap endpoint. Endpoint requested: %s",
+            this.batchWrapEndpoint);
+        return this.makeRequestAndParseFailure(this.batchWrapEndpoint, postData, BatchWrappedDocumentKeys.class, error);
     }
 
     /**
@@ -123,25 +149,33 @@ public final class TenantSecurityKMSRequest {
     public CompletableFuture<byte[]> unwrapKey(String edek, DocumentMetadata metadata) {
         Map<String, Object> postData = metadata.getAsPostData();
         postData.put("encryptedDocumentKey", edek);
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                HttpResponse resp = this.getApiRequest(postData, this.unwrapEndpoint).execute();
-                if (resp.isSuccessStatusCode()) {
-                    return resp.parseAs(UnwrappedDocumentKey.class).getDekBytes();
-                }
-                throw parseFailureFromRequest(resp);
-            } catch (Exception cause) {
-                if (cause instanceof TenantSecurityKMSException) {
-                    throw new CompletionException(cause);
-                }
+        String error = String.format(
+            "Unable to make request to Tenant Security Proxy unwrap endpoint. Endpoint requested: %s",
+            this.wrapEndpoint);
+        return this.makeRequestAndParseFailure(this.unwrapEndpoint, postData, UnwrappedDocumentKey.class, error).thenApply(unwrapResponse -> {
+            try{
+                return unwrapResponse.getDekBytes();
+            }
+            catch(Exception e){
                 throw new CompletionException(new TenantSecurityKMSException(
                         TenantSecurityKMSErrorCodes.UNABLE_TO_MAKE_REQUEST,
                         0,
-                        String.format(
-                                "Unable to make request to Tenant Security Proxy unwrap endpoint. Endpoint requested: %s",
-                                this.wrapEndpoint),
-                        cause));
+                        e.getMessage(),
+                        e));
             }
-        }, webRequestExecutor);
+        });
+    }
+
+    /**
+     * Request batch unwrap endpoint with the provided map of edeks. Returns a map of EDEK key to DEK for
+     * successes and a map of EDEK key to failure details for failures.
+     */
+    public CompletableFuture<BatchUnwrappedDocumentKeys> batchUnwrapKeys(Map<String, String> edeks, DocumentMetadata metadata) {
+        Map<String, Object> postData = metadata.getAsPostData();
+        postData.put("edeks", edeks);
+        String error = String.format(
+            "Unable to make request to Tenant Security Proxy batch unwrap endpoint. Endpoint requested: %s",
+            this.batchWrapEndpoint);
+        return this.makeRequestAndParseFailure(this.batchUnwrapEndpoint, postData, BatchUnwrappedDocumentKeys.class, error);
     }
 }
