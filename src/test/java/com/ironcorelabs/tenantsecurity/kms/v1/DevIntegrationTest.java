@@ -399,9 +399,9 @@ public class DevIntegrationTest {
         assertEqualBytes(row1.get("doc2"), firstRow.get("doc2"));
         assertEqualBytes(row1.get("doc3"), firstRow.get("doc3"));
 
-        assertEqualBytes(row2.get("doc1"), secondRow.get("doc1"));
-        assertEqualBytes(row2.get("doc2"), secondRow.get("second2"));
-        assertEqualBytes(row2.get("doc3"), secondRow.get("second3"));
+        assertEqualBytes(row2.get("second1"), secondRow.get("second1"));
+        assertEqualBytes(row2.get("second2"), secondRow.get("second2"));
+        assertEqualBytes(row2.get("second3"), secondRow.get("second3"));
 
         assertEqualBytes(row3.get("doc1"), thirdRow.get("doc1"));
         assertEqualBytes(row3.get("doc2"), thirdRow.get("doc2"));
@@ -412,69 +412,72 @@ public class DevIntegrationTest {
         DocumentMetadata metadata = getRoundtripMetadata(this.AZURE_TENANT_ID);
 
         // Create three "rows" of data
-        Map<String, byte[]> firstRow = new HashMap<>();
-        firstRow.put("first1", "And a one!".getBytes("UTF-8"));
-        firstRow.put("first2", "And a two!".getBytes("UTF-8"));
-        firstRow.put("first3", "And a here we go!".getBytes("UTF-8"));
+        Map<String, byte[]> user10 = new HashMap<>();
+        user10.put("name", "And a one!".getBytes("UTF-8"));
+        user10.put("email", "And a two!".getBytes("UTF-8"));
+        user10.put("birthday", "And a here we go!".getBytes("UTF-8"));
 
-        Map<String, byte[]> secondRow = getRoundtripDataToEncrypt();
+        Map<String, byte[]> user20 = new HashMap<>();
+        user20.put("name", "John Doe".getBytes("UTF-8"));
+        user20.put("email", "jd@example.com".getBytes("UTF-8"));
+        user20.put("birthday", "12/20/1993".getBytes("UTF-8"));
 
-        Map<String, byte[]> thirdRow = new HashMap<>();
-        thirdRow.put("third1", "So much encryption!".getBytes("UTF-8"));
-        thirdRow.put("third2", "Much wow!".getBytes("UTF-8"));
-        thirdRow.put("third3", "-Doge".getBytes("UTF-8"));
+        Map<String, byte[]> user30 = new HashMap<>();
+        user30.put("name", "So much encryption!".getBytes("UTF-8"));
+        user30.put("email", "Much wow!".getBytes("UTF-8"));
+        user30.put("birthday", "-Doge".getBytes("UTF-8"));
 
         // Create two modifications of that data (we do this here since the getBytes can
         // throw so doing it within the CompletableFuture workflow is a PITA)
-        Map<String, byte[]> newFirstRow = new HashMap<>();
-        newFirstRow.put("first2", "And a two!?".getBytes("UTF-8"));
+        Map<String, byte[]> newUser10 = new HashMap<>();
+        newUser10.put("email", "And a two!?".getBytes("UTF-8"));
 
-        Map<String, byte[]> newThirdRow = new HashMap<>();
-        newThirdRow.put("third3", "-Doge?".getBytes("UTF-8"));
+        Map<String, byte[]> newUser30 = new HashMap<>();
+        newUser30.put("birthday", "-Doge?".getBytes("UTF-8"));
 
         Map<String, Map<String, byte[]>> batchRows = new HashMap<>();
-        batchRows.put("row1", firstRow);
-        batchRows.put("row2", secondRow);
-        batchRows.put("row3", thirdRow);
+        batchRows.put("user10", user10);
+        batchRows.put("user20", user20);
+        batchRows.put("user30", user30);
 
         CompletableFuture<BatchResult<PlaintextDocument>> roundtrip = getClient().thenCompose(client -> {
             try {
                 // First encrypt the original list of documents via batch operation
-                return client.encryptBatchBetter(batchRows, metadata).thenCompose(batchEncryptResult -> {
-                    assertEquals(0, batchEncryptResult.getFailures().size());
-                    assertEquals(3, batchEncryptResult.getDocuments().size());
+                return client.encryptBatchBetter(batchRows, metadata).thenCompose(initialEncryptResults -> {
+                    assertEquals(0, initialEncryptResults.getFailures().size());
+                    assertEquals(3, initialEncryptResults.getDocuments().size());
                     // Then batch update a few pieces of data from each row with new data but the
                     // same key they used to encrypt
-                    PlaintextDocument firstRowUpdates = new PlaintextDocument(newFirstRow,
-                            batchEncryptResult.getDocuments().get("row1").getEdek());
-                    PlaintextDocument thirdRowUpdates = new PlaintextDocument(newThirdRow,
-                            batchEncryptResult.getDocuments().get("row3").getEdek());
+                    PlaintextDocument user10Updates = new PlaintextDocument(newUser10,
+                        initialEncryptResults.getDocuments().get("user10").getEdek());
+                    PlaintextDocument user30Updates = new PlaintextDocument(newUser30,
+                        initialEncryptResults.getDocuments().get("user30").getEdek());
 
                     Map<String, PlaintextDocument> updateBatch = new HashMap<>();
-                    updateBatch.put("row1", firstRowUpdates);
-                    updateBatch.put("row3", thirdRowUpdates);
+                    updateBatch.put("user10", user10Updates);
+                    updateBatch.put("user30", user30Updates);
 
                     // And batch encrypt those new fields
                     return client.encryptExistingBatchBetter(updateBatch, metadata).thenCompose(batchUpdateResult -> {
                         assertEquals(0, batchUpdateResult.getFailures().size());
                         assertEquals(2, batchUpdateResult.getDocuments().size());
-                        Map<String, EncryptedDocument> successes = batchUpdateResult.getDocuments();
+                        Map<String, EncryptedDocument> updateSuccesses = batchUpdateResult.getDocuments();
                         // Then merge the newly encrypted fields with the original row of encrypted data
                         // so we can verify that decryption works on all of them with the same key
-                        Map<String, byte[]> fullEncryptedFirstRow = new HashMap<>();
-                        fullEncryptedFirstRow.putAll(successes.get("row1").getEncryptedFields());
-                        fullEncryptedFirstRow.putAll(successes.get("row1").getEncryptedFields());
+                        Map<String, byte[]> fullEncryptedUser10 = new HashMap<>();
+                        fullEncryptedUser10.putAll(initialEncryptResults.getDocuments().get("user10").getEncryptedFields());
+                        fullEncryptedUser10.putAll(updateSuccesses.get("user10").getEncryptedFields());
 
-                        Map<String, byte[]> fullEncryptedThirdRow = new HashMap<>();
-                        fullEncryptedThirdRow.putAll(successes.get("row3").getEncryptedFields());
-                        fullEncryptedThirdRow.putAll(successes.get("row3").getEncryptedFields());
+                        Map<String, byte[]> fullEncryptedUser30 = new HashMap<>();
+                        fullEncryptedUser30.putAll(initialEncryptResults.getDocuments().get("user30").getEncryptedFields());
+                        fullEncryptedUser30.putAll(updateSuccesses.get("user30").getEncryptedFields());
 
                         Map<String, EncryptedDocument> mergedEncryptedList = new HashMap<>();
-                        mergedEncryptedList.put("row1",
-                                new EncryptedDocument(fullEncryptedFirstRow, batchEncryptResult.getDocuments().get("row1").getEdek()));
-                        mergedEncryptedList.put("row2", batchEncryptResult.getDocuments().get("row2"));
-                        mergedEncryptedList.put("row3",
-                                new EncryptedDocument(fullEncryptedThirdRow, batchEncryptResult.getDocuments().get("row3").getEdek()));
+                        mergedEncryptedList.put("user10",
+                                new EncryptedDocument(fullEncryptedUser10, initialEncryptResults.getDocuments().get("user10").getEdek()));
+                        mergedEncryptedList.put("user20", initialEncryptResults.getDocuments().get("user20"));
+                        mergedEncryptedList.put("user30",
+                                new EncryptedDocument(fullEncryptedUser30, initialEncryptResults.getDocuments().get("user30").getEdek()));
                         // Finally decrypt the whole enchilada so we can verify the roundtrip below
                         return client.decryptBatchBetter(mergedEncryptedList, metadata);
                     });
@@ -491,21 +494,21 @@ public class DevIntegrationTest {
         assertEquals(0, failures.size());
         assertEquals(3, successes.size());
 
-        Map<String, byte[]> row1 = successes.get("row1").getDecryptedFields();
-        Map<String, byte[]> row2 = successes.get("row2").getDecryptedFields();
-        Map<String, byte[]> row3 = successes.get("row3").getDecryptedFields();
+        Map<String, byte[]> roundtripUser10 = successes.get("user10").getDecryptedFields();
+        Map<String, byte[]> roundtripUser20 = successes.get("user20").getDecryptedFields();
+        Map<String, byte[]> roundtripUser30 = successes.get("user30").getDecryptedFields();
 
-        assertEqualBytes(row1.get("first1"), firstRow.get("first1"));
-        assertEqualBytes(row1.get("first2"), newFirstRow.get("first2"));
-        assertEqualBytes(row1.get("first3"), firstRow.get("first3"));
+        assertEqualBytes(roundtripUser10.get("name"), user10.get("name"));
+        assertEqualBytes(roundtripUser10.get("email"), newUser10.get("email"));
+        assertEqualBytes(roundtripUser10.get("birthday"), user10.get("birthday"));
 
-        assertEqualBytes(row2.get("doc1"), secondRow.get("doc1"));
-        assertEqualBytes(row2.get("doc2"), secondRow.get("doc2"));
-        assertEqualBytes(row2.get("doc3"), secondRow.get("doc3"));
+        assertEqualBytes(roundtripUser20.get("name"), user20.get("name"));
+        assertEqualBytes(roundtripUser20.get("email"), user20.get("email"));
+        assertEqualBytes(roundtripUser20.get("birthday"), user20.get("birthday"));
 
-        assertEqualBytes(row3.get("third1"), thirdRow.get("third1"));
-        assertEqualBytes(row3.get("third2"), thirdRow.get("third2"));
-        assertEqualBytes(row3.get("third3"), newThirdRow.get("third3"));
+        assertEqualBytes(roundtripUser30.get("name"), user30.get("name"));
+        assertEqualBytes(roundtripUser30.get("email"), user30.get("email"));
+        assertEqualBytes(roundtripUser30.get("birthday"), newUser30.get("birthday"));
     }
 
     public void largeBatchTestNewApi() throws Exception {
@@ -536,7 +539,7 @@ public class DevIntegrationTest {
             try {
                 return client.encryptBatchBetter(batch, metadata).thenCompose(batchEncryptedResults -> {
                     assertEquals(0, batchEncryptedResults.getFailures().size());
-                    assertEquals(batchSize, batchEncryptedResults.getFailures().size());
+                    assertEquals(batchSize, batchEncryptedResults.getDocuments().size());
                     return client.decryptBatchBetter(batchEncryptedResults.getDocuments(), metadata);
                 });
             } catch (Exception e) {
@@ -546,6 +549,6 @@ public class DevIntegrationTest {
 
         BatchResult<PlaintextDocument> decryptedValues = roundtrip.get();
         assertEquals(0, decryptedValues.getFailures().size());
-        assertEquals(batchSize, decryptedValues.getFailures().size());
+        assertEquals(batchSize, decryptedValues.getDocuments().size());
     }
 }
