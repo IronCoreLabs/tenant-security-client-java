@@ -24,7 +24,7 @@ import com.google.api.client.json.jackson2.JacksonFactory;
  * Handles requests to the Tenant Security Proxy Docker image for wrapping and
  * unwrapping keys. Also works to parse out error codes on wrap/unwrap failures.
  */
-public final class TenantSecurityKMSRequest {
+final class TenantSecurityKMSRequest {
     private static final HttpTransport HTTP_TRANSPORT = new NetHttpTransport();
     private static final JsonFactory JSON_FACTORY = new JacksonFactory();
     private static HttpRequestFactory requestFactory = HTTP_TRANSPORT.createRequestFactory((HttpRequest request) -> {
@@ -43,7 +43,7 @@ public final class TenantSecurityKMSRequest {
     private final GenericUrl unwrapEndpoint;
     private final GenericUrl batchUnwrapEndpoint;
 
-    public TenantSecurityKMSRequest(String tspDomain, String apiKey, int requestThreadSize) {
+    TenantSecurityKMSRequest(String tspDomain, String apiKey, int requestThreadSize) {
         HttpHeaders headers = new HttpHeaders();
         headers.put("Content-Type", "application/json");
         headers.put("Authorization", "cmk " + apiKey);
@@ -123,7 +123,7 @@ public final class TenantSecurityKMSRequest {
     /**
      * Request wrap endpoint to generate a DEK and EDEK.
      */
-    public CompletableFuture<WrappedDocumentKey> wrapKey(DocumentMetadata metadata) {
+    CompletableFuture<WrappedDocumentKey> wrapKey(DocumentMetadata metadata) {
         Map<String, Object> postData = metadata.getAsPostData();
         String error = String.format(
             "Unable to make request to Tenant Security Proxy wrap endpoint. Endpoint requested: %s",
@@ -134,7 +134,7 @@ public final class TenantSecurityKMSRequest {
     /**
      * Request batch wrap endpoint to generate the provided nuymber of DEK/EDEK pairs.
      */
-    public CompletableFuture<BatchWrappedDocumentKeys> batchWrapKeys(Collection<String> documentIds, DocumentMetadata metadata) {
+    CompletableFuture<BatchWrappedDocumentKeys> batchWrapKeys(Collection<String> documentIds, DocumentMetadata metadata) {
         Map<String, Object> postData = metadata.getAsPostData();
         postData.put("documentIds", documentIds);
         String error = String.format(
@@ -146,7 +146,7 @@ public final class TenantSecurityKMSRequest {
     /**
      * Request unwrap endpoint with the provided edek. Returns the resulting DEK.
      */
-    public CompletableFuture<byte[]> unwrapKey(String edek, DocumentMetadata metadata) {
+    CompletableFuture<byte[]> unwrapKey(String edek, DocumentMetadata metadata) {
         Map<String, Object> postData = metadata.getAsPostData();
         postData.put("encryptedDocumentKey", edek);
         String error = String.format(
@@ -170,7 +170,7 @@ public final class TenantSecurityKMSRequest {
      * Request batch unwrap endpoint with the provided map of edeks. Returns a map of EDEK key to DEK for
      * successes and a map of EDEK key to failure details for failures.
      */
-    public CompletableFuture<BatchUnwrappedDocumentKeys> batchUnwrapKeys(Map<String, String> edeks, DocumentMetadata metadata) {
+    CompletableFuture<BatchUnwrappedDocumentKeys> batchUnwrapKeys(Map<String, String> edeks, DocumentMetadata metadata) {
         Map<String, Object> postData = metadata.getAsPostData();
         postData.put("edeks", edeks);
         String error = String.format(

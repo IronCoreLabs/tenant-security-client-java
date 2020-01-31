@@ -28,7 +28,7 @@ public class LocalRoundTrip {
         return documentMap;
     }
 
-    public void gcpRoundtripTest() throws Exception {
+    public void roundtripTest() throws Exception {
         Map<String, String> customFields = new HashMap<>();
         customFields.put("org_name", "Cisco");
         customFields.put("attachment_name", "thongsong.mp3");

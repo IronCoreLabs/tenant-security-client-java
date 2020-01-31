@@ -8,11 +8,11 @@ import java.util.Map;
  */
 public final class BatchResult<T> {
     private final Map<String, T> documents;
-    private final Map<String, TenantSecurityKMSException> batchFailures;
+    private final Map<String, TenantSecurityKMSException> failures;
 
     public BatchResult(Map<String, T> documents, Map<String, TenantSecurityKMSException> failures) {
         this.documents = documents;
-        this.batchFailures = failures;
+        this.failures = failures;
     }
 
     /**
@@ -26,7 +26,7 @@ public final class BatchResult<T> {
      * Get a Map from the document ID to an exception that occured when encrypting or decrypting the document
      */
     public Map<String, TenantSecurityKMSException> getFailures(){
-        return this.batchFailures;
+        return this.failures;
     }
 
     /**
@@ -40,6 +40,6 @@ public final class BatchResult<T> {
      * Returns whether the batch result had any failures when encrypting/decrypting documents.
      */
     public boolean hasFailures(){
-        return this.batchFailures.size() > 0;
+        return this.failures.size() > 0;
     }
 }
