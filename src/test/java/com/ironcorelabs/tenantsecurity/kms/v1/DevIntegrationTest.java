@@ -376,10 +376,10 @@ public class DevIntegrationTest {
 
         CompletableFuture<BatchResult<PlaintextDocument>> roundtrip = getClient().thenCompose(client -> {
             try {
-                return client.encryptBatchBetter(batchRows, metadata).thenCompose(batchResult -> {
+                return client.encryptBatch(batchRows, metadata).thenCompose(batchResult -> {
                     assertEquals(0, batchResult.getFailures().size());
                     assertEquals(3, batchResult.getDocuments().size());
-                    return client.decryptBatchBetter(batchResult.getDocuments(), metadata);
+                    return client.decryptBatch(batchResult.getDocuments(), metadata);
                 });
             } catch (Exception e) {
                 throw new CompletionException(e);
@@ -443,7 +443,7 @@ public class DevIntegrationTest {
         CompletableFuture<BatchResult<PlaintextDocument>> roundtrip = getClient().thenCompose(client -> {
             try {
                 // First encrypt the original list of documents via batch operation
-                return client.encryptBatchBetter(batchRows, metadata).thenCompose(initialEncryptResults -> {
+                return client.encryptBatch(batchRows, metadata).thenCompose(initialEncryptResults -> {
                     assertEquals(0, initialEncryptResults.getFailures().size());
                     assertEquals(3, initialEncryptResults.getDocuments().size());
                     // Then batch update a few pieces of data from each row with new data but the
@@ -458,7 +458,7 @@ public class DevIntegrationTest {
                     updateBatch.put("user30", user30Updates);
 
                     // And batch encrypt those new fields
-                    return client.encryptExistingBatchBetter(updateBatch, metadata).thenCompose(batchUpdateResult -> {
+                    return client.encryptExistingBatch(updateBatch, metadata).thenCompose(batchUpdateResult -> {
                         assertEquals(0, batchUpdateResult.getFailures().size());
                         assertEquals(2, batchUpdateResult.getDocuments().size());
                         Map<String, EncryptedDocument> updateSuccesses = batchUpdateResult.getDocuments();
@@ -479,7 +479,7 @@ public class DevIntegrationTest {
                         mergedEncryptedList.put("user30",
                                 new EncryptedDocument(fullEncryptedUser30, initialEncryptResults.getDocuments().get("user30").getEdek()));
                         // Finally decrypt the whole enchilada so we can verify the roundtrip below
-                        return client.decryptBatchBetter(mergedEncryptedList, metadata);
+                        return client.decryptBatch(mergedEncryptedList, metadata);
                     });
                 });
             } catch (Exception e) {
@@ -537,10 +537,10 @@ public class DevIntegrationTest {
 
         CompletableFuture<BatchResult<PlaintextDocument>> roundtrip = getClient().thenCompose(client -> {
             try {
-                return client.encryptBatchBetter(batch, metadata).thenCompose(batchEncryptedResults -> {
+                return client.encryptBatch(batch, metadata).thenCompose(batchEncryptedResults -> {
                     assertEquals(0, batchEncryptedResults.getFailures().size());
                     assertEquals(batchSize, batchEncryptedResults.getDocuments().size());
-                    return client.decryptBatchBetter(batchEncryptedResults.getDocuments(), metadata);
+                    return client.decryptBatch(batchEncryptedResults.getDocuments(), metadata);
                 });
             } catch (Exception e) {
                 throw new CompletionException(e);

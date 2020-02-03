@@ -109,19 +109,19 @@ public class LocalBatch {
         int batchRepetitions = 50;
 
         CompletableFuture<BatchResult<PlaintextDocument>> roundtrip = client
-                .encryptBatchBetter(getBatchMap(batchSize), context).thenCompose(encryptedResults -> {
+                .encryptBatch(getBatchMap(batchSize), context).thenCompose(encryptedResults -> {
                     System.out.println("Run 1");
                     logFailures(encryptedResults.getFailures());
-                    return client.decryptBatchBetter(encryptedResults.getDocuments(), context);
+                    return client.decryptBatch(encryptedResults.getDocuments(), context);
                 });
 
         for (int i = 2; i <= batchRepetitions; i++) {
             final String run = "Run " + i;
-            roundtrip = roundtrip.thenCompose(_nope -> client.encryptBatchBetter(getBatchMap(batchSize), context))
+            roundtrip = roundtrip.thenCompose(_nope -> client.encryptBatch(getBatchMap(batchSize), context))
                     .thenCompose(encryptedResults -> {
                         System.out.println(run);
                         logFailures(encryptedResults.getFailures());
-                        return client.decryptBatchBetter(encryptedResults.getDocuments(), context);
+                        return client.decryptBatch(encryptedResults.getDocuments(), context);
                     });
         }
 
