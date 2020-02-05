@@ -8,6 +8,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
@@ -245,7 +247,7 @@ public final class TenantSecurityKMSClient {
      * and return the resulting encrypted fields in a map from String to encrypted
      * bytes.
      */
-    private Map<String, byte[]> encryptFields(Map<String, byte[]> document, DocumentMetadata metadata, byte[] dek) {
+    private Map<String, byte[]> encryptFields(Map<String, byte[]> document, byte[] dek) {
         // First, iterate over the map of documents and kick off the encrypt operation
         // Future for each one. As part of doing this, we kick off the operation on to
         // another thread so they run in parallel.
@@ -261,9 +263,8 @@ public final class TenantSecurityKMSClient {
         // Now iterate over our map of keys to Futures and call join on all of them. We
         // do this in a separate stream() because if we called join() above it'd block
         // each iteration and cause them to be run in CompletableFutures.sequence.
-        Map<String, byte[]> encryptedMap = encryptOps.entrySet().stream()
+        return encryptOps.entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().join()));
-        return encryptedMap;
     }
 
     /**
@@ -271,7 +272,7 @@ public final class TenantSecurityKMSClient {
      * return the resulting decrypted fields in a map from String name to decrypted
      * bytes.
      */
-    private Map<String, byte[]> decryptFields(Map<String, byte[]> document, DocumentMetadata metadata, byte[] dek) {
+    private Map<String, byte[]> decryptFields(Map<String, byte[]> document, byte[] dek) {
         // First map over the encrypted document map and convert the values from
         // encrypted bytes to Futures of decrypted bytes. Make sure each decrypt happens
         // on it's own thread to run them in parallel.
@@ -288,9 +289,85 @@ public final class TenantSecurityKMSClient {
         // Then iterate over the map of Futures and join them to get the decrypted bytes
         // out. Return the map with the same keys passed in, but the values will now be
         // decrypted.
-        Map<String, byte[]> decryptedDocument = decryptOps.entrySet().stream()
+        return decryptOps.entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().join()));
-        return decryptedDocument;
+    }
+
+    /**
+     * Given a map of document IDs to plaintext bytes to encrypt and a map of
+     * document IDs to a fresh DEK, iterate over the DEKs and encrypt the document
+     * at the same key. It is possible that the DEK list is shorter than the
+     * document list in case we had any failures generating new DEKs.
+     */
+    private ConcurrentMap<String, EncryptedDocument> encryptBatchOfDocuments(Map<String, Map<String, byte[]>> documents,
+            ConcurrentMap<String, WrappedDocumentKey> dekList) {
+        return dekList.entrySet().parallelStream()
+                .collect(Collectors.toConcurrentMap(ConcurrentMap.Entry::getKey, dekResult -> {
+                    String documentId = dekResult.getKey();
+                    WrappedDocumentKey documentKeys = dekResult.getValue();
+                    Map<String, byte[]> encryptedDoc = encryptFields(documents.get(documentId),
+                            documentKeys.getDekBytes());
+                    return new EncryptedDocument(encryptedDoc, documentKeys.getEdek());
+                }));
+    }
+
+    /**
+     * Given a map of document IDs to previously encrypted plaintext documents to
+     * re-encrypt and a map of document IDs to the documents DEK, iterate over the
+     * DEKs and re-encrypt the document at the same key. It is possible that the DEK
+     * list is shorter than the document list in case we had any failures decrypting
+     * the existing document DEKs.
+     */
+    private ConcurrentMap<String, EncryptedDocument> encryptExistingBatchOfDocuments(
+            Map<String, PlaintextDocument> documents, ConcurrentMap<String, UnwrappedDocumentKey> dekList) {
+        return dekList.entrySet().parallelStream()
+                .collect(Collectors.toConcurrentMap(ConcurrentMap.Entry::getKey, dekResult -> {
+                    String documentId = dekResult.getKey();
+                    UnwrappedDocumentKey documentKeys = dekResult.getValue();
+                    Map<String, byte[]> encryptedDoc = encryptFields(documents.get(documentId).getDecryptedFields(),
+                            documentKeys.getDekBytes());
+                    return new EncryptedDocument(encryptedDoc, documents.get(documentId).getEdek());
+                }));
+    }
+
+    /**
+     * Given a map of document IDs to EncryptedDocument to decrypt and a map of
+     * document IDs to a DEK iterate over the DEKs and decrypt the document at the
+     * same key. It is possible that the DEK list is shorter than the encrypted
+     * document list in case we had any failures unwrapping the provided EDEKs.
+     */
+    private ConcurrentMap<String, PlaintextDocument> decryptBatchDocuments(Map<String, EncryptedDocument> documents,
+            ConcurrentMap<String, UnwrappedDocumentKey> dekList) {
+        return dekList.entrySet().parallelStream()
+                .collect(Collectors.toConcurrentMap(ConcurrentMap.Entry::getKey, dekResult -> {
+                    String documentId = dekResult.getKey();
+                    UnwrappedDocumentKey documentKeys = dekResult.getValue();
+                    EncryptedDocument eDoc = documents.get(documentId);
+                    Map<String, byte[]> decryptedDoc = decryptFields(eDoc.getEncryptedFields(),
+                            documentKeys.getDekBytes());
+                    return new PlaintextDocument(decryptedDoc, eDoc.getEdek());
+                }));
+    }
+
+    /**
+     * Given a map of document IDs to TSP error responses which have an error code
+     * and a message, convert the map to a map of the same document ID but to a
+     * TenantSecurityKMSException.
+     */
+    private ConcurrentMap<String, TenantSecurityKMSException> getBatchFailures(
+            ConcurrentMap<String, ErrorResponse> failures) {
+        return failures.entrySet().parallelStream()
+                .collect(Collectors.toConcurrentMap(ConcurrentMap.Entry::getKey, failure -> {
+                    ErrorResponse errorResponse = failure.getValue();
+                    if (errorResponse.getCode() > 0
+                            && TenantSecurityKMSErrorCodes.valueOf(errorResponse.getCode()) != null) {
+                        return new TenantSecurityKMSException(
+                                TenantSecurityKMSErrorCodes.valueOf(errorResponse.getCode()), 0,
+                                errorResponse.getMessage());
+                    }
+                    return new TenantSecurityKMSException(TenantSecurityKMSErrorCodes.UNKNOWN_ERROR, 0,
+                            errorResponse.getMessage());
+                }));
     }
 
     /**
@@ -309,7 +386,7 @@ public final class TenantSecurityKMSClient {
      */
     public CompletableFuture<EncryptedDocument> encrypt(Map<String, byte[]> document, DocumentMetadata metadata) {
         return this.encryptionService.wrapKey(metadata).thenApplyAsync(newDocumentKeys -> {
-            return new EncryptedDocument(encryptFields(document, metadata, newDocumentKeys.getDekBytes()),
+            return new EncryptedDocument(encryptFields(document, newDocumentKeys.getDekBytes()),
                     newDocumentKeys.getEdek());
         });
     }
@@ -332,10 +409,119 @@ public final class TenantSecurityKMSClient {
      */
     public CompletableFuture<EncryptedDocument> encrypt(PlaintextDocument document, DocumentMetadata metadata) {
         return this.encryptionService.unwrapKey(document.getEdek(), metadata).thenApplyAsync(
-                dek -> new EncryptedDocument(encryptFields(document.getDecryptedFields(), metadata, dek),
-                        document.getEdek()),
+                dek -> new EncryptedDocument(encryptFields(document.getDecryptedFields(), dek), document.getEdek()),
                 encryptionExecutor);
     }
+
+    /**
+     * Encrypt a map of documents from the ID of the document to the list of fields
+     * to encrypt. Makes a call out to the Tenant Security Proxy to generate a
+     * collection of new DEK/EDEK pairs for each document ID provided. This function
+     * supports partial failure so it returns two Maps, one of document ID to
+     * successfully encrypted document and one of document ID to a
+     * TenantSecurityKMSException.
+     *
+     * @param plaintextDocuments Map of document ID to map of fields to encrypt.
+     * @param metadata           Metadata about all of the documents being encrypted
+     * @return Collection of successes and failures that occured during operation.
+     *         The keys of each map returned will be the same keys provided in the
+     *         original plaintextDocuments map.
+     */
+    public CompletableFuture<BatchResult<EncryptedDocument>> encryptBatch(
+            Map<String, Map<String, byte[]>> plaintextDocuments, DocumentMetadata metadata) {
+        return this.encryptionService.batchWrapKeys(plaintextDocuments.keySet(), metadata)
+                .thenComposeAsync(batchResponse -> {
+                    ConcurrentMap<String, WrappedDocumentKey> dekList = new ConcurrentHashMap<>(
+                            batchResponse.getKeys());
+                    ConcurrentMap<String, ErrorResponse> failureList = new ConcurrentHashMap<>(
+                            batchResponse.getFailures());
+                    return CompletableFuture.supplyAsync(() -> encryptBatchOfDocuments(plaintextDocuments, dekList))
+                            .thenCombine(CompletableFuture.supplyAsync(() -> getBatchFailures(failureList)),
+                                    (s, f) -> new BatchResult<EncryptedDocument>(s, f));
+                }, encryptionExecutor);
+    }
+
+    /**
+     * Re-encrypt a existing map of documents from the ID of the document to the
+     * previously encrypted document. Makes a call out to the Tenant Security Proxy
+     * to decrypt the EDEKs present in each provided document. This function
+     * supports partial failure so it returns two Maps, one of document ID to
+     * successfully re-encrypted document and one of document ID to a
+     * TenantSecurityKMSException.
+     *
+     * @param plaintextDocuments Map of previously encrypted document from ID to
+     *                           document.
+     * @param metadata           Metadata about all of the documents being encrypted
+     * @return Collection of successes and failures that occured during operation.
+     *         The keys of each map returned will be the same keys provided in the
+     *         original plaintextDocuments map.
+     */
+    public CompletableFuture<BatchResult<EncryptedDocument>> encryptExistingBatch(
+            Map<String, PlaintextDocument> plaintextDocuments, DocumentMetadata metadata) {
+        // First convert the map from doc ID to plaintext document to a map from doc ID
+        // to EDEK to send to batch endpoint
+        Map<String, String> edekMap = plaintextDocuments.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, (eDoc) -> eDoc.getValue().getEdek()));
+        return this.encryptionService.batchUnwrapKeys(edekMap, metadata).thenComposeAsync(batchResponse -> {
+            ConcurrentMap<String, UnwrappedDocumentKey> dekList = new ConcurrentHashMap<>(batchResponse.getKeys());
+            ConcurrentMap<String, ErrorResponse> failureList = new ConcurrentHashMap<>(batchResponse.getFailures());
+            return CompletableFuture.supplyAsync(() -> encryptExistingBatchOfDocuments(plaintextDocuments, dekList))
+                    .thenCombine(CompletableFuture.supplyAsync(() -> getBatchFailures(failureList)),
+                            (s, f) -> new BatchResult<EncryptedDocument>(s, f));
+        }, encryptionExecutor);
+    }
+
+    /**
+     * Decrypt the provided EncryptedDocument. Decrypts the documents encrypted
+     * document key (EDEK) using the Tenant Security Proxy and uses it to decrypt
+     * and return the document bytes. The DEK is then discarded.
+     *
+     * @param encryptedDocument Document to decrypt which includes encrypted bytes
+     *                          as well as EDEK.
+     * @param metadata          Metadata about the document being decrypted.
+     * @return PlaintextDocument which contains each documents decrypted field
+     *         bytes.
+     */
+    public CompletableFuture<PlaintextDocument> decrypt(EncryptedDocument encryptedDocument,
+            DocumentMetadata metadata) {
+        return this.encryptionService.unwrapKey(encryptedDocument.getEdek(), metadata)
+                .thenApplyAsync(decryptedDocumentAESKey -> {
+                    Map<String, byte[]> decryptedFields = decryptFields(encryptedDocument.getEncryptedFields(),
+                            decryptedDocumentAESKey);
+                    return new PlaintextDocument(decryptedFields, encryptedDocument.getEdek());
+                });
+    }
+
+    /**
+     * Decrypt a map of documents from the ID of the document to its encrypted
+     * content. Makes a call out to the Tenant Security Proxy to decrypt all of the
+     * EDEKs in each document. This function supports partial failure so it returns
+     * two Maps, one of document ID to successfully decrypted document and one of
+     * document ID to a TenantSecurityKMSException.
+     *
+     * @param encryptedDocuments Map of documents to decrypt from ID of the document
+     *                           to the EncryptedDocument
+     * @param metadata           Metadata to use for each decrypt operation.
+     * @return Collection of successes and failures that occured during operation.
+     *         The keys of each map returned will be the same keys provided in the
+     *         original encryptedDocuments map.
+     */
+    public CompletableFuture<BatchResult<PlaintextDocument>> decryptBatch(
+            Map<String, EncryptedDocument> encryptedDocuments, DocumentMetadata metadata) {
+        Map<String, String> edekMap = encryptedDocuments.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, (eDoc) -> eDoc.getValue().getEdek()));
+        return this.encryptionService.batchUnwrapKeys(edekMap, metadata).thenComposeAsync(batchResponse -> {
+            ConcurrentMap<String, UnwrappedDocumentKey> dekList = new ConcurrentHashMap<>(batchResponse.getKeys());
+            ConcurrentMap<String, ErrorResponse> failureList = new ConcurrentHashMap<>(batchResponse.getFailures());
+            return CompletableFuture.supplyAsync(() -> decryptBatchDocuments(encryptedDocuments, dekList)).thenCombine(
+                    CompletableFuture.supplyAsync(() -> getBatchFailures(failureList)),
+                    (s, f) -> new BatchResult<PlaintextDocument>(s, f));
+        }, encryptionExecutor);
+    }
+
+    // ======================================
+    // DEPRECATED METHODS
+    // ======================================
 
     /**
      * Encrypt documents in parallel. Will generate a new document encryption key
@@ -347,6 +533,8 @@ public final class TenantSecurityKMSClient {
      * @param metadata  Metadata about all of the documents being encrypted
      * @return List of EncryptedDocument instances in the same order (if ordered) as
      *         the plaintexts were provided.
+     * @deprecated Replaced by an updated version which takes a Map from document ID
+     *             to field to encrypt and supports partial success and failure
      */
     public CompletableFuture<List<EncryptedDocument>> encryptBatch(Collection<Map<String, byte[]>> documents,
             DocumentMetadata metadata) {
@@ -367,6 +555,8 @@ public final class TenantSecurityKMSClient {
      * @param metadata  Metadata about all of the documents being encrypted
      * @return List of EncryptedDocument instances in the same order (if ordered) as
      *         the plaintexts were provided.
+     * @deprecated Replaced by an updated version which takes a Map from document ID
+     *             to PlaintextDocument and supports partial success and failure
      */
     public CompletableFuture<List<EncryptedDocument>> encryptExistingBatch(Collection<PlaintextDocument> documents,
             DocumentMetadata metadata) {
@@ -374,27 +564,6 @@ public final class TenantSecurityKMSClient {
                 .map(plaintextDocument -> encrypt(plaintextDocument, metadata)).collect(Collectors.toList());
 
         return CompletableFutures.sequence(encryptOps);
-    }
-
-    /**
-     * Decrypt the provided EncryptedDocument. Decrypts the documents encrypted
-     * document key (EDEK) using the Tenant Security Proxy and uses it to decrypt
-     * and return the document bytes. The DEK is then discarded.
-     *
-     * @param encryptedDocument Document to decrypt which includes encrypted bytes
-     *                          as well as EDEK.
-     * @param metadata          Metadata about the document being decrypted.
-     * @return PlaintextDocument which contains each documents decrypted field
-     *         bytes.
-     */
-    public CompletableFuture<PlaintextDocument> decrypt(EncryptedDocument encryptedDocument,
-            DocumentMetadata metadata) {
-        return this.encryptionService.unwrapKey(encryptedDocument.getEdek(), metadata)
-                .thenApplyAsync(decryptedDocumentAESKey -> {
-                    Map<String, byte[]> decryptedFields = decryptFields(encryptedDocument.getEncryptedFields(),
-                            metadata, decryptedDocumentAESKey);
-                    return new PlaintextDocument(decryptedFields, encryptedDocument.getEdek());
-                });
     }
 
     /**
@@ -406,6 +575,8 @@ public final class TenantSecurityKMSClient {
      * @param metadata           Metadata to use for each decrypt operation.
      * @return List of PlaintextDocuments in the same order as provided (if
      *         ordered).
+     * @deprecated Replaced by an updated version which takes a Map from document ID
+     *             to EncryptedDocument and supports partial success and failure
      */
     public CompletableFuture<List<PlaintextDocument>> decryptBatch(Collection<EncryptedDocument> encryptedDocuments,
             DocumentMetadata metadata) {
