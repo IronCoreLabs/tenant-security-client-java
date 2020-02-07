@@ -15,6 +15,11 @@ jobs:
       - uses: actions/setup-node@v1.1.0
         with:
           version: 10.x
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
       - name: decrypt ironhide keys
         env:
           CI_KEYS_KEY: ${{ secrets.CI_KEYS_KEY }}
@@ -45,8 +50,6 @@ jobs:
           ref: refs/heads/master
           path: tenant-security-proxy
           token: ${{ secrets.GitHub_PAT }}
-      - name: use rust beta (remove once ironoxide is on stable)
-        run: rustup update beta && rustup default beta
       - name: cache cargo registry
         uses: actions/cache@v1
         with:
