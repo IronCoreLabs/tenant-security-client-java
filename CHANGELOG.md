@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.0.0
+
+- Deprecated the list based versions of `TenantSecurityKMSClient.decryptBatch` and `TenantSecurityKMSClient.encryptBatch` in favor of a Map based interface that allows for partial failure.
+
 ## v1.2.2
 
 - Deprecated `TenantSecurityKMSException.getErrorMessage` in favor of `getMessage` to make the full error message more accessible.
