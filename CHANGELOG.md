@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.0.0
+
+- Deprecated the list based versions of `TenantSecurityKMSClient.decryptBatch` and `TenantSecurityKMSClient.encryptBatch` in favor of a Map based interface that allows for partial failure.
+
+### Compatibility
+
+This version of the Tenant Security Java Client will only work with version `2.0.0-beta.0+` of the Tenant Security Proxy container.
+
 ## v1.2.2
 
 - Deprecated `TenantSecurityKMSException.getErrorMessage` in favor of `getMessage` to make the full error message more accessible.
