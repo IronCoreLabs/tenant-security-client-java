@@ -36,7 +36,7 @@ public class LocalRoundTrip {
         Map<String, byte[]> documentMap = getRoundtripDataToEncrypt();
 
         CompletableFuture<PlaintextDocument> roundtrip = TenantSecurityKMSClient
-                .create("http://localhost:7777", this.API_KEY).thenCompose(client -> {
+                .create(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT, this.API_KEY).thenCompose(client -> {
 
                     try {
                         return client.encrypt(documentMap, context).thenCompose(encryptedResults -> {

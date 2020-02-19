@@ -59,7 +59,7 @@ public class LocalBatch {
     public void oldBatchRoundtrip() throws Exception {
         DocumentMetadata context = new DocumentMetadata(this.TENANT_ID, "integrationTest", "sample");
 
-        TenantSecurityKMSClient client = new TenantSecurityKMSClient("http://localhost:7777", this.API_KEY);
+        TenantSecurityKMSClient client = new TenantSecurityKMSClient(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT, this.API_KEY);
 
         int batchSize = 25;
         int batchRepetitions = 50;
@@ -103,7 +103,7 @@ public class LocalBatch {
     public void newBatchRoundtrip() throws Exception {
         DocumentMetadata context = new DocumentMetadata(this.TENANT_ID, "integrationTest", "sample");
 
-        TenantSecurityKMSClient client = new TenantSecurityKMSClient("http://localhost:7777", this.API_KEY);
+        TenantSecurityKMSClient client = new TenantSecurityKMSClient(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT, this.API_KEY);
 
         int batchSize = 25;
         int batchRepetitions = 50;

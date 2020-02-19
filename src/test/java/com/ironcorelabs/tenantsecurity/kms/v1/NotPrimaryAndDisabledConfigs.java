@@ -54,7 +54,7 @@ public class NotPrimaryAndDisabledConfigs {
     }
 
     private CompletableFuture<TenantSecurityKMSClient> getClient() {
-        return TenantSecurityKMSClient.create("http://localhost:7777",
+        return TenantSecurityKMSClient.create(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT,
                 NotPrimaryAndDisabledConfigs.INTEGRATION_API_KEY);
     }
 
