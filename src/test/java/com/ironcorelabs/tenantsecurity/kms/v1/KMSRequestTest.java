@@ -48,7 +48,7 @@ public class KMSRequestTest {
 
     public void errorCodeWhenApiKeyIsWrong() throws Exception {
         CompletableFuture<EncryptedDocument> encrypt = TenantSecurityKMSClient
-                .create("http://localhost:7777", "wrongKey")
+                .create(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT, "wrongKey")
                 .thenCompose(client -> client.encrypt(getDocument(), getMetadata()));
 
         try {
@@ -67,7 +67,7 @@ public class KMSRequestTest {
         EncryptedDocument eDoc = new EncryptedDocument(documentMap, "d2hhdCBhIHdhc3RlIG9mIHRpbWUK");
 
         CompletableFuture<PlaintextDocument> decrypt = TenantSecurityKMSClient
-                .create("http://localhost:7777", NotPrimaryAndDisabledConfigs.INTEGRATION_API_KEY)
+                .create(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT, NotPrimaryAndDisabledConfigs.INTEGRATION_API_KEY)
                 .thenCompose(client -> client.decrypt(eDoc, getMetadata()));
 
         try {

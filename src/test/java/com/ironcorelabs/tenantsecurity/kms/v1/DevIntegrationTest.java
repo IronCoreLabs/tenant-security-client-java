@@ -56,7 +56,7 @@ public class DevIntegrationTest {
     }
 
     private CompletableFuture<TenantSecurityKMSClient> getClient() {
-        return TenantSecurityKMSClient.create("http://localhost:7777", this.INTEGRATION_API_KEY);
+        return TenantSecurityKMSClient.create(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT, this.INTEGRATION_API_KEY);
     }
 
     private Map<String, byte[]> getRoundtripDataToEncrypt() throws Exception {
