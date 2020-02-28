@@ -1,5 +1,7 @@
 package com.ironcorelabs.tenantsecurity.kms.v1;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
@@ -26,7 +28,7 @@ import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
  *
  * @author IronCore Labs
  */
-public final class TenantSecurityKMSClient {
+public final class TenantSecurityKMSClient implements Closeable {
     private static final String AES_ALGO = "AES/GCM/NoPadding";
     private static final int IV_BYTE_LENGTH = 12;
     private static final int GCM_TAG_BIT_LENGTH = 128;
@@ -45,7 +47,7 @@ public final class TenantSecurityKMSClient {
     /**
      * Default size of web request thread pool. Value value is 25.
      */
-    public static int DEFAULT_REQUEST_THREADPOOL_SIZE = 25;
+    public static int DEFAULT_REQUEST_THREADPOOL_SIZE = 50;
 
     /**
      * Default size of the threadpool used for AES encryptions/decryptions. Defaults
@@ -125,6 +127,11 @@ public final class TenantSecurityKMSClient {
     public TenantSecurityKMSClient(String tspDomain, String apiKey) throws Exception {
         this(tspDomain, apiKey, DEFAULT_REQUEST_THREADPOOL_SIZE, DEFAULT_AES_THREADPOOL_SIZE,
                 SecureRandom.getInstance("NativePRNGNonBlocking"));
+    }
+
+    public void close() throws IOException {
+        this.encryptionService.close();
+        this.encryptionExecutor.shutdown();
     }
 
     /**

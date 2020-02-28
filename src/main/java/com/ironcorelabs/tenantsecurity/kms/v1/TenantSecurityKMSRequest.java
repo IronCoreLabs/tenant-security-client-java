@@ -1,5 +1,7 @@
 package com.ironcorelabs.tenantsecurity.kms.v1;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -24,7 +26,7 @@ import com.google.api.client.json.jackson2.JacksonFactory;
  * Handles requests to the Tenant Security Proxy Docker image for wrapping and
  * unwrapping keys. Also works to parse out error codes on wrap/unwrap failures.
  */
-final class TenantSecurityKMSRequest {
+final class TenantSecurityKMSRequest implements Closeable {
     private static final HttpTransport HTTP_TRANSPORT = new NetHttpTransport();
     private static final JsonFactory JSON_FACTORY = new JacksonFactory();
     private static HttpRequestFactory requestFactory = HTTP_TRANSPORT.createRequestFactory((HttpRequest request) -> {
@@ -56,6 +58,10 @@ final class TenantSecurityKMSRequest {
         this.batchUnwrapEndpoint = new GenericUrl(tspApiPrefix + "document/batch-unwrap");
 
         this.webRequestExecutor = Executors.newFixedThreadPool(requestThreadSize);
+    }
+
+    public void close() throws IOException {
+        this.webRequestExecutor.shutdown();
     }
 
     /**
