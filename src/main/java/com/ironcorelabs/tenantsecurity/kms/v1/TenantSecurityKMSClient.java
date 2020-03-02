@@ -47,7 +47,7 @@ public final class TenantSecurityKMSClient implements Closeable {
     /**
      * Default size of web request thread pool. Value value is 25.
      */
-    public static int DEFAULT_REQUEST_THREADPOOL_SIZE = 50;
+    public static int DEFAULT_REQUEST_THREADPOOL_SIZE = 25;
 
     /**
      * Default size of the threadpool used for AES encryptions/decryptions. Defaults
