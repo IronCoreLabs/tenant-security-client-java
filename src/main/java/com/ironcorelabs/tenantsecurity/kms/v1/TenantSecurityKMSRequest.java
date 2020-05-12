@@ -8,7 +8,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
 import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpHeaders;
 import com.google.api.client.http.HttpRequest;
@@ -44,8 +43,9 @@ final class TenantSecurityKMSRequest implements Closeable {
     private final GenericUrl batchWrapEndpoint;
     private final GenericUrl unwrapEndpoint;
     private final GenericUrl batchUnwrapEndpoint;
+    private final int timeout;
 
-    TenantSecurityKMSRequest(String tspDomain, String apiKey, int requestThreadSize) {
+    TenantSecurityKMSRequest(String tspDomain, String apiKey, int requestThreadSize, int timeout) {
         HttpHeaders headers = new HttpHeaders();
         headers.put("Content-Type", "application/json");
         headers.put("Authorization", "cmk " + apiKey);
@@ -58,6 +58,7 @@ final class TenantSecurityKMSRequest implements Closeable {
         this.batchUnwrapEndpoint = new GenericUrl(tspApiPrefix + "document/batch-unwrap");
 
         this.webRequestExecutor = Executors.newFixedThreadPool(requestThreadSize);
+        this.timeout = timeout;
     }
 
     public void close() throws IOException {
@@ -74,6 +75,8 @@ final class TenantSecurityKMSRequest implements Closeable {
                 // user agent string and it will grow big enough to cause header overflow
                 // errors.
                 .setHeaders(this.httpHeaders.clone())
+                .setReadTimeout(this.timeout)
+                .setConnectTimeout(this.timeout)
                 // We want to parse out error codes, so don't throw when we get a non-200
                 // response code
                 .setThrowExceptionOnExecuteError(false);

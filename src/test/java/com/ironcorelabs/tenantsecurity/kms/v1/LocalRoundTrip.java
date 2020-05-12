@@ -1,14 +1,12 @@
 package com.ironcorelabs.tenantsecurity.kms.v1;
 
 import static org.testng.Assert.assertEquals;
-
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
-
 import org.testng.annotations.Test;
 
 @Test(groups = { "local-integration" })
