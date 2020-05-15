@@ -160,7 +160,7 @@ final class TenantSecurityKMSRequest implements Closeable {
         postData.put("encryptedDocumentKey", edek);
         String error = String.format(
             "Unable to make request to Tenant Security Proxy unwrap endpoint. Endpoint requested: %s",
-            this.wrapEndpoint);
+            this.unwrapEndpoint);
         return this.makeRequestAndParseFailure(this.unwrapEndpoint, postData, UnwrappedDocumentKey.class, error).thenApply(unwrapResponse -> {
             try{
                 return unwrapResponse.getDekBytes();

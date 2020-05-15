@@ -1,12 +1,16 @@
 # Changelog
 
+## v2.0.1
+
+- Fixed displayed URL in error message when TSP unwrap endpoint cannot be reached.
+
 ## v2.0.0
 
 - Deprecated the list based versions of `TenantSecurityKMSClient.decryptBatch` and `TenantSecurityKMSClient.encryptBatch` in favor of a Map based interface that allows for partial failure.
 
 ### Compatibility
 
-This version of the Tenant Security Java Client will only work with version `2.0.0-beta.0+` of the Tenant Security Proxy container.
+This version of the Tenant Security Java Client will only work with version `2.0.0+` of the Tenant Security Proxy container.
 
 ## v1.2.2
 
