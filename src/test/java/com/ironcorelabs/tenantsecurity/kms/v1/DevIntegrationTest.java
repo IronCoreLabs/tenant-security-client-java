@@ -54,9 +54,6 @@ public class DevIntegrationTest {
     }
 
     private CompletableFuture<TenantSecurityKMSClient> getClient() {
-        // return CompletableFutures.tryCatchNonFatal(
-        // () -> new TenantSecurityKMSClient(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT,
-        // this.INTEGRATION_API_KEY, 25, 25, 1));
         return TenantSecurityKMSClient.create(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT,
                 this.INTEGRATION_API_KEY);
     }
@@ -117,8 +114,7 @@ public class DevIntegrationTest {
                     return client.encrypt(updatedDoc, metadata)
                             .thenCompose(updatedEncryptedResults -> {
                                 // Attempt to decrypt the updated field with the key from the first
-                                // encrypt to
-                                // prove that that it still works
+                                // encrypt to prove that that it still works
                                 return client.decrypt(updatedEncryptedResults, metadata);
                             });
                 });
@@ -294,9 +290,8 @@ public class DevIntegrationTest {
                                     metadata)
                             .thenCompose(updatedEncryptedList -> {
                                 // Then merge the newly encrypted fields with the original row of
-                                // encrypted data
-                                // so we can verify that decryption works on all of them with the
-                                // same key
+                                // encrypted data so we can verify that decryption works on all of
+                                // them with the same key
                                 Map<String, byte[]> fullEncryptedFirstRow = new HashMap<>();
                                 fullEncryptedFirstRow
                                         .putAll(encryptedList.get(0).getEncryptedFields());
@@ -468,8 +463,7 @@ public class DevIntegrationTest {
                                     assertEquals(0, initialEncryptResults.getFailures().size());
                                     assertEquals(3, initialEncryptResults.getDocuments().size());
                                     // Then batch update a few pieces of data from each row with new
-                                    // data but the
-                                    // same key they used to encrypt
+                                    // data but the same key they used to encrypt
                                     PlaintextDocument user10Updates =
                                             new PlaintextDocument(newUser10, initialEncryptResults
                                                     .getDocuments().get("user10").getEdek());
@@ -491,9 +485,9 @@ public class DevIntegrationTest {
                                                 Map<String, EncryptedDocument> updateSuccesses =
                                                         batchUpdateResult.getDocuments();
                                                 // Then merge the newly encrypted fields with the
-                                                // original row of encrypted data
-                                                // so we can verify that decryption works on all of
-                                                // them with the same key
+                                                // original row of encrypted data so we can verify
+                                                // that decryption works on all of them with the
+                                                // same key
                                                 Map<String, byte[]> fullEncryptedUser10 =
                                                         new HashMap<>();
                                                 fullEncryptedUser10.putAll(initialEncryptResults
