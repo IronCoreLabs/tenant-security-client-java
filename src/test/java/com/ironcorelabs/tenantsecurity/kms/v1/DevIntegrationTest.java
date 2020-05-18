@@ -1,7 +1,6 @@
 package com.ironcorelabs.tenantsecurity.kms.v1;
 
 import static org.testng.Assert.assertEquals;
-
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -9,10 +8,9 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
-
 import org.testng.annotations.Test;
 
-@Test(groups = { "dev-integration" })
+@Test(groups = {"dev-integration"})
 public class DevIntegrationTest {
     private String GCP_TENANT_ID = "INTEGRATION-TEST-DEV1-GCP";
     private String AWS_TENANT_ID = "INTEGRATION-TEST-DEV1-AWS";
@@ -56,7 +54,8 @@ public class DevIntegrationTest {
     }
 
     private CompletableFuture<TenantSecurityKMSClient> getClient() {
-        return TenantSecurityKMSClient.create(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT, this.INTEGRATION_API_KEY);
+        return TenantSecurityKMSClient.create(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT,
+                this.INTEGRATION_API_KEY);
     }
 
     private Map<String, byte[]> getRoundtripDataToEncrypt() throws Exception {
@@ -70,7 +69,8 @@ public class DevIntegrationTest {
     private DocumentMetadata getRoundtripMetadata(String tenantID) {
         Map<String, String> arbData = new HashMap<>();
         arbData.put("thingOne", "valuetwo");
-        return new DocumentMetadata(tenantID, "requestingUserOrServiceID", "dataLabel", arbData, "requestID");
+        return new DocumentMetadata(tenantID, "requestingUserOrServiceID", "dataLabel", arbData,
+                "requestID");
     }
 
     public void isCiphertextEncryptedDocTest() throws Exception {
@@ -109,12 +109,14 @@ public class DevIntegrationTest {
         CompletableFuture<PlaintextDocument> roundtrip = getClient().thenCompose(client -> {
             try {
                 return client.encrypt(originalFields, metadata).thenCompose(firstEncryptResult -> {
-                    PlaintextDocument updatedDoc = new PlaintextDocument(updatedFields, firstEncryptResult.getEdek());
-                    return client.encrypt(updatedDoc, metadata).thenCompose(updatedEncryptedResults -> {
-                        // Attempt to decrypt the updated field with the key from the first encrypt to
-                        // prove that that it still works
-                        return client.decrypt(updatedEncryptedResults, metadata);
-                    });
+                    PlaintextDocument updatedDoc =
+                            new PlaintextDocument(updatedFields, firstEncryptResult.getEdek());
+                    return client.encrypt(updatedDoc, metadata)
+                            .thenCompose(updatedEncryptedResults -> {
+                                // Attempt to decrypt the updated field with the key from the first
+                                // encrypt to prove that that it still works
+                                return client.decrypt(updatedEncryptedResults, metadata);
+                            });
                 });
             } catch (Exception e) {
                 throw new CompletionException(e);
@@ -203,7 +205,8 @@ public class DevIntegrationTest {
 
         Map<String, byte[]> fifthRow = getRoundtripDataToEncrypt();
 
-        List<Map<String, byte[]>> rows = Arrays.asList(firstRow, secondRow, thirdRow, fourthRow, fifthRow);
+        List<Map<String, byte[]>> rows =
+                Arrays.asList(firstRow, secondRow, thirdRow, fourthRow, fifthRow);
 
         CompletableFuture<List<PlaintextDocument>> roundtrip = getClient().thenCompose(client -> {
             try {
@@ -276,29 +279,39 @@ public class DevIntegrationTest {
                 return client.encryptBatch(rows, metadata).thenCompose(encryptedList -> {
                     // Then batch update a few pieces of data from each row with new data but the
                     // same key they used to encrypt
-                    PlaintextDocument firstRowUpdates = new PlaintextDocument(newFirstRow,
-                            encryptedList.get(0).getEdek());
-                    PlaintextDocument thirdRowUpdates = new PlaintextDocument(newThirdRow,
-                            encryptedList.get(2).getEdek());
+                    PlaintextDocument firstRowUpdates =
+                            new PlaintextDocument(newFirstRow, encryptedList.get(0).getEdek());
+                    PlaintextDocument thirdRowUpdates =
+                            new PlaintextDocument(newThirdRow, encryptedList.get(2).getEdek());
 
                     // And batch encrypt those new fields
-                    return client.encryptExistingBatch(Arrays.asList(firstRowUpdates, thirdRowUpdates), metadata)
+                    return client
+                            .encryptExistingBatch(Arrays.asList(firstRowUpdates, thirdRowUpdates),
+                                    metadata)
                             .thenCompose(updatedEncryptedList -> {
-                                // Then merge the newly encrypted fields with the original row of encrypted data
-                                // so we can verify that decryption works on all of them with the same key
+                                // Then merge the newly encrypted fields with the original row of
+                                // encrypted data so we can verify that decryption works on all of
+                                // them with the same key
                                 Map<String, byte[]> fullEncryptedFirstRow = new HashMap<>();
-                                fullEncryptedFirstRow.putAll(encryptedList.get(0).getEncryptedFields());
-                                fullEncryptedFirstRow.putAll(updatedEncryptedList.get(0).getEncryptedFields());
+                                fullEncryptedFirstRow
+                                        .putAll(encryptedList.get(0).getEncryptedFields());
+                                fullEncryptedFirstRow
+                                        .putAll(updatedEncryptedList.get(0).getEncryptedFields());
 
                                 Map<String, byte[]> fullEncryptedThirdRow = new HashMap<>();
-                                fullEncryptedThirdRow.putAll(encryptedList.get(2).getEncryptedFields());
-                                fullEncryptedThirdRow.putAll(updatedEncryptedList.get(1).getEncryptedFields());
+                                fullEncryptedThirdRow
+                                        .putAll(encryptedList.get(2).getEncryptedFields());
+                                fullEncryptedThirdRow
+                                        .putAll(updatedEncryptedList.get(1).getEncryptedFields());
 
                                 List<EncryptedDocument> mergedEncryptedList = Arrays.asList(
-                                        new EncryptedDocument(fullEncryptedFirstRow, encryptedList.get(0).getEdek()),
+                                        new EncryptedDocument(fullEncryptedFirstRow,
+                                                encryptedList.get(0).getEdek()),
                                         encryptedList.get(1),
-                                        new EncryptedDocument(fullEncryptedThirdRow, encryptedList.get(2).getEdek()));
-                                // Finally decrypt the whole enchilada so we can verify the roundtrip below
+                                        new EncryptedDocument(fullEncryptedThirdRow,
+                                                encryptedList.get(2).getEdek()));
+                                // Finally decrypt the whole enchilada so we can verify the
+                                // roundtrip below
                                 return client.decryptBatch(mergedEncryptedList, metadata);
                             });
                 });
@@ -342,8 +355,8 @@ public class DevIntegrationTest {
 
         // Encrypt the document 50 times. Allows us to somewhat stress-test the TSP and
         // the Java client
-        List<Map<String, byte[]>> rows = Arrays.stream(new int[50]).mapToObj(_nope -> document)
-                .collect(Collectors.toList());
+        List<Map<String, byte[]>> rows =
+                Arrays.stream(new int[50]).mapToObj(_nope -> document).collect(Collectors.toList());
 
         CompletableFuture<List<PlaintextDocument>> roundtrip = getClient().thenCompose(client -> {
             try {
@@ -374,17 +387,18 @@ public class DevIntegrationTest {
         batchRows.put("secondRow", secondRow);
         batchRows.put("thirdRow", thirdRow);
 
-        CompletableFuture<BatchResult<PlaintextDocument>> roundtrip = getClient().thenCompose(client -> {
-            try {
-                return client.encryptBatch(batchRows, metadata).thenCompose(batchResult -> {
-                    assertEquals(0, batchResult.getFailures().size());
-                    assertEquals(3, batchResult.getDocuments().size());
-                    return client.decryptBatch(batchResult.getDocuments(), metadata);
+        CompletableFuture<BatchResult<PlaintextDocument>> roundtrip =
+                getClient().thenCompose(client -> {
+                    try {
+                        return client.encryptBatch(batchRows, metadata).thenCompose(batchResult -> {
+                            assertEquals(0, batchResult.getFailures().size());
+                            assertEquals(3, batchResult.getDocuments().size());
+                            return client.decryptBatch(batchResult.getDocuments(), metadata);
+                        });
+                    } catch (Exception e) {
+                        throw new CompletionException(e);
+                    }
                 });
-            } catch (Exception e) {
-                throw new CompletionException(e);
-            }
-        });
 
         BatchResult<PlaintextDocument> decryptedBatch = roundtrip.get();
         assertEquals(0, decryptedBatch.getFailures().size());
@@ -440,52 +454,79 @@ public class DevIntegrationTest {
         batchRows.put("user20", user20);
         batchRows.put("user30", user30);
 
-        CompletableFuture<BatchResult<PlaintextDocument>> roundtrip = getClient().thenCompose(client -> {
-            try {
-                // First encrypt the original list of documents via batch operation
-                return client.encryptBatch(batchRows, metadata).thenCompose(initialEncryptResults -> {
-                    assertEquals(0, initialEncryptResults.getFailures().size());
-                    assertEquals(3, initialEncryptResults.getDocuments().size());
-                    // Then batch update a few pieces of data from each row with new data but the
-                    // same key they used to encrypt
-                    PlaintextDocument user10Updates = new PlaintextDocument(newUser10,
-                        initialEncryptResults.getDocuments().get("user10").getEdek());
-                    PlaintextDocument user30Updates = new PlaintextDocument(newUser30,
-                        initialEncryptResults.getDocuments().get("user30").getEdek());
+        CompletableFuture<BatchResult<PlaintextDocument>> roundtrip =
+                getClient().thenCompose(client -> {
+                    try {
+                        // First encrypt the original list of documents via batch operation
+                        return client.encryptBatch(batchRows, metadata)
+                                .thenCompose(initialEncryptResults -> {
+                                    assertEquals(0, initialEncryptResults.getFailures().size());
+                                    assertEquals(3, initialEncryptResults.getDocuments().size());
+                                    // Then batch update a few pieces of data from each row with new
+                                    // data but the same key they used to encrypt
+                                    PlaintextDocument user10Updates =
+                                            new PlaintextDocument(newUser10, initialEncryptResults
+                                                    .getDocuments().get("user10").getEdek());
+                                    PlaintextDocument user30Updates =
+                                            new PlaintextDocument(newUser30, initialEncryptResults
+                                                    .getDocuments().get("user30").getEdek());
 
-                    Map<String, PlaintextDocument> updateBatch = new HashMap<>();
-                    updateBatch.put("user10", user10Updates);
-                    updateBatch.put("user30", user30Updates);
+                                    Map<String, PlaintextDocument> updateBatch = new HashMap<>();
+                                    updateBatch.put("user10", user10Updates);
+                                    updateBatch.put("user30", user30Updates);
 
-                    // And batch encrypt those new fields
-                    return client.encryptExistingBatch(updateBatch, metadata).thenCompose(batchUpdateResult -> {
-                        assertEquals(0, batchUpdateResult.getFailures().size());
-                        assertEquals(2, batchUpdateResult.getDocuments().size());
-                        Map<String, EncryptedDocument> updateSuccesses = batchUpdateResult.getDocuments();
-                        // Then merge the newly encrypted fields with the original row of encrypted data
-                        // so we can verify that decryption works on all of them with the same key
-                        Map<String, byte[]> fullEncryptedUser10 = new HashMap<>();
-                        fullEncryptedUser10.putAll(initialEncryptResults.getDocuments().get("user10").getEncryptedFields());
-                        fullEncryptedUser10.putAll(updateSuccesses.get("user10").getEncryptedFields());
+                                    // And batch encrypt those new fields
+                                    return client.encryptExistingBatch(updateBatch, metadata)
+                                            .thenCompose(batchUpdateResult -> {
+                                                assertEquals(0,
+                                                        batchUpdateResult.getFailures().size());
+                                                assertEquals(2,
+                                                        batchUpdateResult.getDocuments().size());
+                                                Map<String, EncryptedDocument> updateSuccesses =
+                                                        batchUpdateResult.getDocuments();
+                                                // Then merge the newly encrypted fields with the
+                                                // original row of encrypted data so we can verify
+                                                // that decryption works on all of them with the
+                                                // same key
+                                                Map<String, byte[]> fullEncryptedUser10 =
+                                                        new HashMap<>();
+                                                fullEncryptedUser10.putAll(initialEncryptResults
+                                                        .getDocuments().get("user10")
+                                                        .getEncryptedFields());
+                                                fullEncryptedUser10.putAll(updateSuccesses
+                                                        .get("user10").getEncryptedFields());
 
-                        Map<String, byte[]> fullEncryptedUser30 = new HashMap<>();
-                        fullEncryptedUser30.putAll(initialEncryptResults.getDocuments().get("user30").getEncryptedFields());
-                        fullEncryptedUser30.putAll(updateSuccesses.get("user30").getEncryptedFields());
+                                                Map<String, byte[]> fullEncryptedUser30 =
+                                                        new HashMap<>();
+                                                fullEncryptedUser30.putAll(initialEncryptResults
+                                                        .getDocuments().get("user30")
+                                                        .getEncryptedFields());
+                                                fullEncryptedUser30.putAll(updateSuccesses
+                                                        .get("user30").getEncryptedFields());
 
-                        Map<String, EncryptedDocument> mergedEncryptedList = new HashMap<>();
-                        mergedEncryptedList.put("user10",
-                                new EncryptedDocument(fullEncryptedUser10, initialEncryptResults.getDocuments().get("user10").getEdek()));
-                        mergedEncryptedList.put("user20", initialEncryptResults.getDocuments().get("user20"));
-                        mergedEncryptedList.put("user30",
-                                new EncryptedDocument(fullEncryptedUser30, initialEncryptResults.getDocuments().get("user30").getEdek()));
-                        // Finally decrypt the whole enchilada so we can verify the roundtrip below
-                        return client.decryptBatch(mergedEncryptedList, metadata);
-                    });
+                                                Map<String, EncryptedDocument> mergedEncryptedList =
+                                                        new HashMap<>();
+                                                mergedEncryptedList.put("user10",
+                                                        new EncryptedDocument(fullEncryptedUser10,
+                                                                initialEncryptResults.getDocuments()
+                                                                        .get("user10").getEdek()));
+                                                mergedEncryptedList.put("user20",
+                                                        initialEncryptResults.getDocuments()
+                                                                .get("user20"));
+                                                mergedEncryptedList.put("user30",
+                                                        new EncryptedDocument(fullEncryptedUser30,
+                                                                initialEncryptResults.getDocuments()
+                                                                        .get("user30").getEdek()));
+                                                // Finally decrypt the whole enchilada so we can
+                                                // verify the roundtrip below
+                                                return client.decryptBatch(mergedEncryptedList,
+                                                        metadata);
+                                            });
+                                });
+                    } catch (Exception e) {
+                        throw new CompletionException(e);
+                    }
                 });
-            } catch (Exception e) {
-                throw new CompletionException(e);
-            }
-        });
 
         BatchResult<PlaintextDocument> fullBatchResult = roundtrip.get();
         Map<String, PlaintextDocument> successes = fullBatchResult.getDocuments();
@@ -527,25 +568,29 @@ public class DevIntegrationTest {
 
         // Encrypt the document 50 times. Allows us to somewhat stress-test the TSP and
         // the Java client
-        List<Map<String, byte[]>> rows = Arrays.stream(new int[batchSize]).mapToObj(_nope -> document)
-                .collect(Collectors.toList());
+        List<Map<String, byte[]>> rows = Arrays.stream(new int[batchSize])
+                .mapToObj(_nope -> document).collect(Collectors.toList());
 
         Map<String, Map<String, byte[]>> batch = new HashMap<>();
-        for(int i=0; i< rows.size(); i++){
+        for (int i = 0; i < rows.size(); i++) {
             batch.put(Integer.toString(i), rows.get(i));
         }
 
-        CompletableFuture<BatchResult<PlaintextDocument>> roundtrip = getClient().thenCompose(client -> {
-            try {
-                return client.encryptBatch(batch, metadata).thenCompose(batchEncryptedResults -> {
-                    assertEquals(0, batchEncryptedResults.getFailures().size());
-                    assertEquals(batchSize, batchEncryptedResults.getDocuments().size());
-                    return client.decryptBatch(batchEncryptedResults.getDocuments(), metadata);
+        CompletableFuture<BatchResult<PlaintextDocument>> roundtrip =
+                getClient().thenCompose(client -> {
+                    try {
+                        return client.encryptBatch(batch, metadata)
+                                .thenCompose(batchEncryptedResults -> {
+                                    assertEquals(0, batchEncryptedResults.getFailures().size());
+                                    assertEquals(batchSize,
+                                            batchEncryptedResults.getDocuments().size());
+                                    return client.decryptBatch(batchEncryptedResults.getDocuments(),
+                                            metadata);
+                                });
+                    } catch (Exception e) {
+                        throw new CompletionException(e);
+                    }
                 });
-            } catch (Exception e) {
-                throw new CompletionException(e);
-            }
-        });
 
         BatchResult<PlaintextDocument> decryptedValues = roundtrip.get();
         assertEquals(0, decryptedValues.getFailures().size());
