@@ -2,7 +2,7 @@
 
 ## v2.0.2
 
-- Added a `timeout` option to the `TenantSecurityKMSClient` this timeout is applied to the connection negotiaton _and_ the read from the TSP, so the worst case of a very unstable connection is 2x the `timout` value.
+- Added a `timeout` option to the `TenantSecurityKMSClient` this timeout is applied to the connection negotiaton _and_ the read from the TSP, so the worst case of a very unstable connection is 2x the `timeout` value.
 
 ## v2.0.1
 
