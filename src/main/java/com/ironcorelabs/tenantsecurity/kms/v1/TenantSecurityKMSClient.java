@@ -92,8 +92,7 @@ public final class TenantSecurityKMSClient implements Closeable {
      * @param apiKey            Key to use for requests to the Tenant Security Proxy.
      * @param requestThreadSize Number of threads to use for fixed-size web request thread pool
      * @param aesThreadSize     Number of threads to use for fixed-size AES operations threadpool
-     * @param timeout           Request read and connect timeout in ms. Applies to TSP KMS calls as
-     *                          well.
+     * @param timeout           Request to TSP read and connect timeout in ms.
      * 
      * @throws Exception If the provided domain is invalid.
      */
@@ -131,8 +130,7 @@ public final class TenantSecurityKMSClient implements Closeable {
      * @param aesThreadSize     Number of threads to use for fixed-size AES operations threadpool
      * @param randomGen         Instance of SecureRandom to use for PRNG when performing encryption
      *                          operations.
-     * @param timeout           Request read and connect timeout in ms. Applies to TSP KMS calls as
-     *                          well.
+     * @param timeout           Request to TSP read and connect timeout in ms.
      * @throws Exception If the provided domain is invalid or the provided SecureRandom instance is
      *                   not set.
      */
@@ -176,7 +174,6 @@ public final class TenantSecurityKMSClient implements Closeable {
      *
      * @param tspDomain Domain where the Tenant Security Proxy is running.
      * @param apiKey    Key to use for requests to the Tenant Security Proxy.
-     * @param timeout   Request read and connect timeout in ms. Applies to TSP KMS calls as well.
      * @return CompletableFuture that resolves in a instance of the TenantSecurityKMSClient class.
      */
     public static CompletableFuture<TenantSecurityKMSClient> create(String tspDomain,
