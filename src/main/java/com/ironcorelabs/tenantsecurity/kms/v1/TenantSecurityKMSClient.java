@@ -93,7 +93,7 @@ public final class TenantSecurityKMSClient implements Closeable {
      * @param requestThreadSize Number of threads to use for fixed-size web request thread pool
      * @param aesThreadSize     Number of threads to use for fixed-size AES operations threadpool
      * @param timeout           Request to TSP read and connect timeout in ms.
-     * 
+     *
      * @throws Exception If the provided domain is invalid.
      */
     public TenantSecurityKMSClient(String tspDomain, String apiKey, int requestThreadSize,
@@ -237,13 +237,12 @@ public final class TenantSecurityKMSClient implements Closeable {
      * @param bytes bytes to be checked
      */
     public static boolean isCiphertext(byte[] bytes) {
-        // Header size is currently always 0 for CMK encrypted docs. Expect at least one
-        // byte following the header that would have been encrypted.
-        // whenever header size is not 0, this should include a check that
-        // bytes.length > META_LENGTH + headerSize
+        // Header size is variable for CMK encrypted docs depending on whether
+        // the header is present. Expect at least one byte following the header
+        // that would have been encrypted.
         return bytes.length > DOCUMENT_HEADER_META_LENGTH
                 && bytes[0] == CURRENT_DOCUMENT_HEADER_VERSION && containsIroncoreMagic(bytes)
-                && getHeaderSize(bytes) == 0;
+                && getHeaderSize(bytes) >= 0;
     }
 
     /**
