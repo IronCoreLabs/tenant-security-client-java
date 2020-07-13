@@ -9,6 +9,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 import org.testng.annotations.Test;
+import java.util.Base64;
 
 @Test(groups = {"dev-integration"})
 public class DevIntegrationTest {
@@ -595,5 +596,27 @@ public class DevIntegrationTest {
         BatchResult<PlaintextDocument> decryptedValues = roundtrip.get();
         assertEquals(0, decryptedValues.getFailures().size());
         assertEquals(batchSize, decryptedValues.getDocuments().size());
+    }
+
+    public void leasedDataTest() throws Exception {
+        DocumentMetadata metadata = getRoundtripMetadata(this.GCP_TENANT_ID);
+
+        String leasedDocumentEdek = "Cr8BCjA7nnuAiXpD0Jkjc6mOBgcSyxcjFYX813WQhhYg0oKnsDJTmeyAaLs3t9pzkR6mU9cQ7AMY3gQiDCEN6aQFtglBZ0DX7yp3CnUKcAokABW+8Gfu/FSC8WQTqxw528aQXwrpvY0MjlHurZJ6yHx9S/2zEkgAs0w57oTuIHzVmauLGDi/S9zCQH20dezcc/jtw/nqCDnAtAPSB9m17YvGOVpN5xO8960C86NA4AJCoVJ291YW9OkIKto48/YQ7AM=";
+        String leasedDocumentBytes = "A0lST04AOwocjKi8E65AAxBCqUjeSqQDc7veZVQehempBfsABBobChlJTlRFR1JBVElPTi1URVNULURFVjEtR0NQbZ+1yhYOoCNdtV+VVTMTUfAQm1FdqtGyjqeE7iYxfW9TKwTc2C0=";
+
+        Map<String, byte[]> documentMap = new HashMap<>();
+        documentMap.put("doc", Base64.getDecoder().decode(leasedDocumentBytes));
+        EncryptedDocument leasedDoc = new EncryptedDocument(documentMap, leasedDocumentEdek);
+
+        CompletableFuture<PlaintextDocument> roundtrip = getClient().thenCompose(client -> {
+            try {
+                return client.decrypt(leasedDoc, metadata);
+            } catch (Exception e) {
+                throw new CompletionException(e);
+            }
+        });
+
+        Map<String, byte[]> decryptedValuesMap = roundtrip.get().getDecryptedFields();
+        assertEqualBytes(decryptedValuesMap.get("doc"), "new daters".getBytes("UTF-8"));
     }
 }
