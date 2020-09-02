@@ -15,22 +15,22 @@ import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.http.HttpResponse;
 import com.google.api.client.http.HttpStatusCodes;
 import com.google.api.client.http.HttpTransport;
+import com.google.api.client.http.apache.ApacheHttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.http.json.JsonHttpContent;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.JsonObjectParser;
 import com.google.api.client.json.jackson2.JacksonFactory;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 
 /**
  * Handles requests to the Tenant Security Proxy Docker image for wrapping and
  * unwrapping keys. Also works to parse out error codes on wrap/unwrap failures.
  */
 final class TenantSecurityKMSRequest implements Closeable {
-    private static final HttpTransport HTTP_TRANSPORT = new NetHttpTransport();
     private static final JsonFactory JSON_FACTORY = new JacksonFactory();
-    private static HttpRequestFactory requestFactory = HTTP_TRANSPORT.createRequestFactory((HttpRequest request) -> {
-        request.setParser(new JsonObjectParser(JSON_FACTORY));
-    });
 
     // Fixed sized thread pool for web requests. Limit the amount of parallel web
     // requests that we let go out at any given time. We don't want to DoS our
@@ -43,6 +43,7 @@ final class TenantSecurityKMSRequest implements Closeable {
     private final GenericUrl batchWrapEndpoint;
     private final GenericUrl unwrapEndpoint;
     private final GenericUrl batchUnwrapEndpoint;
+    private final HttpRequestFactory requestFactory;
     private final int timeout;
 
     TenantSecurityKMSRequest(String tspDomain, String apiKey, int requestThreadSize, int timeout) {
@@ -58,6 +59,7 @@ final class TenantSecurityKMSRequest implements Closeable {
         this.batchUnwrapEndpoint = new GenericUrl(tspApiPrefix + "document/batch-unwrap");
 
         this.webRequestExecutor = Executors.newFixedThreadPool(requestThreadSize);
+        this.requestFactory = provideHttpRequestFactory(requestThreadSize, requestThreadSize);
         this.timeout = timeout;
     }
 
@@ -133,6 +135,7 @@ final class TenantSecurityKMSRequest implements Closeable {
      * Request wrap endpoint to generate a DEK and EDEK.
      */
     CompletableFuture<WrappedDocumentKey> wrapKey(DocumentMetadata metadata) {
+        System.out.println("IN WRAP KEY");
         Map<String, Object> postData = metadata.getAsPostData();
         String error = String.format(
             "Unable to make request to Tenant Security Proxy wrap endpoint. Endpoint requested: %s",
@@ -141,7 +144,7 @@ final class TenantSecurityKMSRequest implements Closeable {
     }
 
     /**
-     * Request batch wrap endpoint to generate the provided nuymber of DEK/EDEK pairs.
+     * Request batch wrap endpoint to generate the provided number of DEK/EDEK pairs.
      */
     CompletableFuture<BatchWrappedDocumentKeys> batchWrapKeys(Collection<String> documentIds, DocumentMetadata metadata) {
         Map<String, Object> postData = metadata.getAsPostData();
@@ -186,5 +189,30 @@ final class TenantSecurityKMSRequest implements Closeable {
             "Unable to make request to Tenant Security Proxy batch unwrap endpoint. Endpoint requested: %s",
             this.batchWrapEndpoint);
         return this.makeRequestAndParseFailure(this.batchUnwrapEndpoint, postData, BatchUnwrappedDocumentKeys.class, error);
+    }
+
+    /**
+     * Create the factory for http requests.
+     * The main reason for this is to provide connection pooling for situations where large numbers of
+     * requests are desired.
+     *
+     * @param maxConnections        global max connections
+     * @param maxRouteConnections   max connections for a single HTTP endpoint
+     * @return HttpRequestFactory with connection pooling enabled.
+     */
+    static HttpRequestFactory provideHttpRequestFactory(int maxConnections, int maxRouteConnections) {
+        final PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
+        // Increase max total connections
+        cm.setMaxTotal(maxConnections);
+        // Increase default max connection per route
+        cm.setDefaultMaxPerRoute(maxRouteConnections);
+
+        final CloseableHttpClient httpClient = HttpClients
+                .createMinimal(cm);
+        final HttpTransport httpTransport = new ApacheHttpTransport(httpClient);
+
+        return httpTransport.createRequestFactory((HttpRequest request) -> {
+            request.setParser(new JsonObjectParser(JSON_FACTORY));
+        });
     }
 }

@@ -6,7 +6,7 @@
   <groupId>com.ironcorelabs</groupId>
   <artifactId>tenant-security-java</artifactId>
   <packaging>jar</packaging>
-  <version>2.0.2</version>
+  <version>2.0.3</version>
   <name>tenant-security-java</name>
   <url>https://ironcorelabs.com/docs</url>
   <description>Java client library for the IronCore Labs Tenant Security Proxy.</description>
@@ -54,7 +54,7 @@
     <dependency>
       <groupId>com.google.http-client</groupId>
       <artifactId>google-http-client-jackson2</artifactId>
-      <version>1.28.0</version>
+      <version>1.36.0</version>
     </dependency>
     <dependency>
       <groupId>org.testng</groupId>
@@ -62,7 +62,13 @@
       <version>6.14.2</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient</artifactId>
+      <version>4.5.12</version>
+    </dependency>
   </dependencies>
+
 
   <build>
     <plugins>
