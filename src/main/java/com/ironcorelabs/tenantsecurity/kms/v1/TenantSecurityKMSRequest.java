@@ -135,7 +135,6 @@ final class TenantSecurityKMSRequest implements Closeable {
      * Request wrap endpoint to generate a DEK and EDEK.
      */
     CompletableFuture<WrappedDocumentKey> wrapKey(DocumentMetadata metadata) {
-        System.out.println("IN WRAP KEY");
         Map<String, Object> postData = metadata.getAsPostData();
         String error = String.format(
             "Unable to make request to Tenant Security Proxy wrap endpoint. Endpoint requested: %s",
