@@ -7,13 +7,12 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
-
 import org.testng.annotations.Test;
 
 @Test(groups = { "local-batch-integration" })
 public class LocalBatch {
-    private String TENANT_ID = "DKDNG-ET-EN93J";
-    private String API_KEY = "IF7RlyMTXO3dTP5s";
+    private String TENANT_ID = "";
+    private String API_KEY = "";
 
     private Map<String, byte[]> getRoundtripDataToEncrypt() {
         Map<String, byte[]> documentMap = new HashMap<>();

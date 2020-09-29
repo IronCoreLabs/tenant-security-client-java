@@ -18,6 +18,8 @@ import java.util.stream.Collectors;
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import com.ironcorelabs.tenantsecurity.logdriver.v1.EventMetadata;
+import com.ironcorelabs.tenantsecurity.logdriver.v1.SecurityEvent;
 import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
 
 /**
@@ -564,6 +566,17 @@ public final class TenantSecurityKMSClient implements Closeable {
                                             .supplyAsync(() -> getBatchFailures(failureList)),
                                     (s, f) -> new BatchResult<PlaintextDocument>(s, f));
                 }, encryptionExecutor);
+    }
+
+    /**
+     * Send the provided security event to the TSP to be logged and analyzed.
+     * 
+     * @param event    Security event that represents the action that took place.
+     * @param metadata Metadata that provides additional context about the event.
+     * @return TODO based on the response we decide on the endpoint giving
+     */
+    public CompletableFuture<Void> logSecurityEvent(SecurityEvent event, EventMetadata metadata) {
+        return this.encryptionService.logSecurityEvent(event, metadata);
     }
 
     // ======================================

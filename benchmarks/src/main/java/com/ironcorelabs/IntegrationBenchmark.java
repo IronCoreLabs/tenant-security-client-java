@@ -38,8 +38,8 @@ public class IntegrationBenchmark {
         cfM.put("attachment_name", "ladies_first.mp3");
         customFields = Collections.unmodifiableMap(cfM);
     }
-    private static final DocumentMetadata context = new DocumentMetadata(TENANT_ID, "benchmark", "sample", customFields,
-            "customRayID");
+    private static final DocumentMetadata context =
+            new DocumentMetadata(TENANT_ID, "benchmark", "sample", customFields, "customRayID");
     private static final Map<String, byte[]> documentMap;
     static {
         Map<String, byte[]> dM = new HashMap<>();
@@ -68,8 +68,8 @@ public class IntegrationBenchmark {
     @Benchmark
     public void integrationRoundtrip(Blackhole blackhole) {
         try {
-            CompletableFuture<PlaintextDocument> roundtrip = client.encrypt(documentMap, context)
-                    .thenCompose(encryptedResults -> {
+            CompletableFuture<PlaintextDocument> roundtrip =
+                    client.encrypt(documentMap, context).thenCompose(encryptedResults -> {
                         return client.decrypt(encryptedResults, context);
                     });
             Map<String, byte[]> decryptedValuesMap = roundtrip.get().getDecryptedFields();

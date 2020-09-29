@@ -9,7 +9,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import org.testng.annotations.Test;
 
-@Test(groups = { "local-integration" })
+@Test(groups = {"local-integration"})
 public class LocalRoundTrip {
     private String TENANT_ID = "";
     private String API_KEY = "";
@@ -30,33 +30,36 @@ public class LocalRoundTrip {
         Map<String, String> customFields = new HashMap<>();
         customFields.put("org_name", "Cisco");
         customFields.put("attachment_name", "thongsong.mp3");
-        DocumentMetadata context = new DocumentMetadata(this.TENANT_ID, "integrationTest", "sample", customFields, "customRayID");
+        DocumentMetadata context = new DocumentMetadata(this.TENANT_ID, "integrationTest", "sample",
+                customFields, "customRayID");
         Map<String, byte[]> documentMap = getRoundtripDataToEncrypt();
 
         CompletableFuture<PlaintextDocument> roundtrip = TenantSecurityKMSClient
-                .create(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT, this.API_KEY).thenCompose(client -> {
+                .create(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT, this.API_KEY)
+                .thenCompose(client -> {
 
                     try {
-                        return client.encrypt(documentMap, context).thenCompose(encryptedResults -> {
-                            System.out.println(encryptedResults.getEdek());
-                            Map<String, byte[]> fields = encryptedResults.getEncryptedFields();
-                            System.out.println(Arrays.toString(fields.get("doc1")));
-                            System.out.println(Arrays.toString(fields.get("doc2")));
-                            System.out.println(Arrays.toString(fields.get("doc3")));
-                            return client.decrypt(encryptedResults, context);
-                        });
+                        return client.encrypt(documentMap, context)
+                                .thenCompose(encryptedResults -> {
+                                    System.out.println(encryptedResults.getEdek());
+                                    Map<String, byte[]> fields =
+                                            encryptedResults.getEncryptedFields();
+                                    System.out.println(Arrays.toString(fields.get("doc1")));
+                                    System.out.println(Arrays.toString(fields.get("doc2")));
+                                    System.out.println(Arrays.toString(fields.get("doc3")));
+                                    return client.decrypt(encryptedResults, context);
+                                });
                     } catch (Exception e) {
                         throw new CompletionException(e);
                     }
                 });
 
-        try{
+        try {
             Map<String, byte[]> decryptedValuesMap = roundtrip.get().getDecryptedFields();
             assertEqualBytes(decryptedValuesMap.get("doc1"), documentMap.get("doc1"));
             assertEqualBytes(decryptedValuesMap.get("doc2"), documentMap.get("doc2"));
             assertEqualBytes(decryptedValuesMap.get("doc3"), documentMap.get("doc3"));
-        }
-        catch(ExecutionException e){
+        } catch (ExecutionException e) {
             if (e.getCause() instanceof TenantSecurityKMSException) {
                 TenantSecurityKMSException kmsError = (TenantSecurityKMSException) e.getCause();
                 TenantSecurityKMSErrorCodes errorCode = kmsError.getErrorCode();

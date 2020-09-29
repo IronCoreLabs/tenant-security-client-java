@@ -1,40 +1,43 @@
-package com.ironcorelabs.tenantsecurity.kms.v1;
+package com.ironcorelabs.tenantsecurity.logdriver.v1;
 
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Holds metadata fields as part of an encrypted document. Each encrypted document will have
- * metadata that associates it to a tenant ID, which service is accessing the data, it's
- * classification, as well as optional fields for other arbitrary key/value pairs and a request ID
- * to send to the Tenant Security Proxy.
+ * Holds metadata fields as part of a security event. Each event will have metadata that associates
+ * it to a tenant ID, which service is accessing the data, it's classification, as well as optional
+ * fields for other arbitrary key/value pairs and a request ID to send to the Tenant Security Proxy.
  */
-public class DocumentMetadata {
+public class EventMetadata {
     private final String tenantId;
     private final String requestingUserOrServiceId;
     private final String requestId;
     private final String dataLabel;
     private final String sourceIp;
     private final String objectId;
+    private final long timestampMillis;
     private final Map<String, String> otherData;
 
     /**
-     * Constructor for DocumentMetadata class which contains arbitrary key/value pairs and a unique
+     * Constructor for EventMetadata class which contains arbitrary key/value pairs and a unique
      * request ID to send to the Tenant Security Proxy.
      *
      * @param tenantId                  Unique ID of tenant that is performing the operation.
-     * @param requestingUserOrServiceId Unique ID of user/service that is processing data.
-     * @param dataLabel                 Classification of data being processed.
+     * @param requestingUserOrServiceId Unique ID of user/service that triggered the event.
+     * @param dataLabel                 Classification of the event if more than the event category
+     *                                  is needed.
      * @param otherData                 Additional String key/value pairs to add to metadata.
      * @param requestId                 Unique ID that ties host application request ID to Tenant
      *                                  Security Proxy logs.
-     * @param sourceIp                  IP address of the initiator of this document request.
-     * @param objectId                  ID of the object/document in the host system.
+     * @param sourceIp                  IP address of the initiator of the event.
+     * @param objectId                  ID of the object being acted on when the event occured.
+     * @param timestampMillis           Linux epoch millis of when the event occured. If this isn't
+     *                                  passed, now will be assumed.
      * @throws IllegalArgumentException If the provided tenantId is not set
      */
-    public DocumentMetadata(String tenantId, String requestingUserOrServiceId, String dataLabel,
-            Map<String, String> otherData, String requestId, String sourceIp, String objectId)
-            throws IllegalArgumentException {
+    public EventMetadata(String tenantId, String requestingUserOrServiceId, String dataLabel,
+            Map<String, String> otherData, String requestId, String sourceIp, String objectId,
+            Long timestampMillis) throws IllegalArgumentException {
         if (tenantId == null || tenantId.isEmpty()) {
             throw new IllegalArgumentException(
                     "Tenant ID value must be provided as part of document metadata.");
@@ -45,67 +48,74 @@ public class DocumentMetadata {
         this.dataLabel = dataLabel;
         this.sourceIp = sourceIp;
         this.objectId = objectId;
+        this.timestampMillis =
+                timestampMillis == null ? java.lang.System.currentTimeMillis() : timestampMillis;
         this.otherData = otherData == null ? new HashMap<String, String>() : otherData;
     }
 
     /**
-     * Constructor for DocumentMetadata class which contains arbitrary key/value pairs and a unique
+     * Constructor for EventMetadata class which contains arbitrary key/value pairs and a unique
      * request ID to send to the Tenant Security Proxy.
      *
      * @param tenantId                  Unique ID of tenant that is performing the operation.
-     * @param requestingUserOrServiceId Unique ID of user/service that is processing data.
-     * @param dataLabel                 Classification of data being processed.
+     * @param requestingUserOrServiceId Unique ID of user/service that triggered the event.
+     * @param dataLabel                 Classification of the event if more than the event category
+     *                                  is needed.
      * @param otherData                 Additional String key/value pairs to add to metadata.
      * @param requestId                 Unique ID that ties host application request ID to Tenant
      *                                  Security Proxy logs.
      * @throws IllegalArgumentException If the provided tenantId is not set
      */
-    public DocumentMetadata(String tenantId, String requestingUserOrServiceId, String dataLabel,
+    public EventMetadata(String tenantId, String requestingUserOrServiceId, String dataLabel,
             Map<String, String> otherData, String requestId) {
-        this(tenantId, requestingUserOrServiceId, dataLabel, otherData, requestId, null, null);
+        this(tenantId, requestingUserOrServiceId, dataLabel, otherData, requestId, null, null,
+                null);
     }
 
     /**
-     * Constructor for DocumentMetadata class which contains arbitrary key/value pairs to send to
-     * the Tenant Security Proxy.
-     *
-     * @param tenantId                  Unique ID of tenant that is performing the operation.
-     * @param requestingUserOrServiceId Unique ID of user/service that is processing data.
-     * @param dataLabel                 Classification of data being processed.
-     * @param otherData                 Additional String key/value pairs to add to metadata.
-     * @throws IllegalArgumentException If the provided tenantId is not set
-     */
-    public DocumentMetadata(String tenantId, String requestingUserOrServiceId, String dataLabel,
-            Map<String, String> otherData) throws IllegalArgumentException {
-        this(tenantId, requestingUserOrServiceId, dataLabel, otherData, null, null, null);
-    }
-
-    /**
-     * Constructor for DocumentMetadata class which contains a unique request ID to send to the
+     * Constructor for EventMetadata class which contains arbitrary key/value pairs to send to the
      * Tenant Security Proxy.
      *
      * @param tenantId                  Unique ID of tenant that is performing the operation.
-     * @param requestingUserOrServiceId Unique ID of user/service that is processing data.
-     * @param dataLabel                 Classification of data being processed.
+     * @param requestingUserOrServiceId Unique ID of user/service that triggered the event.
+     * @param dataLabel                 Classification of the event if more than the event category
+     *                                  is needed.
+     * @param otherData                 Additional String key/value pairs to add to metadata.
+     * @throws IllegalArgumentException If the provided tenantId is not set
+     */
+    public EventMetadata(String tenantId, String requestingUserOrServiceId, String dataLabel,
+            Map<String, String> otherData) throws IllegalArgumentException {
+        this(tenantId, requestingUserOrServiceId, dataLabel, otherData, null, null, null, null);
+    }
+
+    /**
+     * Constructor for EventMetadata class which contains a unique request ID to send to the Tenant
+     * Security Proxy.
+     *
+     * @param tenantId                  Unique ID of tenant that is performing the operation.
+     * @param requestingUserOrServiceId Unique ID of user/service that triggered the event.
+     * @param dataLabel                 Classification of the event if more than the event category
+     *                                  is needed.
      * @param requestId                 Unique ID that ties host application request ID to Tenant
      *                                  Security Proxy logs.
      * @throws IllegalArgumentException If the provided tenantId is not set
      */
-    public DocumentMetadata(String tenantId, String requestingUserOrServiceId, String dataLabel,
+    public EventMetadata(String tenantId, String requestingUserOrServiceId, String dataLabel,
             String requestId) {
-        this(tenantId, requestingUserOrServiceId, dataLabel, null, requestId, null, null);
+        this(tenantId, requestingUserOrServiceId, dataLabel, null, requestId, null, null, null);
     }
 
     /**
-     * Constructor for DocumentMetadata class which has no additional metadata.
+     * Constructor for EventMetadata class which has no additional metadata.
      *
      * @param tenantId                  Unique ID of tenant that is performing the operation.
-     * @param requestingUserOrServiceId Unique ID of user/service that is processing data.
-     * @param dataLabel                 Classification of data being processed.
+     * @param requestingUserOrServiceId Unique ID of user/service that triggered the event.
+     * @param dataLabel                 Classification of the event if more than the event category
+     *                                  is needed.
      * @throws IllegalArgumentException If the provided tenantId is not set
      */
-    public DocumentMetadata(String tenantId, String requestingUserOrServiceId, String dataLabel) {
-        this(tenantId, requestingUserOrServiceId, dataLabel, null, null, null, null);
+    public EventMetadata(String tenantId, String requestingUserOrServiceId, String dataLabel) {
+        this(tenantId, requestingUserOrServiceId, dataLabel, null, null, null, null, null);
     }
 
     /**
@@ -170,6 +180,7 @@ public class DocumentMetadata {
         }
         postData.put("sourceIP", sourceIp);
         postData.put("objectID", objectId);
+        postData.put("timestampMillis", timestampMillis);
 
         Map<String, String> customFields = new HashMap<>();
         for (Map.Entry<String, String> entry : otherData.entrySet()) {
