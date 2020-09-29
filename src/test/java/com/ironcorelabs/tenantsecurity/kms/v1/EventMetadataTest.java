@@ -35,18 +35,18 @@ public class EventMetadataTest {
 
         Map<String, Object> postData = meta.getAsPostData();
         assertEquals(postData.get("tenantID"), "customerID");
-        assertEquals(postData.get("requestingID"), "svcID");
-        assertEquals(postData.get("dataLabel"), "classification");
-        assertEquals(postData.get("requestID"), null);
-        assertEquals(postData.get("sourceIP"), null);
-        assertEquals(postData.get("objectID"), null);
         Long roughlyNow = (Long) postData.get("timestampMillis");
         long now = java.lang.System.currentTimeMillis();
         long delta = now - roughlyNow;
         assertTrue(delta < 1000 && delta > -1);
 
         Map<String, String> customData = (Map<String, String>) postData.get("customFields");
-        assertEquals(customData.size(), 0);
+        assertEquals(customData.size(), 4);
+        assertEquals(customData.get("requestingID"), "svcID");
+        assertEquals(customData.get("dataLabel"), "classification");
+        assertEquals(customData.get("requestID"), null);
+        assertEquals(customData.get("sourceIP"), null);
+        assertEquals(customData.get("objectID"), null);
     }
 
     @SuppressWarnings("unchecked")
@@ -60,15 +60,15 @@ public class EventMetadataTest {
 
         Map<String, Object> postData = meta.getAsPostData();
         assertEquals(postData.get("tenantID"), "customerID");
-        assertEquals(postData.get("requestingID"), "svcID");
-        assertEquals(postData.get("dataLabel"), "classification");
-        assertEquals(postData.get("requestID"), "requestID");
-        assertEquals(postData.get("sourceIP"), "8.8.8.8");
-        assertEquals(postData.get("objectID"), "document-5");
         assertEquals(postData.get("timestampMillis"), nowInQuotes);
 
         Map<String, String> customData = (Map<String, String>) postData.get("customFields");
         assertEquals(customData.get("custom"), "field");
         assertEquals(customData.get("other"), "value");
+        assertEquals(customData.get("requestingID"), "svcID");
+        assertEquals(customData.get("dataLabel"), "classification");
+        assertEquals(customData.get("requestID"), "requestID");
+        assertEquals(customData.get("sourceIP"), "8.8.8.8");
+        assertEquals(customData.get("objectID"), "document-5");
     }
 }

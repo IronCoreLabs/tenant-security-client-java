@@ -173,19 +173,19 @@ public class EventMetadata {
     public Map<String, Object> getAsPostData() {
         Map<String, Object> postData = new HashMap<>();
         postData.put("tenantID", tenantId);
-        postData.put("requestingID", requestingUserOrServiceId);
-        postData.put("dataLabel", dataLabel);
-        if (requestId != null) {
-            postData.put("requestID", requestId);
-        }
-        postData.put("sourceIP", sourceIp);
-        postData.put("objectID", objectId);
         postData.put("timestampMillis", timestampMillis);
 
         Map<String, String> customFields = new HashMap<>();
         for (Map.Entry<String, String> entry : otherData.entrySet()) {
             customFields.put(entry.getKey(), entry.getValue());
         }
+        if (requestId != null) {
+            customFields.put("requestID", requestId);
+        }
+        customFields.put("sourceIP", sourceIp);
+        customFields.put("objectID", objectId);
+        customFields.put("requestingID", requestingUserOrServiceId);
+        customFields.put("dataLabel", dataLabel);
         postData.put("customFields", customFields);
         return postData;
     }
