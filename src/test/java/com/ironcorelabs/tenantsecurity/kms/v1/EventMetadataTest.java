@@ -10,22 +10,22 @@ import org.testng.annotations.Test;
 @Test(groups = {"unit"})
 public class EventMetadataTest {
     @Test(expectedExceptions = IllegalArgumentException.class)
-    public void missingTenantID() throws Exception {
+    public void missingTenantId() throws Exception {
         new EventMetadata(null, "serviceID", "label");
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class)
-    public void emptyTenantID() throws Exception {
+    public void emptyTenantId() throws Exception {
         new EventMetadata("", "serviceID", "label");
     }
 
     public void defaultValueForAdditionalData() throws Exception {
-        EventMetadata meta = new EventMetadata("tenantID", "serviceID", "label");
+        EventMetadata meta = new EventMetadata("tenantId", "serviceID", "label");
         assertTrue(meta.getOtherData() instanceof HashMap<?, ?>);
     }
 
     public void defaultValueForRequestId() throws Exception {
-        EventMetadata meta = new EventMetadata("tenantID", "serviceID", "label");
+        EventMetadata meta = new EventMetadata("tenantId", "serviceID", "label");
         assertEquals(meta.getRequestId(), null);
     }
 
@@ -34,7 +34,7 @@ public class EventMetadataTest {
         EventMetadata meta = new EventMetadata("customerID", "svcID", "classification");
 
         Map<String, Object> postData = meta.getAsPostData();
-        assertEquals(postData.get("tenantID"), "customerID");
+        assertEquals(postData.get("tenantId"), "customerID");
         Long roughlyNow = (Long) postData.get("timestampMillis");
         long now = java.lang.System.currentTimeMillis();
         long delta = now - roughlyNow;
@@ -42,11 +42,11 @@ public class EventMetadataTest {
 
         Map<String, String> customData = (Map<String, String>) postData.get("customFields");
         assertEquals(customData.size(), 4);
-        assertEquals(customData.get("requestingID"), "svcID");
+        assertEquals(customData.get("requestingId"), "svcID");
         assertEquals(customData.get("dataLabel"), "classification");
-        assertEquals(customData.get("requestID"), null);
-        assertEquals(customData.get("sourceIP"), null);
-        assertEquals(customData.get("objectID"), null);
+        assertEquals(customData.get("requestId"), null);
+        assertEquals(customData.get("sourceIp"), null);
+        assertEquals(customData.get("objectId"), null);
     }
 
     @SuppressWarnings("unchecked")
@@ -56,19 +56,19 @@ public class EventMetadataTest {
         arbData.put("custom", "field");
         arbData.put("other", "value");
         EventMetadata meta = new EventMetadata("customerID", "svcID", "classification", arbData,
-                "requestID", "8.8.8.8", "document-5", nowInQuotes);
+                "requestId", "8.8.8.8", "document-5", nowInQuotes);
 
         Map<String, Object> postData = meta.getAsPostData();
-        assertEquals(postData.get("tenantID"), "customerID");
+        assertEquals(postData.get("tenantId"), "customerID");
         assertEquals(postData.get("timestampMillis"), nowInQuotes);
 
         Map<String, String> customData = (Map<String, String>) postData.get("customFields");
         assertEquals(customData.get("custom"), "field");
         assertEquals(customData.get("other"), "value");
-        assertEquals(customData.get("requestingID"), "svcID");
+        assertEquals(customData.get("requestingId"), "svcID");
         assertEquals(customData.get("dataLabel"), "classification");
-        assertEquals(customData.get("requestID"), "requestID");
-        assertEquals(customData.get("sourceIP"), "8.8.8.8");
-        assertEquals(customData.get("objectID"), "document-5");
+        assertEquals(customData.get("requestId"), "requestId");
+        assertEquals(customData.get("sourceIp"), "8.8.8.8");
+        assertEquals(customData.get("objectId"), "document-5");
     }
 }
