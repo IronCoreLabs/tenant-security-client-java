@@ -41,12 +41,14 @@ public class EventMetadataTest {
         assertTrue(delta < 1000 && delta > -1);
 
         Map<String, String> customData = (Map<String, String>) postData.get("customFields");
-        assertEquals(customData.size(), 4);
-        assertEquals(customData.get("requestingId"), "svcID");
-        assertEquals(customData.get("dataLabel"), "classification");
-        assertEquals(customData.get("requestId"), null);
-        assertEquals(customData.get("sourceIp"), null);
-        assertEquals(customData.get("objectId"), null);
+        assertEquals(customData.size(), 0);
+
+        Map<String, Object> ironcoreData = (Map<String, Object>) postData.get("ironcoreFields");
+        assertEquals(ironcoreData.get("requestingId"), "svcID");
+        assertEquals(ironcoreData.get("dataLabel"), "classification");
+        assertEquals(ironcoreData.get("requestId"), null);
+        assertEquals(ironcoreData.get("sourceIp"), null);
+        assertEquals(ironcoreData.get("objectId"), null);
     }
 
     @SuppressWarnings("unchecked")
@@ -65,10 +67,12 @@ public class EventMetadataTest {
         Map<String, String> customData = (Map<String, String>) postData.get("customFields");
         assertEquals(customData.get("custom"), "field");
         assertEquals(customData.get("other"), "value");
-        assertEquals(customData.get("requestingId"), "svcID");
-        assertEquals(customData.get("dataLabel"), "classification");
-        assertEquals(customData.get("requestId"), "requestId");
-        assertEquals(customData.get("sourceIp"), "8.8.8.8");
-        assertEquals(customData.get("objectId"), "document-5");
+
+        Map<String, Object> ironcoreData = (Map<String, Object>) postData.get("ironcoreFields");
+        assertEquals(ironcoreData.get("requestingId"), "svcID");
+        assertEquals(ironcoreData.get("dataLabel"), "classification");
+        assertEquals(ironcoreData.get("requestId"), "requestId");
+        assertEquals(ironcoreData.get("sourceIp"), "8.8.8.8");
+        assertEquals(ironcoreData.get("objectId"), "document-5");
     }
 }

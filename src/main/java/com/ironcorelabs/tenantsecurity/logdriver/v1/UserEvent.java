@@ -19,8 +19,6 @@ public enum UserEvent implements SecurityEvent {
     EMAIL_VERIFICATION_REQUESTED,
     EMAIL_VERIFIED;
 
-    UserEvent() {}
-
     public String getFlatEvent() {
         return "USER_" + this.name();
     }

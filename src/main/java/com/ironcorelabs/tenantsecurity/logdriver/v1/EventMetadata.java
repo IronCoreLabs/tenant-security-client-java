@@ -165,8 +165,8 @@ public class EventMetadata {
 
     /**
      * Convert all of the metadata into a HashMap that can be used to POST all the data to the
-     * Tenant Security Proxy. Adds all standard fields to the Map and then builds up a sub object
-     * for any custom fields.
+     * Tenant Security Proxy. Adds all required fields to the Map, all optional fields to a sub map,
+     * and then builds up another sub map for any custom fields.
      *
      * @return Metadata converted into POST data Map
      */
@@ -175,17 +175,20 @@ public class EventMetadata {
         postData.put("tenantId", tenantId);
         postData.put("timestampMillis", timestampMillis);
 
+        Map<String, Object> ironcoreFields = new HashMap<>();
+        if (requestId != null) {
+            ironcoreFields.put("requestId", requestId);
+        }
+        ironcoreFields.put("sourceIp", sourceIp);
+        ironcoreFields.put("objectId", objectId);
+        ironcoreFields.put("requestingId", requestingUserOrServiceId);
+        ironcoreFields.put("dataLabel", dataLabel);
+        postData.put("ironcoreFields", ironcoreFields);
+
         Map<String, String> customFields = new HashMap<>();
         for (Map.Entry<String, String> entry : otherData.entrySet()) {
             customFields.put(entry.getKey(), entry.getValue());
         }
-        if (requestId != null) {
-            customFields.put("requestId", requestId);
-        }
-        customFields.put("sourceIp", sourceIp);
-        customFields.put("objectId", objectId);
-        customFields.put("requestingId", requestingUserOrServiceId);
-        customFields.put("dataLabel", dataLabel);
         postData.put("customFields", customFields);
         return postData;
     }
