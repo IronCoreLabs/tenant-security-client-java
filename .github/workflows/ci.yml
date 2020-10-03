@@ -62,11 +62,13 @@ jobs:
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+      - name: install zmq
+        run: sudo apt update && sudo apt install -y --no-install-recommends libzmq3-dev
       - name: integration test
         run: |
           cd tenant-security-proxy
           ironhide file:decrypt .env.integration.iron
           cargo build --release
           env $(cat .env.integration) cargo run --release &
-          timeout 300 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:9000/ready)" != "200" ]]; do sleep 5; done' || false
+          timeout 700 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:9000/ready)" =~ ''[01346-9][0-9][0-9]'' ]]; do sleep 5; done' || false
           ../test-suites/integrationTest.sh
