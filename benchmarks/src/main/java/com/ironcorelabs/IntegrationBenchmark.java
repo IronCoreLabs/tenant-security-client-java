@@ -1,5 +1,6 @@
 package com.ironcorelabs;
 
+import java.lang.System;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
@@ -27,10 +28,13 @@ import org.openjdk.jmh.infra.Blackhole;
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class IntegrationBenchmark {
+    // Default values that can be overridden by environment variables of the same name
+    // These match up to the Demo TSP whose config we ship with the repo.
     private static String TSP_ADDRESS = "http://localhost";
-    private static String TSP_PORT = ":7777";
-    private static String TENANT_ID = "";
-    private static String API_KEY = "";
+    private static String TSP_PORT = "32804";
+    private static String TENANT_ID = "tenant-gcp";
+    private static String API_KEY = "0WUaXesNgbTAuLwn";
+
     private static final Map<String, String> customFields;
     static {
         Map<String, String> cfM = new HashMap<>();
@@ -38,8 +42,7 @@ public class IntegrationBenchmark {
         cfM.put("attachment_name", "ladies_first.mp3");
         customFields = Collections.unmodifiableMap(cfM);
     }
-    private static final DocumentMetadata context =
-            new DocumentMetadata(TENANT_ID, "benchmark", "sample", customFields, "customRayID");
+    private static DocumentMetadata context;
     private static final Map<String, byte[]> documentMap;
     static {
         Map<String, byte[]> dM = new HashMap<>();
@@ -52,7 +55,15 @@ public class IntegrationBenchmark {
     @Setup
     public void doSetup() {
         try {
-            client = new TenantSecurityKMSClient(TSP_ADDRESS + TSP_PORT, API_KEY);
+            Map<String, String> envVars = System.getenv();
+            String tsp_address = envVars.getOrDefault("TSP_ADDRESS", TSP_ADDRESS);
+            String tsp_port = envVars.getOrDefault("TSP_PORT", TSP_PORT);
+            String api_key = envVars.getOrDefault("API_KEY", API_KEY);
+            String tenant_id = envVars.getOrDefault("TENANT_ID", TENANT_ID);
+            context = new DocumentMetadata(tenant_id, "benchmark", "sample", customFields,
+                    "customRayID");
+
+            client = new TenantSecurityKMSClient(tsp_address + ":" + tsp_port, api_key);
         } catch (Exception e) {
         }
     }

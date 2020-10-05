@@ -11,8 +11,10 @@ import org.testng.annotations.Test;
 
 @Test(groups = {"local-integration"})
 public class LocalRoundTrip {
-    private String TENANT_ID = "";
-    private String API_KEY = "";
+    // Default values that can be overridden by environment variables of the same name
+    // These match up to the Demo TSP whose config we ship with the repo.
+    private static String TENANT_ID = "tenant-gcp";
+    private static String API_KEY = "0WUaXesNgbTAuLwn";
 
     private void assertEqualBytes(byte[] one, byte[] two) throws Exception {
         assertEquals(new String(one, "UTF-8"), new String(two, "UTF-8"));
@@ -30,13 +32,22 @@ public class LocalRoundTrip {
         Map<String, String> customFields = new HashMap<>();
         customFields.put("org_name", "Cisco");
         customFields.put("attachment_name", "thongsong.mp3");
-        DocumentMetadata context = new DocumentMetadata(this.TENANT_ID, "integrationTest", "sample",
-                customFields, "customRayID");
+
+        Map<String, String> envVars = System.getenv();
+        String tsp_address = envVars.getOrDefault("TSP_ADDRESS", TestSettings.TSP_ADDRESS);
+        String tsp_port = envVars.getOrDefault("TSP_PORT", TestSettings.TSP_PORT);
+        String api_key = envVars.getOrDefault("API_KEY", API_KEY);
+        String tenant_id = envVars.getOrDefault("TENANT_ID", TENANT_ID);
+
+        if (tsp_port.charAt(0) != ':') {
+            tsp_port = ":" + tsp_port;
+        }
+
+        DocumentMetadata context = new DocumentMetadata(tenant_id, "integrationTest", "sample", customFields, "customRayID");
         Map<String, byte[]> documentMap = getRoundtripDataToEncrypt();
 
         CompletableFuture<PlaintextDocument> roundtrip = TenantSecurityKMSClient
-                .create(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT, this.API_KEY)
-                .thenCompose(client -> {
+                .create(tsp_address + tsp_port, api_key).thenCompose(client -> {
 
                     try {
                         return client.encrypt(documentMap, context)
