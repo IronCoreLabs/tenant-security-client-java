@@ -5,7 +5,7 @@ import java.util.Map;
 
 /**
  * Holds metadata fields as part of an encrypted document. Each encrypted document will have
- * metadata that associates it to a tenant ID, which service is accessing the data, it's
+ * metadata that associates it to a tenant ID, which service is accessing the data, its
  * classification, as well as optional fields for other arbitrary key/value pairs and a request ID
  * to send to the Tenant Security Proxy.
  */
@@ -29,7 +29,7 @@ public class DocumentMetadata {
      * @param requestId                 Unique ID that ties host application request ID to Tenant
      *                                  Security Proxy logs.
      * @param sourceIp                  IP address of the initiator of this document request.
-     * @param objectId                  ID of the object/document in the host system.
+     * @param objectId                  ID of the object/document being acted on in the host system.
      * @throws IllegalArgumentException If the provided tenantId is not set
      */
     public DocumentMetadata(String tenantId, String requestingUserOrServiceId, String dataLabel,
