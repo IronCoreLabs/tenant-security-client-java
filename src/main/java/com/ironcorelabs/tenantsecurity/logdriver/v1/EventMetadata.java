@@ -175,15 +175,15 @@ public class EventMetadata {
         postData.put("tenantId", tenantId);
         postData.put("timestampMillis", timestampMillis);
 
-        Map<String, Object> ironcoreFields = new HashMap<>();
+        Map<String, Object> iclFields = new HashMap<>();
         if (requestId != null) {
-            ironcoreFields.put("requestId", requestId);
+            iclFields.put("requestId", requestId);
         }
-        ironcoreFields.put("sourceIp", sourceIp);
-        ironcoreFields.put("objectId", objectId);
-        ironcoreFields.put("requestingId", requestingUserOrServiceId);
-        ironcoreFields.put("dataLabel", dataLabel);
-        postData.put("ironcoreFields", ironcoreFields);
+        iclFields.put("sourceIp", sourceIp);
+        iclFields.put("objectId", objectId);
+        iclFields.put("requestingId", requestingUserOrServiceId);
+        iclFields.put("dataLabel", dataLabel);
+        postData.put("iclFields", iclFields);
 
         Map<String, String> customFields = new HashMap<>();
         for (Map.Entry<String, String> entry : otherData.entrySet()) {

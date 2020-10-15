@@ -3,6 +3,7 @@ package com.ironcorelabs.tenantsecurity.kms.v1;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -209,13 +210,24 @@ final class TenantSecurityKMSRequest implements Closeable {
      * @return
      */
     CompletableFuture<Void> logSecurityEvent(SecurityEvent event, EventMetadata metadata) {
-        Map<String, Object> postData = metadata.getAsPostData();
-        postData.put("event", event.getFlatEvent());
+        Map<String, Object> postData = combinePostableEventAndMetadata(event, metadata);
         String error = String.format(
                 "Unable to make request to Tenant Security Proxy security event endpoint. Endpoint requested: %s",
                 this.securityEventEndpoint);
         return this.makeRequestAndParseFailure(this.securityEventEndpoint, postData, Void.class,
                 error); // TODO response type?
+    }
+
+    private Map<String, Object> combinePostableEventAndMetadata(SecurityEvent event,
+            EventMetadata metadata) {
+        Map<String, Object> postData = metadata.getAsPostData();
+        // Add the object of this call, the event, to the post data that's ready to go out.
+        // We just created this, so we know the cast is safe. There is a unit case to catch this in
+        // case it changes.
+        Map<String, Object> iclFields = (HashMap<String, Object>) postData.get("iclFields");
+        iclFields.put("event", event.getFlatEvent());
+        postData.put("iclFields", iclFields);
+        return postData;
     }
 
     /**

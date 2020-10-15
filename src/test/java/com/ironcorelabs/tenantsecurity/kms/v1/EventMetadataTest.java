@@ -43,7 +43,7 @@ public class EventMetadataTest {
         Map<String, String> customData = (Map<String, String>) postData.get("customFields");
         assertEquals(customData.size(), 0);
 
-        Map<String, Object> ironcoreData = (Map<String, Object>) postData.get("ironcoreFields");
+        Map<String, Object> ironcoreData = (Map<String, Object>) postData.get("iclFields");
         assertEquals(ironcoreData.get("requestingId"), "svcID");
         assertEquals(ironcoreData.get("dataLabel"), "classification");
         assertEquals(ironcoreData.get("requestId"), null);
@@ -68,7 +68,25 @@ public class EventMetadataTest {
         assertEquals(customData.get("custom"), "field");
         assertEquals(customData.get("other"), "value");
 
-        Map<String, Object> ironcoreData = (Map<String, Object>) postData.get("ironcoreFields");
+        Map<String, Object> ironcoreData = (Map<String, Object>) postData.get("iclFields");
+        assertEquals(ironcoreData.get("requestingId"), "svcID");
+        assertEquals(ironcoreData.get("dataLabel"), "classification");
+        assertEquals(ironcoreData.get("requestId"), "requestId");
+        assertEquals(ironcoreData.get("sourceIp"), "8.8.8.8");
+        assertEquals(ironcoreData.get("objectId"), "document-5");
+    }
+
+    public void testGetPostDataCastSafety() throws Exception {
+        Map<String, String> arbData = new HashMap<>();
+        long nowInQuotes = java.lang.System.currentTimeMillis();
+        arbData.put("custom", "field");
+        arbData.put("other", "value");
+        EventMetadata meta = new EventMetadata("customerID", "svcID", "classification", arbData,
+                "requestId", "8.8.8.8", "document-5", nowInQuotes);
+
+        Map<String, Object> postData = meta.getAsPostData();
+
+        Map<String, Object> ironcoreData = (Map<String, Object>) postData.get("iclFields");
         assertEquals(ironcoreData.get("requestingId"), "svcID");
         assertEquals(ironcoreData.get("dataLabel"), "classification");
         assertEquals(ironcoreData.get("requestId"), "requestId");
