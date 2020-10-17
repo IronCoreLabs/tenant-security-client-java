@@ -569,13 +569,16 @@ public final class TenantSecurityKMSClient implements Closeable {
     }
 
     /**
-     * Send the provided security event to the TSP to be logged and analyzed.
+     * Send the provided security event to the TSP to be logged and analyzed. Returns SecurityEventResult if
+     * the security event was successfully received. Note that logging a security event is an asynchronous operation
+     * at the TSP, so successful receipt of a security event does not mean that the event is deliverable or has
+     * been delivered. It simply means that the event has been received and will be processed.
      * 
      * @param event    Security event that represents the action that took place.
      * @param metadata Metadata that provides additional context about the event.
-     * @return TODO based on the response we decide on the endpoint giving
+     * @return SecurityEventResult
      */
-    public CompletableFuture<Void> logSecurityEvent(SecurityEvent event, EventMetadata metadata) {
+    public CompletableFuture<SecurityEventResult> logSecurityEvent(SecurityEvent event, EventMetadata metadata) {
         return this.encryptionService.logSecurityEvent(event, metadata);
     }
 

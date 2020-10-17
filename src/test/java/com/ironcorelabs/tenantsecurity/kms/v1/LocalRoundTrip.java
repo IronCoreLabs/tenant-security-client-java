@@ -1,12 +1,17 @@
 package com.ironcorelabs.tenantsecurity.kms.v1;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
+
+import com.ironcorelabs.tenantsecurity.logdriver.v1.EventMetadata;
+import com.ironcorelabs.tenantsecurity.logdriver.v1.UserEvent;
 import org.testng.annotations.Test;
 
 @Test(groups = {"local-integration"})
@@ -81,5 +86,30 @@ public class LocalRoundTrip {
             throw e;
         }
 
+    }
+
+    public void logSecurityEventBadTenant() throws Exception {
+
+        Map<String, String> envVars = System.getenv();
+        String tsp_address = envVars.getOrDefault("TSP_ADDRESS", TestSettings.TSP_ADDRESS);
+        String tsp_port = envVars.getOrDefault("TSP_PORT", TestSettings.TSP_PORT);
+        String api_key = envVars.getOrDefault("API_KEY", API_KEY);
+        String tenant_id = "bad-tenant-id"; //envVars.getOrDefault("TENANT_ID", TENANT_ID);
+
+        if (tsp_port.charAt(0) != ':') {
+            tsp_port = ":" + tsp_port;
+        }
+
+        EventMetadata metadata = new EventMetadata(tenant_id, "integrationTest", "sample", "app-request-id");
+
+
+        CompletableFuture<SecurityEventResult> logEvent = TenantSecurityKMSClient
+                .create(tsp_address + tsp_port, api_key).thenCompose(client -> {
+                    return client.logSecurityEvent(UserEvent.ADD, metadata);
+                });
+
+        // even though this tenant is bad, the response here will be success as the security
+        // event was enqueued for further processing.
+        assertTrue(logEvent.get().isEventQueued());
     }
 }

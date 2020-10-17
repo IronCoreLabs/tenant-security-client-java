@@ -1,6 +1,8 @@
 package com.ironcorelabs.tenantsecurity.kms.v1;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -8,6 +10,9 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
+
+import com.ironcorelabs.tenantsecurity.logdriver.v1.EventMetadata;
+import com.ironcorelabs.tenantsecurity.logdriver.v1.UserEvent;
 import org.testng.annotations.Test;
 import java.util.Base64;
 
@@ -619,4 +624,14 @@ public class DevIntegrationTest {
         Map<String, byte[]> decryptedValuesMap = roundtrip.get().getDecryptedFields();
         assertEqualBytes(decryptedValuesMap.get("doc"), "new daters".getBytes("UTF-8"));
     }
+
+    public void logSecurityEvent() throws Exception {
+        EventMetadata metadata = new EventMetadata(this.GCP_TENANT_ID, "integrationTest", "sample", "app-request-id");
+        CompletableFuture<SecurityEventResult> logEvent =
+                getClient().thenCompose(client -> client.logSecurityEvent(UserEvent.ADD, metadata));
+        assertTrue(logEvent.get().isEventQueued());
+    }
+
+
+
 }

@@ -6,7 +6,7 @@ import com.google.api.client.util.Key;
 
 /**
  * A map from a document ID to a either the wrapped or unwrapped version of a
- * documents keys. Also includes a map of failures if any problems occured when
+ * documents keys. Also includes a map of failures if any problems occurred when
  * performing the batch wrap operation.
  */
 public class BatchDocumentKeys<T> {

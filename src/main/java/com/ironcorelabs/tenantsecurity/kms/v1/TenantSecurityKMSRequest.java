@@ -60,7 +60,7 @@ final class TenantSecurityKMSRequest implements Closeable {
         this.batchWrapEndpoint = new GenericUrl(tspApiPrefix + "document/batch-wrap");
         this.unwrapEndpoint = new GenericUrl(tspApiPrefix + "document/unwrap");
         this.batchUnwrapEndpoint = new GenericUrl(tspApiPrefix + "document/batch-unwrap");
-        this.securityEventEndpoint = new GenericUrl(tspApiPrefix + "event/TODO");
+        this.securityEventEndpoint = new GenericUrl(tspApiPrefix + "event/security-event");
 
         this.webRequestExecutor = Executors.newFixedThreadPool(requestThreadSize);
         this.requestFactory = provideHttpRequestFactory(requestThreadSize, requestThreadSize);
@@ -92,7 +92,7 @@ final class TenantSecurityKMSRequest implements Closeable {
     /**
      * Attempt to convert a failed HTTP request to an error code that we can communicate out to
      * callers. Attempts to parse the response as JSON and convert the received error code over to
-     * the type of failure that occured.
+     * the type of failure that occurred.
      */
     private TenantSecurityKMSException parseFailureFromRequest(HttpResponse resp) {
         if (resp.getStatusCode() == HttpStatusCodes.STATUS_CODE_UNAUTHORIZED) {
@@ -203,19 +203,19 @@ final class TenantSecurityKMSRequest implements Closeable {
     }
 
     /**
-     * Request to the security event endpoint with the provided event and metadata. Returns TODO.
+     * Request to the security event endpoint with the provided event and metadata.
      * 
      * @param event    Security event representing the action to be logged.
-     * @param metadata Metadata asssociated with the security event.
-     * @return
+     * @param metadata Metadata associated with the security event.
+     * @return SecurityEventResult
      */
-    CompletableFuture<Void> logSecurityEvent(SecurityEvent event, EventMetadata metadata) {
+    CompletableFuture<SecurityEventResult> logSecurityEvent(SecurityEvent event, EventMetadata metadata) {
         Map<String, Object> postData = combinePostableEventAndMetadata(event, metadata);
         String error = String.format(
                 "Unable to make request to Tenant Security Proxy security event endpoint. Endpoint requested: %s",
                 this.securityEventEndpoint);
-        return this.makeRequestAndParseFailure(this.securityEventEndpoint, postData, Void.class,
-                error); // TODO response type?
+        return this.makeRequestAndParseFailure(this.securityEventEndpoint, postData, SecurityEventResult.class,
+                error);
     }
 
     private Map<String, Object> combinePostableEventAndMetadata(SecurityEvent event,
