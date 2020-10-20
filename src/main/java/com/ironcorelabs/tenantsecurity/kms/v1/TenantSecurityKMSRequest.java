@@ -94,25 +94,25 @@ final class TenantSecurityKMSRequest implements Closeable {
      * callers. Attempts to parse the response as JSON and convert the received error code over to
      * the type of failure that occurred.
      */
-    private TenantSecurityKMSException parseFailureFromRequest(HttpResponse resp) {
+    private TenantSecurityException parseFailureFromRequest(HttpResponse resp) {
         if (resp.getStatusCode() == HttpStatusCodes.STATUS_CODE_UNAUTHORIZED) {
             // The Google client wont parse 401 response bodies. The only way we can get a 401
             // response is if the header
             // was wrong, so hardcode that result here
-            return new TenantSecurityKMSException(TenantSecurityKMSErrorCodes.UNAUTHORIZED_REQUEST,
+            return new TenantSecurityException(TenantSecurityErrorCodes.UNAUTHORIZED_REQUEST,
                     resp.getStatusCode());
         }
         try {
             ErrorResponse errorResponse = resp.parseAs(ErrorResponse.class);
             if (errorResponse.getCode() > 0
-                    && TenantSecurityKMSErrorCodes.valueOf(errorResponse.getCode()) != null) {
-                return new TenantSecurityKMSException(
-                        TenantSecurityKMSErrorCodes.valueOf(errorResponse.getCode()),
+                    && TenantSecurityErrorCodes.valueOf(errorResponse.getCode()) != null) {
+                return new TenantSecurityException(
+                        TenantSecurityErrorCodes.valueOf(errorResponse.getCode()),
                         resp.getStatusCode(), errorResponse.getMessage());
             }
         } catch (Exception e) {
             /* Fall through and return unknown error below */}
-        return new TenantSecurityKMSException(TenantSecurityKMSErrorCodes.UNKNOWN_ERROR,
+        return new TenantSecurityException(TenantSecurityErrorCodes.UNKNOWN_ERROR,
                 resp.getStatusCode());
     }
 
@@ -130,11 +130,11 @@ final class TenantSecurityKMSRequest implements Closeable {
                 }
                 throw parseFailureFromRequest(resp);
             } catch (Exception cause) {
-                if (cause instanceof TenantSecurityKMSException) {
+                if (cause instanceof TenantSecurityException) {
                     throw new CompletionException(cause);
                 }
-                throw new CompletionException(new TenantSecurityKMSException(
-                        TenantSecurityKMSErrorCodes.UNABLE_TO_MAKE_REQUEST, 0, errorMessage,
+                throw new CompletionException(new TenantSecurityException(
+                        TenantSecurityErrorCodes.UNABLE_TO_MAKE_REQUEST, 0, errorMessage,
                         cause));
             }
         }, webRequestExecutor);
@@ -180,8 +180,8 @@ final class TenantSecurityKMSRequest implements Closeable {
                     try {
                         return unwrapResponse.getDekBytes();
                     } catch (Exception e) {
-                        throw new CompletionException(new TenantSecurityKMSException(
-                                TenantSecurityKMSErrorCodes.UNABLE_TO_MAKE_REQUEST, 0,
+                        throw new CompletionException(new TenantSecurityException(
+                                TenantSecurityErrorCodes.UNABLE_TO_MAKE_REQUEST, 0,
                                 e.getMessage(), e));
                     }
                 });
@@ -207,14 +207,14 @@ final class TenantSecurityKMSRequest implements Closeable {
      * 
      * @param event    Security event representing the action to be logged.
      * @param metadata Metadata associated with the security event.
-     * @return SecurityEventResult
+     * @return Void on success. Failures come back as exceptions
      */
-    CompletableFuture<SecurityEventResult> logSecurityEvent(SecurityEvent event, EventMetadata metadata) {
+    CompletableFuture<Void> logSecurityEvent(SecurityEvent event, EventMetadata metadata) {
         Map<String, Object> postData = combinePostableEventAndMetadata(event, metadata);
         String error = String.format(
                 "Unable to make request to Tenant Security Proxy security event endpoint. Endpoint requested: %s",
                 this.securityEventEndpoint);
-        return this.makeRequestAndParseFailure(this.securityEventEndpoint, postData, SecurityEventResult.class,
+        return this.makeRequestAndParseFailure(this.securityEventEndpoint, postData, Void.class,
                 error);
     }
 

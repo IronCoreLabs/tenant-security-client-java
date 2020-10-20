@@ -1,8 +1,5 @@
 package com.ironcorelabs.tenantsecurity.kms.v1;
 
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
-
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -15,6 +12,8 @@ import com.ironcorelabs.tenantsecurity.logdriver.v1.EventMetadata;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.UserEvent;
 import org.testng.annotations.Test;
 import java.util.Base64;
+
+import static org.testng.Assert.*;
 
 @Test(groups = {"dev-integration"})
 public class DevIntegrationTest {
@@ -536,7 +535,7 @@ public class DevIntegrationTest {
 
         BatchResult<PlaintextDocument> fullBatchResult = roundtrip.get();
         Map<String, PlaintextDocument> successes = fullBatchResult.getDocuments();
-        Map<String, TenantSecurityKMSException> failures = fullBatchResult.getFailures();
+        Map<String, TenantSecurityException> failures = fullBatchResult.getFailures();
 
         assertEquals(0, failures.size());
         assertEquals(3, successes.size());
@@ -627,9 +626,15 @@ public class DevIntegrationTest {
 
     public void logSecurityEvent() throws Exception {
         EventMetadata metadata = new EventMetadata(this.GCP_TENANT_ID, "integrationTest", "sample", "app-request-id");
-        CompletableFuture<SecurityEventResult> logEvent =
+        CompletableFuture<Void> logEvent =
                 getClient().thenCompose(client -> client.logSecurityEvent(UserEvent.ADD, metadata));
-        assertTrue(logEvent.get().isEventQueued());
+
+        try {
+            logEvent.get();
+        } catch (Exception e) {
+            fail("Security Event logging should not fail");
+        }
+
     }
 
 

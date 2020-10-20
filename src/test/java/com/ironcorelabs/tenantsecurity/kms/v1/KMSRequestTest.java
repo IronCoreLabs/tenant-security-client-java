@@ -39,10 +39,10 @@ public class KMSRequestTest {
             encrypt.get();
             fail("Request should fail when host is unreachable.");
         } catch (ExecutionException e) {
-            assertTrue(e.getCause() instanceof TenantSecurityKMSException);
-            TenantSecurityKMSException esError = (TenantSecurityKMSException) e.getCause();
+            assertTrue(e.getCause() instanceof TenantSecurityException);
+            TenantSecurityException esError = (TenantSecurityException) e.getCause();
             assertNotNull(esError.getCause());
-            assertEquals(esError.getErrorCode(), TenantSecurityKMSErrorCodes.UNABLE_TO_MAKE_REQUEST);
+            assertEquals(esError.getErrorCode(), TenantSecurityErrorCodes.UNABLE_TO_MAKE_REQUEST);
         }
     }
 
@@ -55,9 +55,9 @@ public class KMSRequestTest {
             encrypt.get();
             fail("Request should fail when API key is wrong");
         } catch (ExecutionException e) {
-            assertTrue(e.getCause() instanceof TenantSecurityKMSException);
-            TenantSecurityKMSException esError = (TenantSecurityKMSException) e.getCause();
-            assertEquals(esError.getErrorCode(), TenantSecurityKMSErrorCodes.UNAUTHORIZED_REQUEST);
+            assertTrue(e.getCause() instanceof TenantSecurityException);
+            TenantSecurityException esError = (TenantSecurityException) e.getCause();
+            assertEquals(esError.getErrorCode(), TenantSecurityErrorCodes.UNAUTHORIZED_REQUEST);
         }
     }
 
@@ -74,9 +74,9 @@ public class KMSRequestTest {
             decrypt.get();
             fail("Request should fail when API key is wrong");
         } catch (ExecutionException e) {
-            assertTrue(e.getCause() instanceof TenantSecurityKMSException);
-            TenantSecurityKMSException esError = (TenantSecurityKMSException) e.getCause();
-            assertEquals(esError.getErrorCode(), TenantSecurityKMSErrorCodes.INVALID_PROVIDED_EDEK);
+            assertTrue(e.getCause() instanceof TenantSecurityException);
+            TenantSecurityException esError = (TenantSecurityException) e.getCause();
+            assertEquals(esError.getErrorCode(), TenantSecurityErrorCodes.INVALID_PROVIDED_EDEK);
         }
     }
 }

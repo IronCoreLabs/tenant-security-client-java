@@ -86,10 +86,10 @@ public class NotPrimaryAndDisabledConfigs {
             encrypt.get();
             fail("Request should fail to encrypt new data");
         } catch (ExecutionException e) {
-            assertTrue(e.getCause() instanceof TenantSecurityKMSException);
-            TenantSecurityKMSException esError = (TenantSecurityKMSException) e.getCause();
+            assertTrue(e.getCause() instanceof TenantSecurityException);
+            TenantSecurityException esError = (TenantSecurityException) e.getCause();
             assertEquals(esError.getErrorCode(),
-                    TenantSecurityKMSErrorCodes.NO_PRIMARY_KMS_CONFIGURATION);
+                    TenantSecurityErrorCodes.NO_PRIMARY_KMS_CONFIGURATION);
         }
     }
 
@@ -103,10 +103,10 @@ public class NotPrimaryAndDisabledConfigs {
             decrypted.get();
             fail("Request should fail to decrypt data when config is missing");
         } catch (ExecutionException e) {
-            assertTrue(e.getCause() instanceof TenantSecurityKMSException);
-            TenantSecurityKMSException esError = (TenantSecurityKMSException) e.getCause();
+            assertTrue(e.getCause() instanceof TenantSecurityException);
+            TenantSecurityException esError = (TenantSecurityException) e.getCause();
             assertEquals(esError.getErrorCode(),
-                    TenantSecurityKMSErrorCodes.KMS_CONFIGURATION_DISABLED);
+                    TenantSecurityErrorCodes.KMS_CONFIGURATION_DISABLED);
         }
     }
 
@@ -118,12 +118,12 @@ public class NotPrimaryAndDisabledConfigs {
 
         try {
             decrypted.get();
-            fail("Request should fail to decrypt data when provided tenant doesnt exist");
+            fail("Request should fail to decrypt data when provided tenant doesn't exist");
         } catch (ExecutionException e) {
-            assertTrue(e.getCause() instanceof TenantSecurityKMSException);
-            TenantSecurityKMSException esError = (TenantSecurityKMSException) e.getCause();
+            assertTrue(e.getCause() instanceof TenantSecurityException);
+            TenantSecurityException esError = (TenantSecurityException) e.getCause();
             assertEquals(esError.getErrorCode(),
-                    TenantSecurityKMSErrorCodes.UNKNOWN_TENANT_OR_NO_ACTIVE_KMS_CONFIGURATIONS);
+                    TenantSecurityErrorCodes.UNKNOWN_TENANT_OR_NO_ACTIVE_KMS_CONFIGURATIONS);
         }
     }
 }

@@ -396,18 +396,18 @@ public final class TenantSecurityKMSClient implements Closeable {
      * Given a map of document IDs to TSP error responses which have an error code and a message,
      * convert the map to a map of the same document ID but to a TenantSecurityKMSException.
      */
-    private ConcurrentMap<String, TenantSecurityKMSException> getBatchFailures(
+    private ConcurrentMap<String, TenantSecurityException> getBatchFailures(
             ConcurrentMap<String, ErrorResponse> failures) {
         return failures.entrySet().parallelStream()
                 .collect(Collectors.toConcurrentMap(ConcurrentMap.Entry::getKey, failure -> {
                     ErrorResponse errorResponse = failure.getValue();
-                    if (errorResponse.getCode() > 0 && TenantSecurityKMSErrorCodes
+                    if (errorResponse.getCode() > 0 && TenantSecurityErrorCodes
                             .valueOf(errorResponse.getCode()) != null) {
-                        return new TenantSecurityKMSException(
-                                TenantSecurityKMSErrorCodes.valueOf(errorResponse.getCode()), 0,
+                        return new TenantSecurityException(
+                                TenantSecurityErrorCodes.valueOf(errorResponse.getCode()), 0,
                                 errorResponse.getMessage());
                     }
-                    return new TenantSecurityKMSException(TenantSecurityKMSErrorCodes.UNKNOWN_ERROR,
+                    return new TenantSecurityException(TenantSecurityErrorCodes.UNKNOWN_ERROR,
                             0, errorResponse.getMessage());
                 }));
     }
@@ -569,16 +569,16 @@ public final class TenantSecurityKMSClient implements Closeable {
     }
 
     /**
-     * Send the provided security event to the TSP to be logged and analyzed. Returns SecurityEventResult if
+     * Send the provided security event to the TSP to be logged and analyzed. Returns Void if
      * the security event was successfully received. Note that logging a security event is an asynchronous operation
      * at the TSP, so successful receipt of a security event does not mean that the event is deliverable or has
      * been delivered. It simply means that the event has been received and will be processed.
      * 
      * @param event    Security event that represents the action that took place.
      * @param metadata Metadata that provides additional context about the event.
-     * @return SecurityEventResult
+     * @return Void on successful receipt by TSP
      */
-    public CompletableFuture<SecurityEventResult> logSecurityEvent(SecurityEvent event, EventMetadata metadata) {
+    public CompletableFuture<Void> logSecurityEvent(SecurityEvent event, EventMetadata metadata) {
         return this.encryptionService.logSecurityEvent(event, metadata);
     }
 

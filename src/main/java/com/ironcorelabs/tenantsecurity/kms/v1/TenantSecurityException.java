@@ -1,24 +1,24 @@
 package com.ironcorelabs.tenantsecurity.kms.v1;
 
 /**
- * Represents an Exception that occured within the Tenant Security Proxy Docker
+ * Represents an Exception that occurred within the Tenant Security Proxy Docker
  * container. Exposes error codes to better communicate the type of error that
- * occured when trying to wrap or unwrap a key from the tenants KMS.
+ * occurred when trying to wrap or unwrap a key from the tenants KMS.
  */
-public class TenantSecurityKMSException extends Exception {
+public class TenantSecurityException extends Exception {
     // ID for serialization. Should be incremented whenever we make
-    // seralization-breaking changes to this class
+    // serialization-breaking changes to this class
     // which is described in
     // https://docs.oracle.com/javase/6/docs/platform/serialization/spec/version.html#6678.
-    private static final long serialVersionUID = 1L;
-    private TenantSecurityKMSErrorCodes errorCode;
+    private static final long serialVersionUID = 2L;
+    private TenantSecurityErrorCodes errorCode;
     private int httpResponseCode;
 
     /**
-     * Create a new TenantSecurityKMSException with the provided error code and HTTP
+     * Create a new TenantSecurityException with the provided error code and HTTP
      * status code.
      *
-     * @param errorCode        The EncryptionServiceErrorCode that occured with this
+     * @param errorCode        TSP generated code corresponding with this
      *                         error.
      * @param httpResponseCode The HTTP response code returned from the
      *                         Tenant Security Proxy for this error.
@@ -26,81 +26,81 @@ public class TenantSecurityKMSException extends Exception {
      *                         Security Proxy for this error.
      * @param cause            The Throwable that caused this one.
      */
-    public TenantSecurityKMSException(TenantSecurityKMSErrorCodes errorCode, int httpResponseCode, String errorMessage, Throwable cause) {
+    public TenantSecurityException(TenantSecurityErrorCodes errorCode, int httpResponseCode, String errorMessage, Throwable cause) {
         super(errorMessage, cause);
         this.errorCode = errorCode;
         this.httpResponseCode = httpResponseCode;
     }
 
     /**
-     * Create a new TenantSecurityKMSException with the provided error code and HTTP
+     * Create a new TenantSecurityException with the provided error code and HTTP
      * status code.
      *
-     * @param errorCode        The EncryptionServiceErrorCode that occured with this
+     * @param errorCode        TSP generated code corresponding with this
      *                         error.
      * @param httpResponseCode The HTTP response code returned from the
      *                         Tenant Security Proxy for this error.
      * @param errorMessage     The readable error message returned from the Tenant
      *                         Security Proxy for this error.
      */
-    public TenantSecurityKMSException(TenantSecurityKMSErrorCodes errorCode, int httpResponseCode, String errorMessage) {
+    public TenantSecurityException(TenantSecurityErrorCodes errorCode, int httpResponseCode, String errorMessage) {
         this(errorCode, httpResponseCode, errorMessage, null);
     }
 
     /**
-     * Create a new TenantSecurityKMSException with the provided error code and HTTP
+     * Create a new TenantSecurityException with the provided error code and HTTP
      * status code.
      *
-     * @param errorCode        The EncryptionServiceErrorCode that occured with this
+     * @param errorCode        TSP generated code corresponding with this
      *                         error.
      * @param httpResponseCode The HTTP response code returned from the
      *                         Tenant Security Proxy for this error.
      * @param cause            The Throwable that caused this one.
      */
-    public TenantSecurityKMSException(TenantSecurityKMSErrorCodes errorCode, int httpResponseCode, Throwable cause) {
+    public TenantSecurityException(TenantSecurityErrorCodes errorCode, int httpResponseCode, Throwable cause) {
         this(errorCode, httpResponseCode, errorCode.getMessage(), cause);
     }
 
     /**
-     * Create a new TenantSecurityKMSException with the provided error code and HTTP
+     * Create a new TenantSecurityException with the provided error code and HTTP
      * status code.
      *
-     * @param errorCode        The EncryptionServiceErrorCode that occured with this
+     * @param errorCode        TSP generated code corresponding with this
      *                         error.
      * @param httpResponseCode The HTTP response code returned from the
      *                         Tenant Security Proxy for this error.
      */
-    public TenantSecurityKMSException(TenantSecurityKMSErrorCodes errorCode, int httpResponseCode) {
+    public TenantSecurityException(TenantSecurityErrorCodes errorCode, int httpResponseCode) {
         this(errorCode, httpResponseCode, errorCode.getMessage(), null);
     }
 
     /**
-     * Create a new TenantSecurityKMSException when the request to the API couldn't
+     * Create a new TenantSecurityException when the request to the API couldn't
      * be made.
      *
-     * @param errorCode The EncryptionServiceErrorCode that occured with this error.
+     * @param errorCode TSP generated code corresponding with this error.
      * @param cause     The Throwable that caused this one.
      */
-    public TenantSecurityKMSException(TenantSecurityKMSErrorCodes errorCode, Throwable cause) {
+    public TenantSecurityException(TenantSecurityErrorCodes errorCode, Throwable cause) {
         this(errorCode, 0, errorCode.getMessage(), cause);
     }
 
     /**
-     * Create a new TenantSecurityKMSException when the request to the API couldn't
+     * Create a new TenantSecurityException when the request to the API couldn't
      * be made.
      *
-     * @param errorCode The EncryptionServiceErrorCode that occured with this error.
+     * @param errorCode TSP generated code corresponding with this error.
      */
-    public TenantSecurityKMSException(TenantSecurityKMSErrorCodes errorCode) {
+    public TenantSecurityException(TenantSecurityErrorCodes errorCode) {
         this(errorCode, 0);
     }
 
     /**
-     * Get the TenantSecurityKMSErrorCodes instance this error represents.
+     * Get the TenantSecurityErrorCodes instance this error represents.
      *
      * @return The numerical error code for this error.
      */
-    public TenantSecurityKMSErrorCodes getErrorCode() {
+    public TenantSecurityErrorCodes getErrorCode() {
         return errorCode;
     }
 

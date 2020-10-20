@@ -41,10 +41,10 @@ public class LocalBatch {
         return documentMap;
     }
 
-    private void logFailures(Map<String, TenantSecurityKMSException> failures) {
+    private void logFailures(Map<String, TenantSecurityException> failures) {
         if (failures.size() > 0) {
             System.out.println(String.format("Batch operation had %d failures", failures.size()));
-            for (Map.Entry<String, TenantSecurityKMSException> entry : failures.entrySet()) {
+            for (Map.Entry<String, TenantSecurityException> entry : failures.entrySet()) {
                 System.out.println(String.format("%s: %s", entry.getKey(), entry.getValue()));
             }
         }
@@ -84,9 +84,9 @@ public class LocalBatch {
             System.out.println("Old Batch: " + (System.currentTimeMillis() - start));
         } catch (ExecutionException e) {
             System.out.println(e.getCause());
-            if (e.getCause() instanceof TenantSecurityKMSException) {
-                TenantSecurityKMSException kmsError = (TenantSecurityKMSException) e.getCause();
-                TenantSecurityKMSErrorCodes errorCode = kmsError.getErrorCode();
+            if (e.getCause() instanceof TenantSecurityException) {
+                TenantSecurityException kmsError = (TenantSecurityException) e.getCause();
+                TenantSecurityErrorCodes errorCode = kmsError.getErrorCode();
                 System.out.println("\nError Code: " + errorCode.getCode());
                 System.out.println("\nError Code Info: " + errorCode.getMessage());
             }
@@ -130,9 +130,9 @@ public class LocalBatch {
             System.out.println("Old Batch: " + (System.currentTimeMillis() - start));
         } catch (ExecutionException e) {
             System.out.println(e.getCause());
-            if (e.getCause() instanceof TenantSecurityKMSException) {
-                TenantSecurityKMSException kmsError = (TenantSecurityKMSException) e.getCause();
-                TenantSecurityKMSErrorCodes errorCode = kmsError.getErrorCode();
+            if (e.getCause() instanceof TenantSecurityException) {
+                TenantSecurityException kmsError = (TenantSecurityException) e.getCause();
+                TenantSecurityErrorCodes errorCode = kmsError.getErrorCode();
                 System.out.println("\nError Code: " + errorCode.getCode());
                 System.out.println("\nError Code Info: " + errorCode.getMessage());
             }

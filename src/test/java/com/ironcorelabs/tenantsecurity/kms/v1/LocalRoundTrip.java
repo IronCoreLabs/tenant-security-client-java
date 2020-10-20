@@ -1,8 +1,5 @@
 package com.ironcorelabs.tenantsecurity.kms.v1;
 
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
-
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -13,6 +10,8 @@ import java.util.concurrent.ExecutionException;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.EventMetadata;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.UserEvent;
 import org.testng.annotations.Test;
+
+import static org.testng.Assert.*;
 
 @Test(groups = {"local-integration"})
 public class LocalRoundTrip {
@@ -76,9 +75,9 @@ public class LocalRoundTrip {
             assertEqualBytes(decryptedValuesMap.get("doc2"), documentMap.get("doc2"));
             assertEqualBytes(decryptedValuesMap.get("doc3"), documentMap.get("doc3"));
         } catch (ExecutionException e) {
-            if (e.getCause() instanceof TenantSecurityKMSException) {
-                TenantSecurityKMSException kmsError = (TenantSecurityKMSException) e.getCause();
-                TenantSecurityKMSErrorCodes errorCode = kmsError.getErrorCode();
+            if (e.getCause() instanceof TenantSecurityException) {
+                TenantSecurityException kmsError = (TenantSecurityException) e.getCause();
+                TenantSecurityErrorCodes errorCode = kmsError.getErrorCode();
                 System.out.println("\nError Message: " + kmsError.getMessage());
                 System.out.println("\nError Code: " + errorCode.getCode());
                 System.out.println("\nError Code Info: " + errorCode.getMessage() + "\n");
@@ -94,7 +93,7 @@ public class LocalRoundTrip {
         String tsp_address = envVars.getOrDefault("TSP_ADDRESS", TestSettings.TSP_ADDRESS);
         String tsp_port = envVars.getOrDefault("TSP_PORT", TestSettings.TSP_PORT);
         String api_key = envVars.getOrDefault("API_KEY", API_KEY);
-        String tenant_id = "bad-tenant-id"; //envVars.getOrDefault("TENANT_ID", TENANT_ID);
+        String tenant_id = "bad-tenant-id";
 
         if (tsp_port.charAt(0) != ':') {
             tsp_port = ":" + tsp_port;
@@ -102,14 +101,17 @@ public class LocalRoundTrip {
 
         EventMetadata metadata = new EventMetadata(tenant_id, "integrationTest", "sample", "app-request-id");
 
-
-        CompletableFuture<SecurityEventResult> logEvent = TenantSecurityKMSClient
+        // even though this tenant is bad, the response here will be success as the security
+        // event was enqueued for further processing.
+        CompletableFuture<Void> logEvent = TenantSecurityKMSClient
                 .create(tsp_address + tsp_port, api_key).thenCompose(client -> {
                     return client.logSecurityEvent(UserEvent.ADD, metadata);
                 });
 
-        // even though this tenant is bad, the response here will be success as the security
-        // event was enqueued for further processing.
-        assertTrue(logEvent.get().isEventQueued());
+        try {
+            logEvent.get();
+        } catch (Exception e) {
+            fail("Security Event logging should not fail");
+        }
     }
 }

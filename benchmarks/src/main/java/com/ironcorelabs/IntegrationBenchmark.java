@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit;
 import com.ironcorelabs.tenantsecurity.kms.v1.DocumentMetadata;
 import com.ironcorelabs.tenantsecurity.kms.v1.PlaintextDocument;
 import com.ironcorelabs.tenantsecurity.kms.v1.TenantSecurityKMSClient;
-import com.ironcorelabs.tenantsecurity.kms.v1.TenantSecurityKMSErrorCodes;
+import com.ironcorelabs.tenantsecurity.kms.v1.TenantSecurityErrorCodes;
 import com.ironcorelabs.tenantsecurity.kms.v1.TenantSecurityKMSException;
 
 import org.openjdk.jmh.annotations.Benchmark;
@@ -88,7 +88,7 @@ public class IntegrationBenchmark {
         } catch (Exception e) {
             if (e.getCause() instanceof TenantSecurityKMSException) {
                 TenantSecurityKMSException kmsError = (TenantSecurityKMSException) e.getCause();
-                TenantSecurityKMSErrorCodes errorCode = kmsError.getErrorCode();
+                TenantSecurityErrorCodes errorCode = kmsError.getErrorCode();
                 System.out.println("\nError Message: " + kmsError.getMessage());
                 System.out.println("\nError Code: " + errorCode.getCode());
                 System.out.println("\nError Code Info: " + errorCode.getMessage() + "\n");
