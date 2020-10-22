@@ -7,6 +7,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
+import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.EventMetadata;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.UserEvent;
 import org.testng.annotations.Test;
@@ -50,7 +51,7 @@ public class LocalRoundTrip {
         DocumentMetadata context = new DocumentMetadata(tenant_id, "integrationTest", "sample", customFields, "customRayID");
         Map<String, byte[]> documentMap = getRoundtripDataToEncrypt();
 
-        CompletableFuture<PlaintextDocument> roundtrip = TenantSecurityKMSClient
+        CompletableFuture<PlaintextDocument> roundtrip = TenantSecurityClient
                 .create(tsp_address + tsp_port, api_key).thenCompose(client -> {
 
                     try {
@@ -103,7 +104,7 @@ public class LocalRoundTrip {
 
         // even though this tenant is bad, the response here will be success as the security
         // event was enqueued for further processing.
-        CompletableFuture<Void> logEvent = TenantSecurityKMSClient
+        CompletableFuture<Void> logEvent = TenantSecurityClient
                 .create(tsp_address + tsp_port, api_key).thenCompose(client -> {
                     return client.logSecurityEvent(UserEvent.ADD, metadata);
                 });

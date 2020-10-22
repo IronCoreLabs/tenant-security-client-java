@@ -7,6 +7,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+
+import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 import org.testng.annotations.Test;
 
 @Test(groups = {"dev-integration"})
@@ -53,8 +55,8 @@ public class NotPrimaryAndDisabledConfigs {
         assertEquals(new String(one, "UTF-8"), new String(two, "UTF-8"));
     }
 
-    private CompletableFuture<TenantSecurityKMSClient> getClient() {
-        return TenantSecurityKMSClient.create(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT,
+    private CompletableFuture<TenantSecurityClient> getClient() {
+        return TenantSecurityClient.create(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT,
                 NotPrimaryAndDisabledConfigs.INTEGRATION_API_KEY);
     }
 

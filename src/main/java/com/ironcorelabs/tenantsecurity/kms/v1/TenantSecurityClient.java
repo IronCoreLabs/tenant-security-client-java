@@ -18,6 +18,8 @@ import java.util.stream.Collectors;
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+
+import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.EventMetadata;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.SecurityEvent;
 import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
@@ -27,7 +29,7 @@ import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
  *
  * @author IronCore Labs
  */
-public final class TenantSecurityKMSClient implements Closeable {
+public final class TenantSecurityClient implements Closeable {
     private static final String AES_ALGO = "AES/GCM/NoPadding";
     private static final int IV_BYTE_LENGTH = 12;
     private static final int GCM_TAG_BIT_LENGTH = 128;
@@ -42,7 +44,7 @@ public final class TenantSecurityKMSClient implements Closeable {
     // CPU-cores but configurable on construction.
     private ExecutorService encryptionExecutor;
 
-    private TenantSecurityKMSRequest encryptionService;
+    private TenantSecurityRequest encryptionService;
 
     /**
      * Default size of web request thread pool. Value value is 25.
@@ -63,7 +65,7 @@ public final class TenantSecurityKMSClient implements Closeable {
      * @param apiKey    Key to use for requests to the Tenant Security Proxy.
      * @throws Exception If the provided domain is invalid.
      */
-    public TenantSecurityKMSClient(String tspDomain, String apiKey) throws Exception {
+    public TenantSecurityClient(String tspDomain, String apiKey) throws Exception {
         this(tspDomain, apiKey, DEFAULT_REQUEST_THREADPOOL_SIZE, DEFAULT_AES_THREADPOOL_SIZE,
                 SecureRandom.getInstance("NativePRNGNonBlocking"));
     }
@@ -79,8 +81,8 @@ public final class TenantSecurityKMSClient implements Closeable {
      * @param aesThreadSize     Number of threads to use for fixed-size AES operations threadpool
      * @throws Exception If the provided domain is invalid.
      */
-    public TenantSecurityKMSClient(String tspDomain, String apiKey, int requestThreadSize,
-            int aesThreadSize) throws Exception {
+    public TenantSecurityClient(String tspDomain, String apiKey, int requestThreadSize,
+                                int aesThreadSize) throws Exception {
         this(tspDomain, apiKey, requestThreadSize, aesThreadSize,
                 SecureRandom.getInstance("NativePRNGNonBlocking"));
     }
@@ -98,8 +100,8 @@ public final class TenantSecurityKMSClient implements Closeable {
      *
      * @throws Exception If the provided domain is invalid.
      */
-    public TenantSecurityKMSClient(String tspDomain, String apiKey, int requestThreadSize,
-            int aesThreadSize, int timeout) throws Exception {
+    public TenantSecurityClient(String tspDomain, String apiKey, int requestThreadSize,
+                                int aesThreadSize, int timeout) throws Exception {
         this(tspDomain, apiKey, requestThreadSize, aesThreadSize,
                 SecureRandom.getInstance("NativePRNGNonBlocking"), timeout);
     }
@@ -117,8 +119,8 @@ public final class TenantSecurityKMSClient implements Closeable {
      * @throws Exception If the provided domain is invalid or the provided SecureRandom instance is
      *                   not set.
      */
-    public TenantSecurityKMSClient(String tspDomain, String apiKey, int requestThreadSize,
-            int aesThreadSize, SecureRandom randomGen) throws Exception {
+    public TenantSecurityClient(String tspDomain, String apiKey, int requestThreadSize,
+                                int aesThreadSize, SecureRandom randomGen) throws Exception {
         this(tspDomain, apiKey, requestThreadSize, aesThreadSize, randomGen, 20000);
     }
 
@@ -136,8 +138,8 @@ public final class TenantSecurityKMSClient implements Closeable {
      * @throws Exception If the provided domain is invalid or the provided SecureRandom instance is
      *                   not set.
      */
-    public TenantSecurityKMSClient(String tspDomain, String apiKey, int requestThreadSize,
-            int aesThreadSize, SecureRandom randomGen, int timeout) throws Exception {
+    public TenantSecurityClient(String tspDomain, String apiKey, int requestThreadSize,
+                                int aesThreadSize, SecureRandom randomGen, int timeout) throws Exception {
         // Use the URL class to validate the form of the provided TSP domain URL
         new URL(tspDomain);
         if (apiKey == null || apiKey.isEmpty()) {
@@ -158,7 +160,7 @@ public final class TenantSecurityKMSClient implements Closeable {
         this.encryptionExecutor = Executors.newFixedThreadPool(aesThreadSize);
 
         this.encryptionService =
-                new TenantSecurityKMSRequest(tspDomain, apiKey, requestThreadSize, timeout);
+                new TenantSecurityRequest(tspDomain, apiKey, requestThreadSize, timeout);
 
         // Update the crypto policy to allow us to use 256 bit AES keys
         Security.setProperty("crypto.policy", "unlimited");
@@ -178,10 +180,10 @@ public final class TenantSecurityKMSClient implements Closeable {
      * @param apiKey    Key to use for requests to the Tenant Security Proxy.
      * @return CompletableFuture that resolves in a instance of the TenantSecurityKMSClient class.
      */
-    public static CompletableFuture<TenantSecurityKMSClient> create(String tspDomain,
-            String apiKey) {
+    public static CompletableFuture<TenantSecurityClient> create(String tspDomain,
+                                                                 String apiKey) {
         return CompletableFutures
-                .tryCatchNonFatal(() -> new TenantSecurityKMSClient(tspDomain, apiKey));
+                .tryCatchNonFatal(() -> new TenantSecurityClient(tspDomain, apiKey));
     }
 
     /**
@@ -401,14 +403,7 @@ public final class TenantSecurityKMSClient implements Closeable {
         return failures.entrySet().parallelStream()
                 .collect(Collectors.toConcurrentMap(ConcurrentMap.Entry::getKey, failure -> {
                     ErrorResponse errorResponse = failure.getValue();
-                    if (errorResponse.getCode() > 0 && TenantSecurityErrorCodes
-                            .valueOf(errorResponse.getCode()) != null) {
-                        return new TenantSecurityException(
-                                TenantSecurityErrorCodes.valueOf(errorResponse.getCode()), 0,
-                                errorResponse.getMessage());
-                    }
-                    return new TenantSecurityException(TenantSecurityErrorCodes.UNKNOWN_ERROR,
-                            0, errorResponse.getMessage());
+                    return errorResponse.toTenantSecurityException(0);
                 }));
     }
 
@@ -572,7 +567,7 @@ public final class TenantSecurityKMSClient implements Closeable {
      * Send the provided security event to the TSP to be logged and analyzed. Returns Void if
      * the security event was successfully received. Note that logging a security event is an asynchronous operation
      * at the TSP, so successful receipt of a security event does not mean that the event is deliverable or has
-     * been delivered. It simply means that the event has been received and will be processed.
+     * been delivered to the tenant's logging system. It simply means that the event has been received and will be processed.
      * 
      * @param event    Security event that represents the action that took place.
      * @param metadata Metadata that provides additional context about the event.

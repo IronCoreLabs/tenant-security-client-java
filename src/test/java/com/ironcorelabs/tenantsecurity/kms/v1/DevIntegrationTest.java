@@ -8,6 +8,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
+import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.EventMetadata;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.UserEvent;
 import org.testng.annotations.Test;
@@ -24,42 +25,42 @@ public class DevIntegrationTest {
 
     @Test(expectedExceptions = java.net.MalformedURLException.class)
     public void constructorUrlTest() throws Exception {
-        new TenantSecurityKMSClient("foobaz", "apiKey");
+        new TenantSecurityClient("foobaz", "apiKey");
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void missingApiKeyTest() throws Exception {
-        new TenantSecurityKMSClient("http://localhost", null);
+        new TenantSecurityClient("http://localhost", null);
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void emptyApiKeyTest() throws Exception {
-        new TenantSecurityKMSClient("http://localhost", "");
+        new TenantSecurityClient("http://localhost", "");
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void invalidRequestThreadpoolSize() throws Exception {
-        new TenantSecurityKMSClient("http://localhost", "apiKey", 0, 1);
+        new TenantSecurityClient("http://localhost", "apiKey", 0, 1);
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void invalidCryptoThreadpoolSize() throws Exception {
-        new TenantSecurityKMSClient("http://localhost", "apiKey", 1, 0);
+        new TenantSecurityClient("http://localhost", "apiKey", 1, 0);
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void missingRandomGen() throws Exception {
-        new TenantSecurityKMSClient("http://localhost", "apiKey",
-                TenantSecurityKMSClient.DEFAULT_REQUEST_THREADPOOL_SIZE,
-                TenantSecurityKMSClient.DEFAULT_AES_THREADPOOL_SIZE, null);
+        new TenantSecurityClient("http://localhost", "apiKey",
+                TenantSecurityClient.DEFAULT_REQUEST_THREADPOOL_SIZE,
+                TenantSecurityClient.DEFAULT_AES_THREADPOOL_SIZE, null);
     }
 
     private void assertEqualBytes(byte[] one, byte[] two) throws Exception {
         assertEquals(new String(one, "UTF-8"), new String(two, "UTF-8"));
     }
 
-    private CompletableFuture<TenantSecurityKMSClient> getClient() {
-        return TenantSecurityKMSClient.create(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT,
+    private CompletableFuture<TenantSecurityClient> getClient() {
+        return TenantSecurityClient.create(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT,
                 this.INTEGRATION_API_KEY);
     }
 
@@ -91,15 +92,15 @@ public class DevIntegrationTest {
         });
 
         Map<String, byte[]> encryptedValuesMap = roundtrip.get().getEncryptedFields();
-        assertEquals(TenantSecurityKMSClient.isCiphertext(encryptedValuesMap.get("doc1")), true);
-        assertEquals(TenantSecurityKMSClient.isCiphertext(encryptedValuesMap.get("doc2")), true);
-        assertEquals(TenantSecurityKMSClient.isCiphertext(encryptedValuesMap.get("doc3")), true);
+        assertEquals(TenantSecurityClient.isCiphertext(encryptedValuesMap.get("doc1")), true);
+        assertEquals(TenantSecurityClient.isCiphertext(encryptedValuesMap.get("doc2")), true);
+        assertEquals(TenantSecurityClient.isCiphertext(encryptedValuesMap.get("doc3")), true);
     }
 
     public void isCiphertextJunkBytesTest() throws Exception {
-        assertEquals(TenantSecurityKMSClient.isCiphertext("doom guy".getBytes()), false);
-        assertEquals(TenantSecurityKMSClient.isCiphertext("1293982173982398217".getBytes()), false);
-        assertEquals(TenantSecurityKMSClient.isCiphertext(new byte[0]), false);
+        assertEquals(TenantSecurityClient.isCiphertext("doom guy".getBytes()), false);
+        assertEquals(TenantSecurityClient.isCiphertext("1293982173982398217".getBytes()), false);
+        assertEquals(TenantSecurityClient.isCiphertext(new byte[0]), false);
     }
 
     public void encryptBytesWithExistingKey() throws Exception {

@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
+
+import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 import org.testng.annotations.Test;
 
 @Test(groups = { "local-batch-integration" })
@@ -58,7 +60,7 @@ public class LocalBatch {
     public void oldBatchRoundtrip() throws Exception {
         DocumentMetadata context = new DocumentMetadata(this.TENANT_ID, "integrationTest", "sample");
 
-        TenantSecurityKMSClient client = new TenantSecurityKMSClient(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT, this.API_KEY);
+        TenantSecurityClient client = new TenantSecurityClient(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT, this.API_KEY);
 
         int batchSize = 25;
         int batchRepetitions = 50;
@@ -102,7 +104,7 @@ public class LocalBatch {
     public void newBatchRoundtrip() throws Exception {
         DocumentMetadata context = new DocumentMetadata(this.TENANT_ID, "integrationTest", "sample");
 
-        TenantSecurityKMSClient client = new TenantSecurityKMSClient(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT, this.API_KEY);
+        TenantSecurityClient client = new TenantSecurityClient(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT, this.API_KEY);
 
         int batchSize = 25;
         int batchRepetitions = 50;

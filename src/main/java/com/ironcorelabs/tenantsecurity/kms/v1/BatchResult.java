@@ -1,5 +1,7 @@
 package com.ironcorelabs.tenantsecurity.kms.v1;
 
+import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
+
 import java.util.concurrent.ConcurrentMap;
 
 /**

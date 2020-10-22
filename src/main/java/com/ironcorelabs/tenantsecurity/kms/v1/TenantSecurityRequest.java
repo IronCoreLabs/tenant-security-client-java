@@ -21,6 +21,8 @@ import com.google.api.client.http.json.JsonHttpContent;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.JsonObjectParser;
 import com.google.api.client.json.jackson2.JacksonFactory;
+import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
+import com.ironcorelabs.tenantsecurity.kms.v1.exception.TspServiceException;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.EventMetadata;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.SecurityEvent;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -31,7 +33,7 @@ import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
  * Handles requests to the Tenant Security Proxy Docker image for wrapping and unwrapping keys. Also
  * works to parse out error codes on wrap/unwrap failures.
  */
-final class TenantSecurityKMSRequest implements Closeable {
+final class TenantSecurityRequest implements Closeable {
     private static final JsonFactory JSON_FACTORY = new JacksonFactory();
 
     // Fixed sized thread pool for web requests. Limit the amount of parallel web
@@ -49,7 +51,7 @@ final class TenantSecurityKMSRequest implements Closeable {
     private final HttpRequestFactory requestFactory;
     private final int timeout;
 
-    TenantSecurityKMSRequest(String tspDomain, String apiKey, int requestThreadSize, int timeout) {
+    TenantSecurityRequest(String tspDomain, String apiKey, int requestThreadSize, int timeout) {
         HttpHeaders headers = new HttpHeaders();
         headers.put("Content-Type", "application/json");
         headers.put("Authorization", "cmk " + apiKey);
@@ -99,22 +101,20 @@ final class TenantSecurityKMSRequest implements Closeable {
             // The Google client wont parse 401 response bodies. The only way we can get a 401
             // response is if the header
             // was wrong, so hardcode that result here
-            return new TenantSecurityException(TenantSecurityErrorCodes.UNAUTHORIZED_REQUEST,
+            return new TspServiceException(TenantSecurityErrorCodes.UNAUTHORIZED_REQUEST,
                     resp.getStatusCode());
         }
         try {
             ErrorResponse errorResponse = resp.parseAs(ErrorResponse.class);
-            if (errorResponse.getCode() > 0
-                    && TenantSecurityErrorCodes.valueOf(errorResponse.getCode()) != null) {
-                return new TenantSecurityException(
-                        TenantSecurityErrorCodes.valueOf(errorResponse.getCode()),
-                        resp.getStatusCode(), errorResponse.getMessage());
-            }
+            return errorResponse.toTenantSecurityException(resp.getStatusCode());
         } catch (Exception e) {
-            /* Fall through and return unknown error below */}
-        return new TenantSecurityException(TenantSecurityErrorCodes.UNKNOWN_ERROR,
+            /* Fall through and return unknown error below */
+        }
+        return new TspServiceException(TenantSecurityErrorCodes.UNKNOWN_ERROR,
                 resp.getStatusCode());
     }
+
+
 
     /**
      * Generic method for making a request to the provided URL with the provided post data. Returns
@@ -130,10 +130,10 @@ final class TenantSecurityKMSRequest implements Closeable {
                 }
                 throw parseFailureFromRequest(resp);
             } catch (Exception cause) {
-                if (cause instanceof TenantSecurityException) {
+                if (cause instanceof TspServiceException) {
                     throw new CompletionException(cause);
                 }
-                throw new CompletionException(new TenantSecurityException(
+                throw new CompletionException(new TspServiceException(
                         TenantSecurityErrorCodes.UNABLE_TO_MAKE_REQUEST, 0, errorMessage,
                         cause));
             }
@@ -180,7 +180,7 @@ final class TenantSecurityKMSRequest implements Closeable {
                     try {
                         return unwrapResponse.getDekBytes();
                     } catch (Exception e) {
-                        throw new CompletionException(new TenantSecurityException(
+                        throw new CompletionException(new TspServiceException(
                                 TenantSecurityErrorCodes.UNABLE_TO_MAKE_REQUEST, 0,
                                 e.getMessage(), e));
                     }
