@@ -130,7 +130,7 @@ final class TenantSecurityRequest implements Closeable {
                 }
                 throw parseFailureFromRequest(resp);
             } catch (Exception cause) {
-                if (cause instanceof TspServiceException) {
+                if (cause instanceof TenantSecurityException) {
                     throw new CompletionException(cause);
                 }
                 throw new CompletionException(new TspServiceException(
