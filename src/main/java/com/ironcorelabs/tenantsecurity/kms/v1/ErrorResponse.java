@@ -9,9 +9,14 @@ import com.ironcorelabs.tenantsecurity.kms.v1.exception.*;
  */
 public class ErrorResponse {
 
+    // just for testing
     protected ErrorResponse(int code, String message) {
         this.code = code;
         this.message = message;
+    }
+
+    // This empty constructor needed for JSON deserialization
+    public ErrorResponse() {
     }
 
     @Key
