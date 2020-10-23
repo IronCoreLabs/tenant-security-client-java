@@ -8,12 +8,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
+import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 import org.testng.annotations.Test;
 
 @Test(groups = { "local-batch-integration" })
 public class LocalBatch {
-    private String TENANT_ID = "DKDNG-ET-EN93J";
-    private String API_KEY = "IF7RlyMTXO3dTP5s";
+    private String TENANT_ID = "";
+    private String API_KEY = "";
 
     private Map<String, byte[]> getRoundtripDataToEncrypt() {
         Map<String, byte[]> documentMap = new HashMap<>();
@@ -42,10 +43,10 @@ public class LocalBatch {
         return documentMap;
     }
 
-    private void logFailures(Map<String, TenantSecurityKMSException> failures) {
+    private void logFailures(Map<String, TenantSecurityException> failures) {
         if (failures.size() > 0) {
             System.out.println(String.format("Batch operation had %d failures", failures.size()));
-            for (Map.Entry<String, TenantSecurityKMSException> entry : failures.entrySet()) {
+            for (Map.Entry<String, TenantSecurityException> entry : failures.entrySet()) {
                 System.out.println(String.format("%s: %s", entry.getKey(), entry.getValue()));
             }
         }
@@ -59,7 +60,7 @@ public class LocalBatch {
     public void oldBatchRoundtrip() throws Exception {
         DocumentMetadata context = new DocumentMetadata(this.TENANT_ID, "integrationTest", "sample");
 
-        TenantSecurityKMSClient client = new TenantSecurityKMSClient(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT, this.API_KEY);
+        TenantSecurityClient client = new TenantSecurityClient(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT, this.API_KEY);
 
         int batchSize = 25;
         int batchRepetitions = 50;
@@ -85,9 +86,9 @@ public class LocalBatch {
             System.out.println("Old Batch: " + (System.currentTimeMillis() - start));
         } catch (ExecutionException e) {
             System.out.println(e.getCause());
-            if (e.getCause() instanceof TenantSecurityKMSException) {
-                TenantSecurityKMSException kmsError = (TenantSecurityKMSException) e.getCause();
-                TenantSecurityKMSErrorCodes errorCode = kmsError.getErrorCode();
+            if (e.getCause() instanceof TenantSecurityException) {
+                TenantSecurityException kmsError = (TenantSecurityException) e.getCause();
+                TenantSecurityErrorCodes errorCode = kmsError.getErrorCode();
                 System.out.println("\nError Code: " + errorCode.getCode());
                 System.out.println("\nError Code Info: " + errorCode.getMessage());
             }
@@ -103,7 +104,7 @@ public class LocalBatch {
     public void newBatchRoundtrip() throws Exception {
         DocumentMetadata context = new DocumentMetadata(this.TENANT_ID, "integrationTest", "sample");
 
-        TenantSecurityKMSClient client = new TenantSecurityKMSClient(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT, this.API_KEY);
+        TenantSecurityClient client = new TenantSecurityClient(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT, this.API_KEY);
 
         int batchSize = 25;
         int batchRepetitions = 50;
@@ -131,9 +132,9 @@ public class LocalBatch {
             System.out.println("Old Batch: " + (System.currentTimeMillis() - start));
         } catch (ExecutionException e) {
             System.out.println(e.getCause());
-            if (e.getCause() instanceof TenantSecurityKMSException) {
-                TenantSecurityKMSException kmsError = (TenantSecurityKMSException) e.getCause();
-                TenantSecurityKMSErrorCodes errorCode = kmsError.getErrorCode();
+            if (e.getCause() instanceof TenantSecurityException) {
+                TenantSecurityException kmsError = (TenantSecurityException) e.getCause();
+                TenantSecurityErrorCodes errorCode = kmsError.getErrorCode();
                 System.out.println("\nError Code: " + errorCode.getCode());
                 System.out.println("\nError Code Info: " + errorCode.getMessage());
             }

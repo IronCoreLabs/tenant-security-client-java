@@ -2,10 +2,8 @@ package com.ironcorelabs.tenantsecurity.kms.v1;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
-
 import java.util.HashMap;
 import java.util.Map;
-
 import org.testng.annotations.Test;
 
 @Test(groups = { "unit" })
@@ -39,6 +37,8 @@ public class DocumentMetadataTest {
         assertEquals(postData.get("requestingID"), "svcID");
         assertEquals(postData.get("dataLabel"), "classification");
         assertEquals(postData.get("requestID"), null);
+        assertEquals(postData.get("sourceIP"), null);
+        assertEquals(postData.get("objectID"), null);
 
         Map<String, String> customData = (Map<String, String>) postData.get("customFields");
         assertEquals(customData.size(), 0);
@@ -49,13 +49,15 @@ public class DocumentMetadataTest {
         Map<String, String> arbData = new HashMap<>();
         arbData.put("custom", "field");
         arbData.put("other", "value");
-        DocumentMetadata meta = new DocumentMetadata("customerID", "svcID", "classification", arbData, "requestID");
+        DocumentMetadata meta = new DocumentMetadata("customerID", "svcID", "classification", arbData, "requestID", "8.8.8.8", "document-5");
 
         Map<String, Object> postData = meta.getAsPostData();
         assertEquals(postData.get("tenantID"), "customerID");
         assertEquals(postData.get("requestingID"), "svcID");
         assertEquals(postData.get("dataLabel"), "classification");
         assertEquals(postData.get("requestID"), "requestID");
+        assertEquals(postData.get("sourceIP"), "8.8.8.8");
+        assertEquals(postData.get("objectID"), "document-5");
 
         Map<String, String> customData = (Map<String, String>) postData.get("customFields");
         assertEquals(customData.get("custom"), "field");

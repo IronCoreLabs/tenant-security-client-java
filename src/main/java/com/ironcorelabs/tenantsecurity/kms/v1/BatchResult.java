@@ -1,5 +1,7 @@
 package com.ironcorelabs.tenantsecurity.kms.v1;
 
+import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
+
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -8,9 +10,9 @@ import java.util.concurrent.ConcurrentMap;
  */
 public final class BatchResult<T> {
     private final ConcurrentMap<String, T> documents;
-    private final ConcurrentMap<String, TenantSecurityKMSException> failures;
+    private final ConcurrentMap<String, TenantSecurityException> failures;
 
-    public BatchResult(ConcurrentMap<String, T> documents, ConcurrentMap<String, TenantSecurityKMSException> failures) {
+    public BatchResult(ConcurrentMap<String, T> documents, ConcurrentMap<String, TenantSecurityException> failures) {
         this.documents = documents;
         this.failures = failures;
     }
@@ -25,7 +27,7 @@ public final class BatchResult<T> {
     /**
      * Get a Map from the document ID to an exception that occured when encrypting or decrypting the document
      */
-    public ConcurrentMap<String, TenantSecurityKMSException> getFailures(){
+    public ConcurrentMap<String, TenantSecurityException> getFailures(){
         return this.failures;
     }
 

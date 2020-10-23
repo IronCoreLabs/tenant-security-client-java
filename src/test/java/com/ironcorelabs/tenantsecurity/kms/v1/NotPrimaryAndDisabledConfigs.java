@@ -7,6 +7,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+
+import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 import org.testng.annotations.Test;
 
 @Test(groups = {"dev-integration"})
@@ -53,8 +55,8 @@ public class NotPrimaryAndDisabledConfigs {
         assertEquals(new String(one, "UTF-8"), new String(two, "UTF-8"));
     }
 
-    private CompletableFuture<TenantSecurityKMSClient> getClient() {
-        return TenantSecurityKMSClient.create(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT,
+    private CompletableFuture<TenantSecurityClient> getClient() {
+        return TenantSecurityClient.create(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT,
                 NotPrimaryAndDisabledConfigs.INTEGRATION_API_KEY);
     }
 
@@ -86,10 +88,10 @@ public class NotPrimaryAndDisabledConfigs {
             encrypt.get();
             fail("Request should fail to encrypt new data");
         } catch (ExecutionException e) {
-            assertTrue(e.getCause() instanceof TenantSecurityKMSException);
-            TenantSecurityKMSException esError = (TenantSecurityKMSException) e.getCause();
+            assertTrue(e.getCause() instanceof TenantSecurityException);
+            TenantSecurityException esError = (TenantSecurityException) e.getCause();
             assertEquals(esError.getErrorCode(),
-                    TenantSecurityKMSErrorCodes.NO_PRIMARY_KMS_CONFIGURATION);
+                    TenantSecurityErrorCodes.NO_PRIMARY_KMS_CONFIGURATION);
         }
     }
 
@@ -103,10 +105,10 @@ public class NotPrimaryAndDisabledConfigs {
             decrypted.get();
             fail("Request should fail to decrypt data when config is missing");
         } catch (ExecutionException e) {
-            assertTrue(e.getCause() instanceof TenantSecurityKMSException);
-            TenantSecurityKMSException esError = (TenantSecurityKMSException) e.getCause();
+            assertTrue(e.getCause() instanceof TenantSecurityException);
+            TenantSecurityException esError = (TenantSecurityException) e.getCause();
             assertEquals(esError.getErrorCode(),
-                    TenantSecurityKMSErrorCodes.KMS_CONFIGURATION_DISABLED);
+                    TenantSecurityErrorCodes.KMS_CONFIGURATION_DISABLED);
         }
     }
 
@@ -118,12 +120,12 @@ public class NotPrimaryAndDisabledConfigs {
 
         try {
             decrypted.get();
-            fail("Request should fail to decrypt data when provided tenant doesnt exist");
+            fail("Request should fail to decrypt data when provided tenant doesn't exist");
         } catch (ExecutionException e) {
-            assertTrue(e.getCause() instanceof TenantSecurityKMSException);
-            TenantSecurityKMSException esError = (TenantSecurityKMSException) e.getCause();
+            assertTrue(e.getCause() instanceof TenantSecurityException);
+            TenantSecurityException esError = (TenantSecurityException) e.getCause();
             assertEquals(esError.getErrorCode(),
-                    TenantSecurityKMSErrorCodes.UNKNOWN_TENANT_OR_NO_ACTIVE_KMS_CONFIGURATIONS);
+                    TenantSecurityErrorCodes.UNKNOWN_TENANT_OR_NO_ACTIVE_KMS_CONFIGURATIONS);
         }
     }
 }
