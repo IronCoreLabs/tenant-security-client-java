@@ -33,12 +33,12 @@ public class DocumentMetadataTest {
         DocumentMetadata meta = new DocumentMetadata("customerID", "svcID", "classification");
 
         Map<String, Object> postData = meta.getAsPostData();
-        assertEquals(postData.get("tenantID"), "customerID");
-        assertEquals(postData.get("requestingID"), "svcID");
+        assertEquals(postData.get("tenantId"), "customerID");
+        assertEquals(postData.get("requestingId"), "svcID");
         assertEquals(postData.get("dataLabel"), "classification");
-        assertEquals(postData.get("requestID"), null);
-        assertEquals(postData.get("sourceIP"), null);
-        assertEquals(postData.get("objectID"), null);
+        assertEquals(postData.get("requestId"), null);
+        assertEquals(postData.get("sourceIp"), null);
+        assertEquals(postData.get("objectId"), null);
 
         Map<String, String> customData = (Map<String, String>) postData.get("customFields");
         assertEquals(customData.size(), 0);
@@ -52,12 +52,12 @@ public class DocumentMetadataTest {
         DocumentMetadata meta = new DocumentMetadata("customerID", "svcID", "classification", arbData, "requestID", "8.8.8.8", "document-5");
 
         Map<String, Object> postData = meta.getAsPostData();
-        assertEquals(postData.get("tenantID"), "customerID");
-        assertEquals(postData.get("requestingID"), "svcID");
+        assertEquals(postData.get("tenantId"), "customerID");
+        assertEquals(postData.get("requestingId"), "svcID");
         assertEquals(postData.get("dataLabel"), "classification");
-        assertEquals(postData.get("requestID"), "requestID");
-        assertEquals(postData.get("sourceIP"), "8.8.8.8");
-        assertEquals(postData.get("objectID"), "document-5");
+        assertEquals(postData.get("requestId"), "requestID");
+        assertEquals(postData.get("sourceIp"), "8.8.8.8");
+        assertEquals(postData.get("objectId"), "document-5");
 
         Map<String, String> customData = (Map<String, String>) postData.get("customFields");
         assertEquals(customData.get("custom"), "field");
