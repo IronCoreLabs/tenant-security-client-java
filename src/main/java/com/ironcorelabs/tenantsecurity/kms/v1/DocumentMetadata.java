@@ -162,14 +162,14 @@ public class DocumentMetadata {
      */
     public Map<String, Object> getAsPostData() {
         Map<String, Object> postData = new HashMap<>();
-        postData.put("tenantID", tenantId);
-        postData.put("requestingID", requestingUserOrServiceId);
+        postData.put("tenantId", tenantId);
+        postData.put("requestingId", requestingUserOrServiceId);
         postData.put("dataLabel", dataLabel);
         if (requestId != null) {
-            postData.put("requestID", requestId);
+            postData.put("requestId", requestId);
         }
-        postData.put("sourceIP", sourceIp);
-        postData.put("objectID", objectId);
+        postData.put("sourceIp", sourceIp);
+        postData.put("objectId", objectId);
 
         Map<String, String> customFields = new HashMap<>();
         for (Map.Entry<String, String> entry : otherData.entrySet()) {
