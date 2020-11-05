@@ -6,8 +6,6 @@ import java.net.URL;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.security.Security;
-import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -18,7 +16,6 @@ import java.util.stream.Collectors;
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
-
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.EventMetadata;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.SecurityEvent;
@@ -82,7 +79,7 @@ public final class TenantSecurityClient implements Closeable {
      * @throws Exception If the provided domain is invalid.
      */
     public TenantSecurityClient(String tspDomain, String apiKey, int requestThreadSize,
-                                int aesThreadSize) throws Exception {
+            int aesThreadSize) throws Exception {
         this(tspDomain, apiKey, requestThreadSize, aesThreadSize,
                 SecureRandom.getInstance("NativePRNGNonBlocking"));
     }
@@ -101,7 +98,7 @@ public final class TenantSecurityClient implements Closeable {
      * @throws Exception If the provided domain is invalid.
      */
     public TenantSecurityClient(String tspDomain, String apiKey, int requestThreadSize,
-                                int aesThreadSize, int timeout) throws Exception {
+            int aesThreadSize, int timeout) throws Exception {
         this(tspDomain, apiKey, requestThreadSize, aesThreadSize,
                 SecureRandom.getInstance("NativePRNGNonBlocking"), timeout);
     }
@@ -120,7 +117,7 @@ public final class TenantSecurityClient implements Closeable {
      *                   not set.
      */
     public TenantSecurityClient(String tspDomain, String apiKey, int requestThreadSize,
-                                int aesThreadSize, SecureRandom randomGen) throws Exception {
+            int aesThreadSize, SecureRandom randomGen) throws Exception {
         this(tspDomain, apiKey, requestThreadSize, aesThreadSize, randomGen, 20000);
     }
 
@@ -139,7 +136,7 @@ public final class TenantSecurityClient implements Closeable {
      *                   not set.
      */
     public TenantSecurityClient(String tspDomain, String apiKey, int requestThreadSize,
-                                int aesThreadSize, SecureRandom randomGen, int timeout) throws Exception {
+            int aesThreadSize, SecureRandom randomGen, int timeout) throws Exception {
         // Use the URL class to validate the form of the provided TSP domain URL
         new URL(tspDomain);
         if (apiKey == null || apiKey.isEmpty()) {
@@ -180,8 +177,7 @@ public final class TenantSecurityClient implements Closeable {
      * @param apiKey    Key to use for requests to the Tenant Security Proxy.
      * @return CompletableFuture that resolves in a instance of the TenantSecurityKMSClient class.
      */
-    public static CompletableFuture<TenantSecurityClient> create(String tspDomain,
-                                                                 String apiKey) {
+    public static CompletableFuture<TenantSecurityClient> create(String tspDomain, String apiKey) {
         return CompletableFutures
                 .tryCatchNonFatal(() -> new TenantSecurityClient(tspDomain, apiKey));
     }
@@ -564,10 +560,11 @@ public final class TenantSecurityClient implements Closeable {
     }
 
     /**
-     * Send the provided security event to the TSP to be logged and analyzed. Returns Void if
-     * the security event was successfully received. Note that logging a security event is an asynchronous operation
-     * at the TSP, so successful receipt of a security event does not mean that the event is deliverable or has
-     * been delivered to the tenant's logging system. It simply means that the event has been received and will be processed.
+     * Send the provided security event to the TSP to be logged and analyzed. Returns Void if the
+     * security event was successfully received. Note that logging a security event is an
+     * asynchronous operation at the TSP, so successful receipt of a security event does not mean
+     * that the event is deliverable or has been delivered to the tenant's logging system. It simply
+     * means that the event has been received and will be processed.
      * 
      * @param event    Security event that represents the action that took place.
      * @param metadata Metadata that provides additional context about the event.
@@ -575,72 +572,5 @@ public final class TenantSecurityClient implements Closeable {
      */
     public CompletableFuture<Void> logSecurityEvent(SecurityEvent event, EventMetadata metadata) {
         return this.encryptionService.logSecurityEvent(event, metadata);
-    }
-
-    // ======================================
-    // DEPRECATED METHODS
-    // ======================================
-
-    /**
-     * Encrypt documents in parallel. Will generate a new document encryption key for each item in
-     * the provided Collection and use it to encrypt all the fields in the document Map. The
-     * provided metadata will be used for all encrypted documents.
-     *
-     * @param documents Collection of documents to encrypt
-     * @param metadata  Metadata about all of the documents being encrypted
-     * @return List of EncryptedDocument instances in the same order (if ordered) as the plaintexts
-     *         were provided.
-     * @deprecated Replaced by an updated version which takes a Map from document ID to field to
-     *             encrypt and supports partial success and failure
-     */
-    public CompletableFuture<List<EncryptedDocument>> encryptBatch(
-            Collection<Map<String, byte[]>> documents, DocumentMetadata metadata) {
-        List<CompletableFuture<EncryptedDocument>> encryptOps =
-                documents.stream().map(plaintextDocument -> encrypt(plaintextDocument, metadata))
-                        .collect(Collectors.toList());
-
-        return CompletableFutures.sequence(encryptOps);
-    }
-
-    /**
-     * Encrypt the provided documents reusing an existing encrypted document encryption key (EDEK).
-     * Makes a call out to the Tenant Security Proxy to decrypt the EDEK and then uses the resulting
-     * key (DEK) to encrypt the documents. This allows callers to batch update/re-encrypt data that
-     * has already been encrypted with an existing key.
-     *
-     * @param documents Collection of PlaintextDocuments to re-encrypt
-     * @param metadata  Metadata about all of the documents being encrypted
-     * @return List of EncryptedDocument instances in the same order (if ordered) as the plaintexts
-     *         were provided.
-     * @deprecated Replaced by an updated version which takes a Map from document ID to
-     *             PlaintextDocument and supports partial success and failure
-     */
-    public CompletableFuture<List<EncryptedDocument>> encryptExistingBatch(
-            Collection<PlaintextDocument> documents, DocumentMetadata metadata) {
-        List<CompletableFuture<EncryptedDocument>> encryptOps =
-                documents.stream().map(plaintextDocument -> encrypt(plaintextDocument, metadata))
-                        .collect(Collectors.toList());
-
-        return CompletableFutures.sequence(encryptOps);
-    }
-
-    /**
-     * Decrypt the provided EncryptedDocuments in parallel. Returns a List of PlaintextDocuments in
-     * the same order (if ordered) as provided. Uses the provided metadata for each decrypt
-     * invocation.
-     *
-     * @param encryptedDocuments Collection of EncryptedDocuments to decrypt.
-     * @param metadata           Metadata to use for each decrypt operation.
-     * @return List of PlaintextDocuments in the same order as provided (if ordered).
-     * @deprecated Replaced by an updated version which takes a Map from document ID to
-     *             EncryptedDocument and supports partial success and failure
-     */
-    public CompletableFuture<List<PlaintextDocument>> decryptBatch(
-            Collection<EncryptedDocument> encryptedDocuments, DocumentMetadata metadata) {
-        List<CompletableFuture<PlaintextDocument>> decryptOps = encryptedDocuments.stream()
-                .map(encryptedDocument -> decrypt(encryptedDocument, metadata))
-                .collect(Collectors.toList());
-
-        return CompletableFutures.sequence(decryptOps);
     }
 }

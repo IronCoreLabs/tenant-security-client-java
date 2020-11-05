@@ -31,9 +31,9 @@ public class IntegrationBenchmark {
     // Default values that can be overridden by environment variables of the same name
     // These match up to the Demo TSP whose config we ship with the repo.
     private static String TSP_ADDRESS = "http://localhost";
-    private static String TSP_PORT = "7777";
-    private static String TENANT_ID = "testTenant";
-    private static String API_KEY = "X5vNQc+aQ0w/tmEi";
+    private static String TSP_PORT = "32804";
+    private static String TENANT_ID = "tenant-gcp";
+    private static String API_KEY = "0WUaXesNgbTAuLwn";
     private static final Map<String, String> customFields;
     static {
         Map<String, String> cfM = new HashMap<>();
