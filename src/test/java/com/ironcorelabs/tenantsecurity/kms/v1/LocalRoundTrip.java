@@ -18,8 +18,8 @@ import static org.testng.Assert.*;
 public class LocalRoundTrip {
     // Default values that can be overridden by environment variables of the same name
     // These match up to the Demo TSP whose config we ship with the repo.
-    private static String TENANT_ID = "tenant-gcp";
-    private static String API_KEY = "0WUaXesNgbTAuLwn";
+    private static String TENANT_ID = "testTenant";
+    private static String API_KEY = "X5vNQc+aQ0w/tmEi";
 
     private void assertEqualBytes(byte[] one, byte[] two) throws Exception {
         assertEquals(new String(one, "UTF-8"), new String(two, "UTF-8"));
@@ -48,7 +48,8 @@ public class LocalRoundTrip {
             tsp_port = ":" + tsp_port;
         }
 
-        DocumentMetadata context = new DocumentMetadata(tenant_id, "integrationTest", "sample", customFields, "customRayID");
+        DocumentMetadata context = new DocumentMetadata(tenant_id, "integrationTest", "sample",
+                customFields, "customRayID");
         Map<String, byte[]> documentMap = getRoundtripDataToEncrypt();
 
         CompletableFuture<PlaintextDocument> roundtrip = TenantSecurityClient
