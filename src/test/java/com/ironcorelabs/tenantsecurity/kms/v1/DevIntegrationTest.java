@@ -1,20 +1,19 @@
 package com.ironcorelabs.tenantsecurity.kms.v1;
 
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.fail;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
-
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.EventMetadata;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.UserEvent;
 import org.testng.annotations.Test;
-import java.util.Base64;
-
-import static org.testng.Assert.*;
 
 @Test(groups = {"dev-integration"})
 public class DevIntegrationTest {
@@ -25,34 +24,34 @@ public class DevIntegrationTest {
 
     @Test(expectedExceptions = java.net.MalformedURLException.class)
     public void constructorUrlTest() throws Exception {
-        new TenantSecurityClient("foobaz", "apiKey");
+        new TenantSecurityClient("foobaz", "apiKey").close();
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void missingApiKeyTest() throws Exception {
-        new TenantSecurityClient("http://localhost", null);
+        new TenantSecurityClient("http://localhost", null).close();
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void emptyApiKeyTest() throws Exception {
-        new TenantSecurityClient("http://localhost", "");
+        new TenantSecurityClient("http://localhost", "").close();
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void invalidRequestThreadpoolSize() throws Exception {
-        new TenantSecurityClient("http://localhost", "apiKey", 0, 1);
+        new TenantSecurityClient("http://localhost", "apiKey", 0, 1).close();
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void invalidCryptoThreadpoolSize() throws Exception {
-        new TenantSecurityClient("http://localhost", "apiKey", 1, 0);
+        new TenantSecurityClient("http://localhost", "apiKey", 1, 0).close();
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void missingRandomGen() throws Exception {
         new TenantSecurityClient("http://localhost", "apiKey",
                 TenantSecurityClient.DEFAULT_REQUEST_THREADPOOL_SIZE,
-                TenantSecurityClient.DEFAULT_AES_THREADPOOL_SIZE, null);
+                TenantSecurityClient.DEFAULT_AES_THREADPOOL_SIZE, null).close();
     }
 
     private void assertEqualBytes(byte[] one, byte[] two) throws Exception {
@@ -193,192 +192,7 @@ public class DevIntegrationTest {
         assertEqualBytes(decryptedValuesMap.get("doc3"), documentMap.get("doc3"));
     }
 
-    public void batchRoundtripTestOldApi() throws Exception {
-        DocumentMetadata metadata = getRoundtripMetadata(this.GCP_TENANT_ID);
-        Map<String, byte[]> firstRow = getRoundtripDataToEncrypt();
-
-        Map<String, byte[]> secondRow = new HashMap<>();
-        secondRow.put("second1", "And a one!".getBytes("UTF-8"));
-        secondRow.put("second2", "And a two!".getBytes("UTF-8"));
-        secondRow.put("second3", "And a here we go!".getBytes("UTF-8"));
-
-        Map<String, byte[]> thirdRow = getRoundtripDataToEncrypt();
-
-        Map<String, byte[]> fourthRow = new HashMap<>();
-        fourthRow.put("fourth1", "So much encryption!".getBytes("UTF-8"));
-        fourthRow.put("fourth2", "Much wow!".getBytes("UTF-8"));
-        fourthRow.put("fourth3", "-Doge".getBytes("UTF-8"));
-
-        Map<String, byte[]> fifthRow = getRoundtripDataToEncrypt();
-
-        List<Map<String, byte[]>> rows =
-                Arrays.asList(firstRow, secondRow, thirdRow, fourthRow, fifthRow);
-
-        CompletableFuture<List<PlaintextDocument>> roundtrip = getClient().thenCompose(client -> {
-            try {
-                return client.encryptBatch(rows, metadata).thenCompose(encryptedList -> {
-                    return client.decryptBatch(encryptedList, metadata);
-                });
-            } catch (Exception e) {
-                throw new CompletionException(e);
-            }
-        });
-
-        List<PlaintextDocument> encryptedRows = roundtrip.get();
-
-        Map<String, byte[]> row1 = encryptedRows.get(0).getDecryptedFields();
-        Map<String, byte[]> row2 = encryptedRows.get(1).getDecryptedFields();
-        Map<String, byte[]> row3 = encryptedRows.get(2).getDecryptedFields();
-        Map<String, byte[]> row4 = encryptedRows.get(3).getDecryptedFields();
-        Map<String, byte[]> row5 = encryptedRows.get(4).getDecryptedFields();
-
-        assertEqualBytes(row1.get("doc1"), firstRow.get("doc1"));
-        assertEqualBytes(row1.get("doc2"), firstRow.get("doc2"));
-        assertEqualBytes(row1.get("doc3"), firstRow.get("doc3"));
-
-        assertEqualBytes(row2.get("second1"), secondRow.get("second1"));
-        assertEqualBytes(row2.get("second2"), secondRow.get("second2"));
-        assertEqualBytes(row2.get("second3"), secondRow.get("second3"));
-
-        assertEqualBytes(row3.get("doc1"), thirdRow.get("doc1"));
-        assertEqualBytes(row3.get("doc2"), thirdRow.get("doc2"));
-        assertEqualBytes(row3.get("doc3"), thirdRow.get("doc3"));
-
-        assertEqualBytes(row4.get("fourth1"), fourthRow.get("fourth1"));
-        assertEqualBytes(row4.get("fourth2"), fourthRow.get("fourth2"));
-        assertEqualBytes(row4.get("fourth3"), fourthRow.get("fourth3"));
-
-        assertEqualBytes(row5.get("doc1"), fifthRow.get("doc1"));
-        assertEqualBytes(row5.get("doc2"), fifthRow.get("doc2"));
-        assertEqualBytes(row5.get("doc3"), fifthRow.get("doc3"));
-    }
-
-    public void batchRoundtripUpdateTestOldApi() throws Exception {
-        DocumentMetadata metadata = getRoundtripMetadata(this.AZURE_TENANT_ID);
-
-        // Create three "rows" of data
-        Map<String, byte[]> firstRow = new HashMap<>();
-        firstRow.put("first1", "And a one!".getBytes("UTF-8"));
-        firstRow.put("first2", "And a two!".getBytes("UTF-8"));
-        firstRow.put("first3", "And a here we go!".getBytes("UTF-8"));
-
-        Map<String, byte[]> secondRow = getRoundtripDataToEncrypt();
-
-        Map<String, byte[]> thirdRow = new HashMap<>();
-        thirdRow.put("third1", "So much encryption!".getBytes("UTF-8"));
-        thirdRow.put("third2", "Much wow!".getBytes("UTF-8"));
-        thirdRow.put("third3", "-Doge".getBytes("UTF-8"));
-
-        // Create two modifications of that data (we do this here since the getBytes can
-        // throw so doing it within the CompletableFuture workflow is a PITA)
-        Map<String, byte[]> newFirstRow = new HashMap<>();
-        newFirstRow.put("first2", "And a two!?".getBytes("UTF-8"));
-
-        Map<String, byte[]> newThirdRow = new HashMap<>();
-        newThirdRow.put("third3", "-Doge?".getBytes("UTF-8"));
-
-        List<Map<String, byte[]>> rows = Arrays.asList(firstRow, secondRow, thirdRow);
-
-        CompletableFuture<List<PlaintextDocument>> roundtrip = getClient().thenCompose(client -> {
-            try {
-                // First encrypt the original list of documents via batch operation
-                return client.encryptBatch(rows, metadata).thenCompose(encryptedList -> {
-                    // Then batch update a few pieces of data from each row with new data but the
-                    // same key they used to encrypt
-                    PlaintextDocument firstRowUpdates =
-                            new PlaintextDocument(newFirstRow, encryptedList.get(0).getEdek());
-                    PlaintextDocument thirdRowUpdates =
-                            new PlaintextDocument(newThirdRow, encryptedList.get(2).getEdek());
-
-                    // And batch encrypt those new fields
-                    return client
-                            .encryptExistingBatch(Arrays.asList(firstRowUpdates, thirdRowUpdates),
-                                    metadata)
-                            .thenCompose(updatedEncryptedList -> {
-                                // Then merge the newly encrypted fields with the original row of
-                                // encrypted data so we can verify that decryption works on all of
-                                // them with the same key
-                                Map<String, byte[]> fullEncryptedFirstRow = new HashMap<>();
-                                fullEncryptedFirstRow
-                                        .putAll(encryptedList.get(0).getEncryptedFields());
-                                fullEncryptedFirstRow
-                                        .putAll(updatedEncryptedList.get(0).getEncryptedFields());
-
-                                Map<String, byte[]> fullEncryptedThirdRow = new HashMap<>();
-                                fullEncryptedThirdRow
-                                        .putAll(encryptedList.get(2).getEncryptedFields());
-                                fullEncryptedThirdRow
-                                        .putAll(updatedEncryptedList.get(1).getEncryptedFields());
-
-                                List<EncryptedDocument> mergedEncryptedList = Arrays.asList(
-                                        new EncryptedDocument(fullEncryptedFirstRow,
-                                                encryptedList.get(0).getEdek()),
-                                        encryptedList.get(1),
-                                        new EncryptedDocument(fullEncryptedThirdRow,
-                                                encryptedList.get(2).getEdek()));
-                                // Finally decrypt the whole enchilada so we can verify the
-                                // roundtrip below
-                                return client.decryptBatch(mergedEncryptedList, metadata);
-                            });
-                });
-            } catch (Exception e) {
-                throw new CompletionException(e);
-            }
-        });
-
-        List<PlaintextDocument> encryptedRows = roundtrip.get();
-
-        Map<String, byte[]> row1 = encryptedRows.get(0).getDecryptedFields();
-        Map<String, byte[]> row2 = encryptedRows.get(1).getDecryptedFields();
-        Map<String, byte[]> row3 = encryptedRows.get(2).getDecryptedFields();
-
-        assertEqualBytes(row1.get("first1"), firstRow.get("first1"));
-        assertEqualBytes(row1.get("first2"), newFirstRow.get("first2"));
-        assertEqualBytes(row1.get("first3"), firstRow.get("first3"));
-
-        assertEqualBytes(row2.get("doc1"), secondRow.get("doc1"));
-        assertEqualBytes(row2.get("doc2"), secondRow.get("doc2"));
-        assertEqualBytes(row2.get("doc3"), secondRow.get("doc3"));
-
-        assertEqualBytes(row3.get("third1"), thirdRow.get("third1"));
-        assertEqualBytes(row3.get("third2"), thirdRow.get("third2"));
-        assertEqualBytes(row3.get("third3"), newThirdRow.get("third3"));
-    }
-
-    public void largeBatchTestOldApi() throws Exception {
-        DocumentMetadata metadata = getRoundtripMetadata(this.AWS_TENANT_ID);
-
-        // Build up a fairly large amount of data to have a test that encrypts more than
-        // a few bytes
-        Map<String, byte[]> document = new HashMap<>();
-
-        int msgSize = 1024 * 3000; // 3 MB
-        StringBuilder sb = new StringBuilder(msgSize);
-        for (int i = 0; i < msgSize; i++) {
-            sb.append("a");
-        }
-        document.put("doc1", sb.toString().getBytes("UTF-8"));
-
-        // Encrypt the document 50 times. Allows us to somewhat stress-test the TSP and
-        // the Java client
-        List<Map<String, byte[]>> rows =
-                Arrays.stream(new int[50]).mapToObj(_nope -> document).collect(Collectors.toList());
-
-        CompletableFuture<List<PlaintextDocument>> roundtrip = getClient().thenCompose(client -> {
-            try {
-                return client.encryptBatch(rows, metadata).thenCompose(encryptedResults -> {
-                    return client.decryptBatch(encryptedResults, metadata);
-                });
-            } catch (Exception e) {
-                throw new CompletionException(e);
-            }
-        });
-
-        List<PlaintextDocument> decryptedValues = roundtrip.get();
-        assertEquals(decryptedValues.size(), 50);
-    }
-
-    public void batchRoundtripTestNewApi() throws Exception {
+    public void batchRoundtripTest() throws Exception {
         DocumentMetadata metadata = getRoundtripMetadata(this.GCP_TENANT_ID);
 
         Map<String, byte[]> firstRow = getRoundtripDataToEncrypt();
@@ -428,7 +242,7 @@ public class DevIntegrationTest {
         assertEqualBytes(row3.get("doc3"), thirdRow.get("doc3"));
     }
 
-    public void batchRoundtripUpdateTestNewApi() throws Exception {
+    public void batchRoundtripUpdateTest() throws Exception {
         DocumentMetadata metadata = getRoundtripMetadata(this.AZURE_TENANT_ID);
 
         // Create three "rows" of data
@@ -558,7 +372,7 @@ public class DevIntegrationTest {
         assertEqualBytes(roundtripUser30.get("birthday"), newUser30.get("birthday"));
     }
 
-    public void largeBatchTestNewApi() throws Exception {
+    public void largeBatchTest() throws Exception {
         DocumentMetadata metadata = getRoundtripMetadata(this.AWS_TENANT_ID);
 
         // Build up a fairly large amount of data to have a test that encrypts more than
@@ -606,8 +420,10 @@ public class DevIntegrationTest {
     public void leasedDataTest() throws Exception {
         DocumentMetadata metadata = getRoundtripMetadata(this.GCP_TENANT_ID);
 
-        String leasedDocumentEdek = "Cr8BCjA7nnuAiXpD0Jkjc6mOBgcSyxcjFYX813WQhhYg0oKnsDJTmeyAaLs3t9pzkR6mU9cQ7AMY3gQiDCEN6aQFtglBZ0DX7yp3CnUKcAokABW+8Gfu/FSC8WQTqxw528aQXwrpvY0MjlHurZJ6yHx9S/2zEkgAs0w57oTuIHzVmauLGDi/S9zCQH20dezcc/jtw/nqCDnAtAPSB9m17YvGOVpN5xO8960C86NA4AJCoVJ291YW9OkIKto48/YQ7AM=";
-        String leasedDocumentBytes = "A0lST04AOwocjKi8E65AAxBCqUjeSqQDc7veZVQehempBfsABBobChlJTlRFR1JBVElPTi1URVNULURFVjEtR0NQbZ+1yhYOoCNdtV+VVTMTUfAQm1FdqtGyjqeE7iYxfW9TKwTc2C0=";
+        String leasedDocumentEdek =
+                "Cr8BCjA7nnuAiXpD0Jkjc6mOBgcSyxcjFYX813WQhhYg0oKnsDJTmeyAaLs3t9pzkR6mU9cQ7AMY3gQiDCEN6aQFtglBZ0DX7yp3CnUKcAokABW+8Gfu/FSC8WQTqxw528aQXwrpvY0MjlHurZJ6yHx9S/2zEkgAs0w57oTuIHzVmauLGDi/S9zCQH20dezcc/jtw/nqCDnAtAPSB9m17YvGOVpN5xO8960C86NA4AJCoVJ291YW9OkIKto48/YQ7AM=";
+        String leasedDocumentBytes =
+                "A0lST04AOwocjKi8E65AAxBCqUjeSqQDc7veZVQehempBfsABBobChlJTlRFR1JBVElPTi1URVNULURFVjEtR0NQbZ+1yhYOoCNdtV+VVTMTUfAQm1FdqtGyjqeE7iYxfW9TKwTc2C0=";
 
         Map<String, byte[]> documentMap = new HashMap<>();
         documentMap.put("doc", Base64.getDecoder().decode(leasedDocumentBytes));
@@ -626,7 +442,8 @@ public class DevIntegrationTest {
     }
 
     public void logSecurityEvent() throws Exception {
-        EventMetadata metadata = new EventMetadata(this.GCP_TENANT_ID, "integrationTest", "sample", "app-request-id");
+        EventMetadata metadata = new EventMetadata(this.GCP_TENANT_ID, "integrationTest", "sample",
+                "app-request-id");
         CompletableFuture<Void> logEvent =
                 getClient().thenCompose(client -> client.logSecurityEvent(UserEvent.ADD, metadata));
 

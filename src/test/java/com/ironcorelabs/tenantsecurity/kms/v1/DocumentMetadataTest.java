@@ -6,7 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.testng.annotations.Test;
 
-@Test(groups = { "unit" })
+@Test(groups = {"unit"})
 public class DocumentMetadataTest {
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void missingTenantID() throws Exception {
@@ -34,11 +34,13 @@ public class DocumentMetadataTest {
 
         Map<String, Object> postData = meta.getAsPostData();
         assertEquals(postData.get("tenantId"), "customerID");
-        assertEquals(postData.get("requestingId"), "svcID");
-        assertEquals(postData.get("dataLabel"), "classification");
-        assertEquals(postData.get("requestId"), null);
-        assertEquals(postData.get("sourceIp"), null);
-        assertEquals(postData.get("objectId"), null);
+
+        Map<String, Object> iclFields = (Map<String, Object>) postData.get("iclFields");
+        assertEquals(iclFields.get("requestingId"), "svcID");
+        assertEquals(iclFields.get("dataLabel"), "classification");
+        assertEquals(iclFields.get("requestId"), null);
+        assertEquals(iclFields.get("sourceIp"), null);
+        assertEquals(iclFields.get("objectId"), null);
 
         Map<String, String> customData = (Map<String, String>) postData.get("customFields");
         assertEquals(customData.size(), 0);
@@ -49,15 +51,18 @@ public class DocumentMetadataTest {
         Map<String, String> arbData = new HashMap<>();
         arbData.put("custom", "field");
         arbData.put("other", "value");
-        DocumentMetadata meta = new DocumentMetadata("customerID", "svcID", "classification", arbData, "requestID", "8.8.8.8", "document-5");
+        DocumentMetadata meta = new DocumentMetadata("customerID", "svcID", "classification",
+                arbData, "requestID", "8.8.8.8", "document-5");
 
         Map<String, Object> postData = meta.getAsPostData();
         assertEquals(postData.get("tenantId"), "customerID");
-        assertEquals(postData.get("requestingId"), "svcID");
-        assertEquals(postData.get("dataLabel"), "classification");
-        assertEquals(postData.get("requestId"), "requestID");
-        assertEquals(postData.get("sourceIp"), "8.8.8.8");
-        assertEquals(postData.get("objectId"), "document-5");
+
+        Map<String, Object> iclFields = (Map<String, Object>) postData.get("iclFields");
+        assertEquals(iclFields.get("requestingId"), "svcID");
+        assertEquals(iclFields.get("dataLabel"), "classification");
+        assertEquals(iclFields.get("requestId"), "requestID");
+        assertEquals(iclFields.get("sourceIp"), "8.8.8.8");
+        assertEquals(iclFields.get("objectId"), "document-5");
 
         Map<String, String> customData = (Map<String, String>) postData.get("customFields");
         assertEquals(customData.get("custom"), "field");

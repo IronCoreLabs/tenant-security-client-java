@@ -1,18 +1,17 @@
 package com.ironcorelabs.tenantsecurity.kms.v1;
 
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.fail;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
-
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.EventMetadata;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.UserEvent;
 import org.testng.annotations.Test;
-
-import static org.testng.Assert.*;
 
 @Test(groups = {"local-integration"})
 public class LocalRoundTrip {
@@ -48,11 +47,12 @@ public class LocalRoundTrip {
             tsp_port = ":" + tsp_port;
         }
 
-        DocumentMetadata context = new DocumentMetadata(tenant_id, "integrationTest", "sample", customFields, "customRayID");
+        DocumentMetadata context = new DocumentMetadata(tenant_id, "integrationTest", "sample",
+                customFields, "customRayID");
         Map<String, byte[]> documentMap = getRoundtripDataToEncrypt();
 
-        CompletableFuture<PlaintextDocument> roundtrip = TenantSecurityClient
-                .create(tsp_address + tsp_port, api_key).thenCompose(client -> {
+        CompletableFuture<PlaintextDocument> roundtrip =
+                TenantSecurityClient.create(tsp_address + tsp_port, api_key).thenCompose(client -> {
 
                     try {
                         return client.encrypt(documentMap, context)
@@ -100,12 +100,13 @@ public class LocalRoundTrip {
             tsp_port = ":" + tsp_port;
         }
 
-        EventMetadata metadata = new EventMetadata(tenant_id, "integrationTest", "sample", "app-request-id");
+        EventMetadata metadata =
+                new EventMetadata(tenant_id, "integrationTest", "sample", "app-request-id");
 
         // even though this tenant is bad, the response here will be success as the security
         // event was enqueued for further processing.
-        CompletableFuture<Void> logEvent = TenantSecurityClient
-                .create(tsp_address + tsp_port, api_key).thenCompose(client -> {
+        CompletableFuture<Void> logEvent =
+                TenantSecurityClient.create(tsp_address + tsp_port, api_key).thenCompose(client -> {
                     return client.logSecurityEvent(UserEvent.ADD, metadata);
                 });
 

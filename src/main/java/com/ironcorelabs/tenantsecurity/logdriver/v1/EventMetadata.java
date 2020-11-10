@@ -2,6 +2,7 @@ package com.ironcorelabs.tenantsecurity.logdriver.v1;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Holds metadata fields as part of a security event. Each event will have metadata that associates
@@ -40,7 +41,11 @@ public class EventMetadata {
             Long timestampMillis) throws IllegalArgumentException {
         if (tenantId == null || tenantId.isEmpty()) {
             throw new IllegalArgumentException(
-                    "Tenant ID value must be provided as part of document metadata.");
+                    "Tenant ID value must be provided as part of event metadata.");
+        }
+        if (requestingUserOrServiceId == null || requestingUserOrServiceId.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Requesting user or service ID must be provided as part of event metadata.");
         }
         this.tenantId = tenantId;
         this.requestingUserOrServiceId = requestingUserOrServiceId;
@@ -176,13 +181,12 @@ public class EventMetadata {
         postData.put("timestampMillis", timestampMillis);
 
         Map<String, Object> iclFields = new HashMap<>();
-        if (requestId != null) {
-            iclFields.put("requestId", requestId);
-        }
+        iclFields.put("requestId", requestId);
         iclFields.put("sourceIp", sourceIp);
         iclFields.put("objectId", objectId);
         iclFields.put("requestingId", requestingUserOrServiceId);
         iclFields.put("dataLabel", dataLabel);
+        iclFields.values().removeIf(Objects::isNull);
         postData.put("iclFields", iclFields);
 
         Map<String, String> customFields = new HashMap<>();

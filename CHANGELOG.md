@@ -1,5 +1,18 @@
 # Changelog
 
+## v3.0.0
+
+- Added `TenantSecurityClient.logSecurityEvent` method and supporting `SecurityEvent` and `EventMetadata` types
+- Standardized `EventMetadata` and `DocumentMetadata` to similar interfaces with the TSP
+- Introduced an exception hierachy based on TSP error codes. `TenantSecurityKMSException` renamed to `TenantSecurityException` and
+  `KmsException`, `SecurityEventException`, and `TspServiceException` are subclasses.
+- Renamed `TenantSecurityKMSClient` to `TenantSecurityClient`
+- Removed deprecated list based batch methods
+
+### Compatibility
+
+This version of the Tenant Security Java Client will only work with version `3.0.0+` of the Tenant Security Proxy container.
+
 ## v2.0.3
 
 - Use connection pooling for better performance and safer scaling in high-load environments.

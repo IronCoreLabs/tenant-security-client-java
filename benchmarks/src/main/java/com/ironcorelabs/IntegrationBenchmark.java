@@ -34,7 +34,6 @@ public class IntegrationBenchmark {
     private static String TSP_PORT = "32804";
     private static String TENANT_ID = "tenant-gcp";
     private static String API_KEY = "0WUaXesNgbTAuLwn";
-
     private static final Map<String, String> customFields;
     static {
         Map<String, String> cfM = new HashMap<>();

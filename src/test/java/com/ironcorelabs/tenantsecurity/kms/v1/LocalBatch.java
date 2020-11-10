@@ -7,11 +7,10 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
-
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 import org.testng.annotations.Test;
 
-@Test(groups = { "local-batch-integration" })
+@Test(groups = {"local-batch-integration"})
 public class LocalBatch {
     private String TENANT_ID = "";
     private String API_KEY = "";
@@ -53,58 +52,16 @@ public class LocalBatch {
     }
 
     /**
-     * Roundtrip a batch of 25 documents 50 times sequentially. Uses the old batch
-     * methods which send a single request per document in the batch to the TSP (25
-     * docs * 50 runs = 1250 requests)
+     * Roundtrip a batch of 25 documents 50 times sequentially. Uses the new batch methods which
+     * send a single request to the TSP per batch (1 request per batch * 50 runs = 50 total
+     * requests).
      */
-    public void oldBatchRoundtrip() throws Exception {
-        DocumentMetadata context = new DocumentMetadata(this.TENANT_ID, "integrationTest", "sample");
+    public void batchRoundtrip() throws Exception {
+        DocumentMetadata context =
+                new DocumentMetadata(this.TENANT_ID, "integrationTest", "sample");
 
-        TenantSecurityClient client = new TenantSecurityClient(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT, this.API_KEY);
-
-        int batchSize = 25;
-        int batchRepetitions = 50;
-
-        CompletableFuture<List<PlaintextDocument>> roundtrip = client.encryptBatch(getBatchList(batchSize), context)
-                .thenCompose(encryptedResults -> {
-                    System.out.println("Run 1");
-                    return client.decryptBatch(encryptedResults, context);
-                });
-
-        for (int i = 2; i <= batchRepetitions; i++) {
-            final String run = "Run " + i;
-            roundtrip = roundtrip.thenCompose(_nope -> client.encryptBatch(getBatchList(batchSize), context))
-                    .thenCompose(encryptedResults -> {
-                        System.out.println(run);
-                        return client.decryptBatch(encryptedResults, context);
-                    });
-        }
-
-        try {
-            long start = System.currentTimeMillis();
-            roundtrip.get();
-            System.out.println("Old Batch: " + (System.currentTimeMillis() - start));
-        } catch (ExecutionException e) {
-            System.out.println(e.getCause());
-            if (e.getCause() instanceof TenantSecurityException) {
-                TenantSecurityException kmsError = (TenantSecurityException) e.getCause();
-                TenantSecurityErrorCodes errorCode = kmsError.getErrorCode();
-                System.out.println("\nError Code: " + errorCode.getCode());
-                System.out.println("\nError Code Info: " + errorCode.getMessage());
-            }
-            throw e;
-        }
-    }
-
-    /**
-     * Roundtrip a batch of 25 documents 50 times sequentially. Uses the new batch
-     * methods which send a single request to the TSP per batch (1 request per batch
-     * * 50 runs = 50 total requests).
-     */
-    public void newBatchRoundtrip() throws Exception {
-        DocumentMetadata context = new DocumentMetadata(this.TENANT_ID, "integrationTest", "sample");
-
-        TenantSecurityClient client = new TenantSecurityClient(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT, this.API_KEY);
+        TenantSecurityClient client = new TenantSecurityClient(
+                TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT, this.API_KEY);
 
         int batchSize = 25;
         int batchRepetitions = 50;
@@ -118,7 +75,8 @@ public class LocalBatch {
 
         for (int i = 2; i <= batchRepetitions; i++) {
             final String run = "Run " + i;
-            roundtrip = roundtrip.thenCompose(_nope -> client.encryptBatch(getBatchMap(batchSize), context))
+            roundtrip = roundtrip
+                    .thenCompose(_nope -> client.encryptBatch(getBatchMap(batchSize), context))
                     .thenCompose(encryptedResults -> {
                         System.out.println(run);
                         logFailures(encryptedResults.getFailures());
@@ -139,6 +97,8 @@ public class LocalBatch {
                 System.out.println("\nError Code Info: " + errorCode.getMessage());
             }
             throw e;
+        } finally {
+            client.close();
         }
     }
 }
