@@ -8,7 +8,7 @@ public enum UserEvent implements SecurityEvent {
     SESSION_TIMEOUT,
     LOCKOUT,
     LOGOUT,
-    PERMISSIONS_CHANGE,
+    CHANGE_PERMISSIONS,
     PASSWORD_EXPIRED,
     PASSWORD_RESET,
     PASSWORD_CHANGE,

@@ -39,7 +39,7 @@ public class SecurityEventTest {
         assertEquals(UserEvent.SESSION_TIMEOUT.getFlatEvent(), "USER_SESSION_TIMEOUT");
         assertEquals(UserEvent.LOCKOUT.getFlatEvent(), "USER_LOCKOUT");
         assertEquals(UserEvent.LOGOUT.getFlatEvent(), "USER_LOGOUT");
-        assertEquals(UserEvent.PERMISSIONS_CHANGE.getFlatEvent(), "USER_PERMISSIONS_CHANGE");
+        assertEquals(UserEvent.CHANGE_PERMISSIONS.getFlatEvent(), "USER_CHANGE_PERMISSIONS");
         assertEquals(UserEvent.PASSWORD_EXPIRED.getFlatEvent(), "USER_PASSWORD_EXPIRED");
         assertEquals(UserEvent.PASSWORD_RESET.getFlatEvent(), "USER_PASSWORD_RESET");
         assertEquals(UserEvent.PASSWORD_CHANGE.getFlatEvent(), "USER_PASSWORD_CHANGE");
