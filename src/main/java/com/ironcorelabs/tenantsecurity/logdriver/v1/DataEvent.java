@@ -7,7 +7,7 @@ public enum DataEvent implements SecurityEvent {
     DECRYPT,
     CREATE,
     DELETE,
-    ACCESS_DENIED,
+    DENY_ACCESS,
     CHANGE_PERMISSIONS;
 
     public String getFlatEvent() {
