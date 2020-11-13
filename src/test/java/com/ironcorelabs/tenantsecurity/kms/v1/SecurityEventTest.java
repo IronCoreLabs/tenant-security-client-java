@@ -23,33 +23,33 @@ public class SecurityEventTest {
         assertEquals(DataEvent.DECRYPT.getFlatEvent(), "DATA_DECRYPT");
         assertEquals(DataEvent.CREATE.getFlatEvent(), "DATA_CREATE");
         assertEquals(DataEvent.DELETE.getFlatEvent(), "DATA_DELETE");
-        assertEquals(DataEvent.ACCESS_DENIED.getFlatEvent(), "DATA_ACCESS_DENIED");
+        assertEquals(DataEvent.DENY_ACCESS.getFlatEvent(), "DATA_DENY_ACCESS");
         assertEquals(DataEvent.CHANGE_PERMISSIONS.getFlatEvent(), "DATA_CHANGE_PERMISSIONS");
 
         // PERIODIC
-        assertEquals(PeriodicEvent.RETENTION_POLICY_ENFORCED.getFlatEvent(),
-                "PERIODIC_RETENTION_POLICY_ENFORCED");
-        assertEquals(PeriodicEvent.BACKUP_CREATED.getFlatEvent(), "PERIODIC_BACKUP_CREATED");
+        assertEquals(PeriodicEvent.ENFORCE_RETENTION_POLICY.getFlatEvent(),
+                "PERIODIC_ENFORCE_RETENTION_POLICY");
+        assertEquals(PeriodicEvent.CREATE_BACKUP.getFlatEvent(), "PERIODIC_CREATE_BACKUP");
 
         // USER
         assertEquals(UserEvent.ADD.getFlatEvent(), "USER_ADD");
         assertEquals(UserEvent.SUSPEND.getFlatEvent(), "USER_SUSPEND");
         assertEquals(UserEvent.REMOVE.getFlatEvent(), "USER_REMOVE");
         assertEquals(UserEvent.LOGIN.getFlatEvent(), "USER_LOGIN");
-        assertEquals(UserEvent.SESSION_TIMEOUT.getFlatEvent(), "USER_SESSION_TIMEOUT");
+        assertEquals(UserEvent.TIMEOUT_SESSION.getFlatEvent(), "USER_TIMEOUT_SESSION");
         assertEquals(UserEvent.LOCKOUT.getFlatEvent(), "USER_LOCKOUT");
         assertEquals(UserEvent.LOGOUT.getFlatEvent(), "USER_LOGOUT");
-        assertEquals(UserEvent.PERMISSIONS_CHANGE.getFlatEvent(), "USER_PERMISSIONS_CHANGE");
-        assertEquals(UserEvent.PASSWORD_EXPIRED.getFlatEvent(), "USER_PASSWORD_EXPIRED");
-        assertEquals(UserEvent.PASSWORD_RESET.getFlatEvent(), "USER_PASSWORD_RESET");
-        assertEquals(UserEvent.PASSWORD_CHANGE.getFlatEvent(), "USER_PASSWORD_CHANGE");
-        assertEquals(UserEvent.BAD_LOGIN.getFlatEvent(), "USER_BAD_LOGIN");
+        assertEquals(UserEvent.CHANGE_PERMISSIONS.getFlatEvent(), "USER_CHANGE_PERMISSIONS");
+        assertEquals(UserEvent.EXPIRE_PASSWORD.getFlatEvent(), "USER_EXPIRE_PASSWORD");
+        assertEquals(UserEvent.RESET_PASSWORD.getFlatEvent(), "USER_RESET_PASSWORD");
+        assertEquals(UserEvent.CHANGE_PASSWORD.getFlatEvent(), "USER_CHANGE_PASSWORD");
+        assertEquals(UserEvent.REJECT_LOGIN.getFlatEvent(), "USER_REJECT_LOGIN");
         assertEquals(UserEvent.ENABLE_TWO_FACTOR.getFlatEvent(), "USER_ENABLE_TWO_FACTOR");
         assertEquals(UserEvent.DISABLE_TWO_FACTOR.getFlatEvent(), "USER_DISABLE_TWO_FACTOR");
-        assertEquals(UserEvent.EMAIL_CHANGE.getFlatEvent(), "USER_EMAIL_CHANGE");
-        assertEquals(UserEvent.EMAIL_VERIFICATION_REQUESTED.getFlatEvent(),
-                "USER_EMAIL_VERIFICATION_REQUESTED");
-        assertEquals(UserEvent.EMAIL_VERIFIED.getFlatEvent(), "USER_EMAIL_VERIFIED");
+        assertEquals(UserEvent.CHANGE_EMAIL.getFlatEvent(), "USER_CHANGE_EMAIL");
+        assertEquals(UserEvent.REQUEST_EMAIL_VERIFICATION.getFlatEvent(),
+                "USER_REQUEST_EMAIL_VERIFICATION");
+        assertEquals(UserEvent.VERIFY_EMAIL.getFlatEvent(), "USER_VERIFY_EMAIL");
 
 
     }
