@@ -12,8 +12,8 @@
   <description>Java client library for the IronCore Labs Tenant Security Proxy.</description>
   <licenses>
     <license>
-      <name>Apache-2</name>
-      <url>https://opensource.org/licenses/Apache-2.0</url>
+      <name>AGLP-3</name>
+      <url>https://opensource.org/licenses/AGPL-3.0</url>
       <distribution>repo</distribution>
     </license>
   </licenses>
