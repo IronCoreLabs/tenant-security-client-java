@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.0.1
+
+- Renamed some security events for better consistency
+
 ## v3.0.0
 
 - Added `TenantSecurityClient.logSecurityEvent` method and supporting `SecurityEvent` and `EventMetadata` types
