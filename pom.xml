@@ -12,7 +12,7 @@
   <description>Java client library for the IronCore Labs Tenant Security Proxy.</description>
   <licenses>
     <license>
-      <name>AGLP-3</name>
+      <name>AGPL-3</name>
       <url>https://opensource.org/licenses/AGPL-3.0</url>
       <distribution>repo</distribution>
     </license>
