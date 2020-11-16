@@ -38,6 +38,10 @@ on Drive in `IT_Info/sonatype-info.txt.iron`.
 `gpg --import rsa_signing_key.asc`.
 - Update the `<version>` in `pom.xml`.
 - Run `mvn clean source:jar javadoc:jar deploy -Dsuite=test-suites/test-unit` to deploy the release to Maven Central.
+**NOTE**: this command will need the passphrase associated with the GPG signing key.
+If that hasn't been entered recently, the command will error with a "signing failed" message.
+You need to do a signing operation like `gpg -s pom.xml`, then enter the passphrase for the key.
+After that, re-run the `mvn` commmand.
 - When the artifacts have been deployed, you need to go to `https://oss.sonatype.org`, log in using the `icl-devops` username and
 password, and find the new release in the *Staging Repositories*. You must close that repository and then release it in order to
 actually push the package out to the public repo.
