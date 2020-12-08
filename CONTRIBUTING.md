@@ -62,3 +62,15 @@ This is a sample `settings.xml` file for `maven`:
 </settings>
 ```
 
+## CI Automated Tests
+
+The CI job runs tests using the [tenant-security-proxy](https://github.com/IronCoreLabs/tenant-security-proxy) repo.
+If your tests don't build against the default branch of that repo, you can change it by adding a command to the pull request. The
+comment should contain the string `CI_branches` and a JSON object like
+`{"tenant-security-proxy": "some_branch"}`. You can include formatting, prose, or a haiku,
+but no `{` or `}` characters. Example:
+```
+CI_branches: `{"tenant-security-proxy": "some_branch"}`
+
+This new branch needs to build against some_branch.
+```
