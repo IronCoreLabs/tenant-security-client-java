@@ -8,11 +8,12 @@ on:
 
 jobs:
   build_and_test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
+    needs: get_refs
 
     steps:
-      - uses: actions/checkout@v2-beta
-      - uses: actions/setup-node@v1.4.4
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2.1.2
         with:
           version: 10.x
       - name: decrypt ironhide keys
@@ -39,29 +40,22 @@ jobs:
       - name: local install
         run: mvn install -DskipTests=true -Dgpg.skip=true -Dmaven.javadoc.skip=true -B -V
       - name: clone the tsp
-        uses: actions/checkout@v2-beta
+        uses: actions/checkout@v2
         with:
           repository: IronCoreLabs/tenant-security-proxy
-          ref: refs/heads/master
+          ref: ${{ needs.get_refs.outputs.tenant-security-proxy }}
           path: tenant-security-proxy
           token: ${{ secrets.GitHub_PAT }}
       - name: use rust beta (remove once ironoxide is on stable)
         run: rustup update beta && rustup default beta
       - name: cache cargo registry
-        uses: actions/cache@v1
+        uses: actions/cache@v2
         with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-      - name: cache cargo index
-        uses: actions/cache@v1
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
-      - name: cache cargo build
-        uses: actions/cache@v1
-        with:
-          path: target
-          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
       - name: install zmq
         run: sudo apt update && sudo apt install -y --no-install-recommends libzmq3-dev
       - name: integration test
@@ -72,3 +66,76 @@ jobs:
           env $(cat .env.integration) cargo run --release &
           timeout 700 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:9000/ready)" =~ ''[01346-9][0-9][0-9]'' ]]; do sleep 5; done' || false
           ../test-suites/integrationTest.sh
+
+  # Look for a comment telling us what refs to use from the other repos we depend on.
+  # To add additional repositories, add them to "outputs" and to the "Setup list of required repos" step.
+  get_refs:
+    # Only run if it's on a PR.
+    if: github.base_ref != ''
+    runs-on: ubuntu-18.04
+    outputs:
+      tenant-security-proxy: ${{ steps.get_refs.outputs.tenant-security-proxy }}
+    steps:
+      - name: Setup list of required repos
+        run: |
+          echo tenant-security-proxy >> repos
+      - name: Get PR number
+        id: get_pr
+        run: |
+          PR=$(jq -r .pull_request.number "${GITHUB_EVENT_PATH}")
+          echo "PR is ${PR}"
+          # Sanity check that ${PR} is a number.
+          test "${PR}" -ge 0
+          echo "::set-output name=pr::${PR}"
+      - name: Find Comment
+        uses: peter-evans/find-comment@v1
+        id: find_comment
+        with:
+          issue-number: ${{ steps.get_pr.outputs.pr }}
+          body-includes: CI_branches
+      - name: Parse refs
+        if: steps.find_comment.outputs.comment-id != 0
+        id: get_refs
+        env:
+          COMMENT_BODY: ${{ steps.find_comment.outputs.comment-body }}
+        run: |
+          # Extract the JSON part of the comment into a file.
+          echo "${COMMENT_BODY}" | tr '\n' ' ' | sed -e 's,^[^{]*,,' -e 's,[^}]*$,,' > refs.json
+          echo "Got JSON:"
+          cat refs.json && echo ""
+
+          # Sanity check that all repos in the JSON comment are ones that we know about.
+          jq -r 'keys[]' < refs.json > extra_repos
+          for REPO in $(cat repos) ; do
+            grep -v "^${REPO}\$" < extra_repos > temp || true
+            mv temp extra_repos
+          done
+          if [ -s extra_repos ] ; then
+            echo "Unrecognized repositories:"
+            cat extra_repos
+            exit 1
+          fi
+
+          # Emit an output variable for each repo.
+          for REPO in $(cat repos) ; do
+            REF=$(jq -r '.["'"${REPO}"'"]' < refs.json)
+            if [ "${REF}" = "null" ] ; then
+              REF="master"
+            fi
+            echo "${REPO}: ${REF}"
+            echo "::set-output name=${REPO}::${REF}"
+          done
+      - name: Post a reaction (parsed your comment)
+        if: steps.get_refs.outcome == 'success'
+        uses: peter-evans/create-or-update-comment@v1
+        with:
+          issue-number: ${{ steps.get_pr.outputs.pr }}
+          comment-id: ${{ steps.find_comment.outputs.comment-id }}
+          reactions: eyes
+      - name: Post a reaction (unparsed comment)
+        if: steps.get_refs.outcome == 'failure'
+        uses: peter-evans/create-or-update-comment@v1
+        with:
+          issue-number: ${{ steps.get_pr.outputs.pr }}
+          comment-id: ${{ steps.find_comment.outputs.comment-id }}
+          reactions: confused
