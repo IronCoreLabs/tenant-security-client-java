@@ -29,7 +29,7 @@ jobs:
         with:
           java-version: 1.8
       - name: cache mvn repository
-        uses: actions/cache@v1
+        uses: actions/cache@v2.1.3
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -49,7 +49,7 @@ jobs:
       - name: use rust beta (remove once ironoxide is on stable)
         run: rustup update beta && rustup default beta
       - name: cache cargo registry
-        uses: actions/cache@v2
+        uses: actions/cache@v2.1.3
         with:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           path: |
