@@ -4,7 +4,7 @@ This directory contains some examples of using the Java Tenant Security Client (
 
 In order to use SaaS Shield, you need to run one or more _Tenant Security Proxies_ (TSPs) in your environment.
 This service is provided as a Docker container, so it is easy to run the proxy on any computer that has Docker
-installed. IronCore Labs hosts the Docker container on a publicly accessible container register, so you can pull
+installed. IronCore Labs hosts the Docker container on a publicly accessible container registery, so you can pull
 the image from there and run it locally.
 
 In addition to the Docker container, you need a configuration file that specifies how the TSP should communicate
