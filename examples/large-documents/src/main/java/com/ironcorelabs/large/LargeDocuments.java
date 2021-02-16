@@ -1,6 +1,8 @@
 package com.ironcorelabs.large;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.primitives.Bytes;
+
 import java.util.stream.Stream;
 import java.io.UncheckedIOException;
 import java.io.File;
@@ -10,6 +12,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 import java.util.AbstractMap;
+import java.util.HashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
@@ -104,6 +107,45 @@ public class LargeDocuments {
             }
             throw e;
         }
+
+        //
+        // Example 2: update two subdocuments in our persistence layer
+        //
+        String subDocId1 = "4c3173c3-8e09-49eb-a4ee-428e2dbf5296";
+        String subDocId2 = "4e57e8bd-d88a-4083-9fac-05a635110e2a";
+
+        // Read the two files out first
+        byte[] encryptedFile1 = Files.readAllBytes(Paths.get(tmpFileDir.toString(), subDocId1 + ".enc"));
+        byte[] encryptedFile2 = Files.readAllBytes(Paths.get(tmpFileDir.toString(), subDocId2 + ".enc"));
+
+        // In a DB situation this edek could be stored with the large doc (if sub docs
+        // are only decrypted in that context) or it could be stored alongside each
+        // sub-document. In the latter case you make it harder to accidentally
+        // cryptoshred data by de-syncing edeks at the cost of row size
+        String edek = new String(Files.readAllBytes(Paths.get(tmpFileDir.toString(), filename + ".edek")));
+
+        // each of the documents could be individually decrypted with their own calls,
+        // but by combining them into one structure we ensure we only make one call to
+        // the KMS to unwrap the key
+        Map<String, byte[]> encryptedPartDocMap = new HashMap<>();
+        encryptedPartDocMap.put(subDocId1, encryptedFile1);
+        encryptedPartDocMap.put(subDocId2, encryptedFile2);
+        EncryptedDocument encryptedPartialBigDoc = new EncryptedDocument(encryptedPartDocMap, edek);
+
+        // Decrypt the two subdocuments
+        PlaintextDocument decryptedPartialBigDoc = client.decrypt(encryptedPartialBigDoc, metadata).get();
+
+        // Turn the decrypted bytes back into objects
+        SubDoc reSubDoc1 = objectMapper
+                .readValue(new String(decryptedPartialBigDoc.getDecryptedFields().get(subDocId1)), SubDoc.class);
+        SubDoc reSubDoc2 = objectMapper
+                .readValue(new String(decryptedPartialBigDoc.getDecryptedFields().get(subDocId2)), SubDoc.class);
+        // just so we can write it out nicely
+        BigDoc rePartialBigDoc = new BigDoc("x", "x", "x", new SubDoc[] { reSubDoc1, reSubDoc2 });
+
+        // Write out the rehydrated docs as proof that things round tripped fine
+        Files.write(Paths.get(tmpFileDir.toString(), "partial-large-document.json"),
+                objectMapper.writeValueAsString(rePartialBigDoc).getBytes());
 
         System.exit(0);
     };
