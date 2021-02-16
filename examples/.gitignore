@@ -1,0 +1,6 @@
+**/node-modules
+**/.env
+**/decrypted.jpg
+**/*.enc
+**/*.edek
+**/sub-docs
