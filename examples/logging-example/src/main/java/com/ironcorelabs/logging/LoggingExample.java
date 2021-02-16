@@ -30,7 +30,6 @@ public class LoggingExample {
     // Typically this would be done once when the application or service initializes
     TenantSecurityClient client = TenantSecurityClient.create("http://localhost:32804", API_KEY).get();
 
-    //
     // Example 1: logging a user-related event
     //
     // Create metadata about the event. This example populates all possible fields
