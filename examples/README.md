@@ -20,13 +20,14 @@ created in IronCore's staging infrastructure.
 The following commands will get a TSP running on your computer with the provided configuration:
 
 ```bash
-docker pull gcr.io/ironcore-images/tenant-security-proxy:2.1
-docker run --env-file demo-tsp.conf -p 32804:7777 gcr.io/ironcore-images/tenant-security-proxy:2.1
+docker pull gcr.io/ironcore-images/tenant-security-proxy:3.2.0
+docker run   --env-file demo-tsp.conf   -p 32804:7777   -m 512M   --mount 'type=bind,src=/tmp,dst=/logdriver'   gcr.io/ironcore-images/tenant-security-proxy:3.2.0
+
 ```
 
 This starts the TSP locally listening on port 32804.
 
-Once the TSP is running, you can experiment with the example Node programs. Each of the subdirectories contains
+Once the TSP is running, you can experiment with the example Java programs. Each of the subdirectories contains
 a different illustrative example, with instructions to run.
 
 
