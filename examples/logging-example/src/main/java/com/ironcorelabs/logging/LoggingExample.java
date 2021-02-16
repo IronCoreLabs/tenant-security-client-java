@@ -46,6 +46,7 @@ public class LoggingExample {
       System.out.println("Successfully logged user login event.");
     } catch (ExecutionException e) {
       if (e.getCause() instanceof TenantSecurityException) {
+        System.out.println("Error logging user login event:");
         TenantSecurityException error = (TenantSecurityException) e.getCause();
         TenantSecurityErrorCodes errorCode = error.getErrorCode();
         System.out.println("\nError Message: " + error.getMessage());
@@ -54,6 +55,31 @@ public class LoggingExample {
       }
       throw e;
     }
+
+    //
+    // Example 2: logging an admin-related event
+    //
+    // This one adds minimal metadata for the event. The timestamp should be roughly
+    // 5 seconds after the one on the previous event.
+    EventMetadata metadata2 = new EventMetadata(TENANT_ID, "adminId1", "PII");
+    try {
+      client.logSecurityEvent(UserEvent.ADD, metadata2).get();
+      System.out.println("Successfully logged admin add event.");
+    } catch (ExecutionException e) {
+      if (e.getCause() instanceof TenantSecurityException) {
+        System.out.println("Error logging admin add event:");
+        TenantSecurityException error = (TenantSecurityException) e.getCause();
+        TenantSecurityErrorCodes errorCode = error.getErrorCode();
+        System.out.println("\nError Message: " + error.getMessage());
+        System.out.println("\nError Code: " + errorCode.getCode());
+        System.out.println("\nError Code Info: " + errorCode.getMessage() + "\n");
+      }
+      throw e;
+    }
+
+    // You should be able to see that these two events were delivered in the TSP
+    // logs. If you have access to the example tenant's SIEM, you can see these
+    // events in their logs.
 
     System.exit(0);
   };
