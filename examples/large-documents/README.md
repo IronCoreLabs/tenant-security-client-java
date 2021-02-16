@@ -25,7 +25,7 @@ We've assigned an API key for you, but in production you will make your own and 
 configuration with it. This should produce output like:
 
 ```bash
-λ java -cp target/logging-example-0.1.0.jar com.ironcorelabs.logging.LoggingExample
+λ java -cp target/large-documents-example-0.1.0.jar com.ironcorelabs.large.LargeDocuments
 Using tenant tenant-gcp-l
 Successfully logged user login event.
 Successfully logged admin add event.

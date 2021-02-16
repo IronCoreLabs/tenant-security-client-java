@@ -2,7 +2,9 @@ package com.ironcorelabs.large;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.stream.Stream;
+import java.io.UncheckedIOException;
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -59,14 +61,18 @@ public class LargeDocuments {
         System.out.println("Writing encrypted files and performance to: " + tmpFileDir);
 
         ObjectMapper objectMapper = new ObjectMapper();
-        BigDoc sourceObj = objectMapper.readValue(new File("./resources/" + filename));
+        BigDoc sourceObj = objectMapper.readValue(new File("./resources/" + filename), BigDoc.class);
 
         // Reduce the document to a map of all the sub documents to be encrypted with
         // the same key
-        Map<String, byte[]> docToEncrypt = Stream.of(sourceObj.subDocs)
-                .map(subDoc -> new AbstractMap.SimpleEntry<>(subDoc.subDocId,
-                        objectMapper.writeValueAsString(subDoc).getBytes()))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        Map<String, byte[]> docToEncrypt = Stream.of(sourceObj.subDocs).map(subDoc -> {
+            try {
+                byte[] value = objectMapper.writeValueAsString(subDoc).getBytes();
+                return new AbstractMap.SimpleEntry<>(subDoc.subDocId, value);
+            } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                throw new UncheckedIOException(e);
+            }
+        }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         try {
             // Request a key from the KMS and use it to encrypt all the sub documents
@@ -82,7 +88,11 @@ public class LargeDocuments {
                 String subDocId = entry.getKey();
                 Path subDocPath = Paths.get(tmpFileDir.toString(), subDocId + ".enc");
                 byte[] subDocEncryptedBytes = entry.getValue();
-                Files.write(subDocPath, subDocEncryptedBytes);
+                try {
+                    Files.write(subDocPath, subDocEncryptedBytes);
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
             });
         } catch (ExecutionException e) {
             if (e.getCause() instanceof TenantSecurityException) {
