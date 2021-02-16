@@ -21,7 +21,7 @@ The following commands will get a TSP running on your computer with the provided
 
 ```bash
 docker pull gcr.io/ironcore-images/tenant-security-proxy:3.2.0
-docker run   --env-file demo-tsp.conf   -p 32804:7777   -m 512M   --mount 'type=bind,src=/tmp,dst=/logdriver'   gcr.io/ironcore-images/tenant-security-proxy:3.2.0
+docker run --env-file demo-tsp.conf -p 32804:7777 -m 512M --mount 'type=bind,src=/tmp,dst=/logdriver' gcr.io/ironcore-images/tenant-security-proxy:3.2.0
 
 ```
 

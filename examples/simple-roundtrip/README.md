@@ -1,7 +1,7 @@
 # Simple Round-Trip Example
 
 In order to run this example, you need to be running a _Tenant Security Proxy_ (TSP) on your machine.
-Check the **README.md** file in the parent directory to see how to start the TSP, if you haven't done so
+Check the [README.md](../README.md) file in the parent directory to see how to start the TSP, if you haven't done so
 yet.
 
 Once the TSP is running, you can experiment with this example java program. It illustrates the basics of how
