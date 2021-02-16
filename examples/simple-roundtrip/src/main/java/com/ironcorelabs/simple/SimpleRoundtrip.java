@@ -66,9 +66,10 @@ public class SimpleRoundtrip {
                                     String edek = encryptedResults.getEdek();
                                     Map<String, byte[]> encryptedDocument = encryptedResults.getEncryptedFields();
 
-                                    System.out.println(Arrays.toString(encryptedDocument.get("ssn")));
-                                    System.out.println(Arrays.toString(encryptedDocument.get("address")));
-                                    System.out.println(Arrays.toString(encryptedDocument.get("name")));
+                                    // un-comment if you want to print out the encrypted data
+                                    //System.out.println("Encrypted SSN: " + new String(encryptedDocument.get("ssn"), StandardCharsets.UTF_8));
+                                    //System.out.println("Encrypted address: " + new String(encryptedDocument.get("address"), StandardCharsets.UTF_8));
+                                    //System.out.println("Encrypted name: " + new String(encryptedDocument.get("name"), StandardCharsets.UTF_8));
 
 
                                     // retrieve the EDEK and encryptedDocument from your persistence layer
@@ -103,7 +104,7 @@ public class SimpleRoundtrip {
         //
         // Example 2: encrypting/decrypting a file, using the filesystem for persistence
         //
-        
+
         String sourceFile = "success.jpg";
         byte[] sourceFileBytes = Files.readAllBytes(Paths.get(sourceFile));
         Map<String, byte[]> toEncrypt = new HashMap<>();

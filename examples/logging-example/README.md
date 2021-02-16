@@ -46,7 +46,7 @@ If you look in the TSP logs you should see something like:
 {"service":"logdriver","message":"Successfully wrote 2 log entries to Stackdriver.","level":"INFO","timestamp":"2021-02-16T17:45:59.047270024+00:00","tenant_id":"tenant-gcp-l"}
 ```
 
-This shows the TSP recieving these events, batching them up together, and sending them successfully to Stackdriver (the configured log sink for
+This shows the TSP receiving these events, batching them up together, and sending them successfully to Stackdriver (the configured log sink for
 `tenant-gcp-l`).
 
 If you would like to experiment with a different tenant, just do:
