@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -15,14 +14,22 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
+/**
+ * Two examples:
+ *
+ * Encrypt/Decrypt a customer record
+ *
+ * Encrypt/Decrypt a file
+ */
 public class SimpleRoundtrip {
 
+    // Change if you want to test against a non-local TSP.
     private static final String TSP_ADDR = "http://localhost:32804";
 
     public static void main(String[] args) throws Exception {
 
         // In order to communicate with the TSP, you need a matching API_KEY. Find the
-        // right value from end of the TSP configuration file, and set the API_KEY
+        // right value from the end of the TSP configuration file, and set the API_KEY
         // environment variable to that value.
         String API_KEY = System.getenv("API_KEY");
         if (API_KEY == null) {
@@ -30,8 +37,7 @@ public class SimpleRoundtrip {
             System.exit(1);
         }
 
-        // For this example, make sure you use a tenant that has security event logging
-        // enabled so you can actually see the events logged to the appropriate SIEM.
+        // default to "tenant-gcp-l". Override by setting the TENANT_ID environment variable
         String TENANT_ID = System.getenv("TENANT_ID");
         if (TENANT_ID == null) {
             TENANT_ID = "tenant-gcp-l";

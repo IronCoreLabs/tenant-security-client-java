@@ -4,7 +4,7 @@ This directory contains some examples of using the Java Tenant Security Client (
 
 In order to use SaaS Shield, you need to run one or more _Tenant Security Proxies_ (TSPs) in your environment.
 This service is provided as a Docker container, so it is easy to run the proxy on any computer that has Docker
-installed. IronCore Labs hosts the Docker container on a publicly accessible container register, so you can pull
+installed. IronCore Labs hosts the Docker container on a publicly accessible container registery, so you can pull
 the image from there and run it locally.
 
 In addition to the Docker container, you need a configuration file that specifies how the TSP should communicate
@@ -21,7 +21,7 @@ The following commands will get a TSP running on your computer with the provided
 
 ```bash
 docker pull gcr.io/ironcore-images/tenant-security-proxy:3.2.0
-docker run   --env-file demo-tsp.conf   -p 32804:7777   -m 512M   --mount 'type=bind,src=/tmp,dst=/logdriver'   gcr.io/ironcore-images/tenant-security-proxy:3.2.0
+docker run --env-file demo-tsp.conf -p 32804:7777 -m 512M --mount 'type=bind,src=/tmp,dst=/logdriver' gcr.io/ironcore-images/tenant-security-proxy:3.2.0
 
 ```
 
@@ -42,7 +42,7 @@ their IDs are the following:
 - tenant-aws-l
 - tenant-azure-l
 
-The last three are similar to the first three, but they have _key leasing_ enabled.
+The last three are similar to the first three, but they have [key leasing](https://ironcorelabs.com/docs/saas-shield/what-is-key-leasing/) enabled.
 
 By default, an example will use the `tenant-gcp` tenant. If you would like to experiment with a different tenant, just do:
 
