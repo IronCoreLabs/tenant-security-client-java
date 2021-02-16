@@ -1,11 +1,12 @@
-# Logging Example
+# Large Documents
 
 In order to run this example, you need to be running a _Tenant Security Proxy_ (TSP) on your machine.
 Check the **README.md** file in the parent directory to see how to start the TSP, if you haven't done so
 yet.
 
 Once the TSP is running, you can experiment with this example Java program. It illustrates the basics of how
-to use the Tenant Security Client (TSC) SDK to log security events. The example code shows two scenarios:
+to use the Tenant Security Client (TSC) SDK to performantly encrypt/decrypt large documents or a set of many
+fields that share a DEK. The example code shows two scenarios:
 
 - encrypting a large document as many subdocs, using the disk for persistence
 - retrieving and decrypting subdocs individually
@@ -28,7 +29,6 @@ configuration with it. This should produce output like:
 λ java -cp target/large-documents-example-0.1.0.jar com.ironcorelabs.large.LargeDocuments
 Using tenant tenant-azure-l
 Writing encrypted files to: /tmp/saas-shield566835192357707822
-
 ```
 
 The output "Writing encryped files to:" is printed after successfully encrypting files using a key from the TSP.
