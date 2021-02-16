@@ -42,7 +42,7 @@ their IDs are the following:
 - tenant-aws-l
 - tenant-azure-l
 
-The last three are similar to the first three, but they have _key leasing_ enabled.
+The last three are similar to the first three, but they have [key leasing](https://ironcorelabs.com/docs/saas-shield/what-is-key-leasing/) enabled.
 
 By default, an example will use the `tenant-gcp` tenant. If you would like to experiment with a different tenant, just do:
 
