@@ -1,12 +1,8 @@
 package com.ironcorelabs.simple;
 
-import com.ironcorelabs.tenantsecurity.kms.v1.DocumentMetadata;
-import com.ironcorelabs.tenantsecurity.kms.v1.PlaintextDocument;
-import com.ironcorelabs.tenantsecurity.kms.v1.TenantSecurityClient;
-import com.ironcorelabs.tenantsecurity.kms.v1.TenantSecurityErrorCodes;
+import com.ironcorelabs.tenantsecurity.kms.v1.*;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -17,15 +13,26 @@ import java.util.concurrent.ExecutionException;
 
 public class SimpleRoundtrip {
 
-    private static final String API_KEY="0WUaXesNgbTAuLwn";
-    private static final String TENANT_ID = "tenant-gcp-l";
     private static final String TSP_ADDR = "http://localhost:32804";
 
     public static void main(String[] args) throws Exception {
-        System.out.println("Hey");
 
+        // In order to communicate with the TSP, you need a matching API_KEY. Find the
+        // right value from end of the TSP configuration file, and set the API_KEY
+        // environment variable to that value.
+        String API_KEY = System.getenv("API_KEY");
+        if (API_KEY == null) {
+            System.out.println("Must set the API_KEY environment variable.");
+            System.exit(1);
+        }
+
+        // For this example, make sure you use a tenant that has security event logging
+        // enabled so you can actually see the events logged to the appropriate SIEM.
+        String TENANT_ID = System.getenv("TENANT_ID");
+        if (TENANT_ID == null) {
+            TENANT_ID = "tenant-gcp-l";
+        }
         System.out.println("Using tenant " + TENANT_ID);
-
 
         //
         // Example 1: encrypting/decrypting a customer record
@@ -35,14 +42,14 @@ public class SimpleRoundtrip {
         // identify the service or user making the call
         DocumentMetadata metadata = new DocumentMetadata(TENANT_ID, "serviceOrUserId", "PII");
 
+        // Create a map containing your data
         Map<String, byte[]> custRecord = new HashMap<>();
         custRecord.put("ssn", "000-12-2345".getBytes("UTF-8"));
         custRecord.put("address", "2825-519 Stone Creek Rd, Bozeman, MT 59715".getBytes("UTF-8"));
         custRecord.put("name", "Jim Bridger".getBytes("UTF-8"));
 
 
-
-
+        // Request a key from the KMS and use it to encrypt the document
         CompletableFuture<PlaintextDocument> roundtrip =
                 // Initialize the client with a Tenant Security Proxy domain and API key.
                 // Typically this would be done once when the application or service initializes
@@ -51,12 +58,19 @@ public class SimpleRoundtrip {
                     try {
                         return client.encrypt(custRecord, metadata)
                                 .thenCompose(encryptedResults -> {
-                                    System.out.println(encryptedResults.getEdek());
-                                    Map<String, byte[]> fields =
-                                            encryptedResults.getEncryptedFields();
-                                    System.out.println(Arrays.toString(fields.get("ssn")));
-                                    System.out.println(Arrays.toString(fields.get("address")));
-                                    System.out.println(Arrays.toString(fields.get("name")));
+                                    // persist the EDEK and encryptedDocument to your persistence layer
+                                    String edek = encryptedResults.getEdek();
+                                    Map<String, byte[]> encryptedDocument = encryptedResults.getEncryptedFields();
+
+                                    System.out.println(Arrays.toString(encryptedDocument.get("ssn")));
+                                    System.out.println(Arrays.toString(encryptedDocument.get("address")));
+                                    System.out.println(Arrays.toString(encryptedDocument.get("name")));
+
+
+                                    // retrieve the EDEK and encryptedDocument from your persistence layer
+                                    EncryptedDocument retrievedEncryptedDocument = new EncryptedDocument(encryptedDocument, edek);
+
+                                    // decrypt back into plaintext
                                     return client.decrypt(encryptedResults, metadata);
                                 });
                     } catch (Exception e) {
@@ -65,6 +79,7 @@ public class SimpleRoundtrip {
                 });
 
         try {
+            // access decrypted fields 
             Map<String, byte[]> decryptedValuesMap = roundtrip.get().getDecryptedFields();
 
             System.out.println("Decrypted SSN: " + new String(decryptedValuesMap.get("ssn"), StandardCharsets.UTF_8));
