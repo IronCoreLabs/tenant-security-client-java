@@ -6,6 +6,8 @@ import com.ironcorelabs.tenantsecurity.kms.v1.TenantSecurityClient;
 import com.ironcorelabs.tenantsecurity.kms.v1.TenantSecurityErrorCodes;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -15,8 +17,8 @@ import java.util.concurrent.ExecutionException;
 
 public class SimpleRoundtrip {
 
-    private static final String API_KEY = "asdf";
-    private static final String TENANT_ID = "adf";
+    private static final String API_KEY="0WUaXesNgbTAuLwn";
+    private static final String TENANT_ID = "tenant-gcp-l";
     private static final String TSP_ADDR = "http://localhost:32804";
 
     public static void main(String[] args) throws Exception {
@@ -64,9 +66,10 @@ public class SimpleRoundtrip {
 
         try {
             Map<String, byte[]> decryptedValuesMap = roundtrip.get().getDecryptedFields();
-            System.out.println("Decrypted SSN: " + Arrays.toString(decryptedValuesMap.get("ssn")));
-            System.out.println("Decrypted address: " + decryptedValuesMap.get("address"));
-            System.out.println("Decrypted name: " + decryptedValuesMap.get("name"));
+
+            System.out.println("Decrypted SSN: " + new String(decryptedValuesMap.get("ssn"), StandardCharsets.UTF_8));
+            System.out.println("Decrypted address: " + new String(decryptedValuesMap.get("address"), StandardCharsets.UTF_8));
+            System.out.println("Decrypted name: " + new String(decryptedValuesMap.get("name"), StandardCharsets.UTF_8));
         } catch (ExecutionException e) {
             if (e.getCause() instanceof TenantSecurityException) {
                 TenantSecurityException kmsError = (TenantSecurityException) e.getCause();
@@ -77,6 +80,8 @@ public class SimpleRoundtrip {
             }
             throw e;
         }
+
+        System.exit(0);
 
     }
 
