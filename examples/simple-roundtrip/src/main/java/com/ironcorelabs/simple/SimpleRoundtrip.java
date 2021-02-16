@@ -3,8 +3,12 @@ package com.ironcorelabs.simple;
 import com.ironcorelabs.tenantsecurity.kms.v1.*;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -95,6 +99,67 @@ public class SimpleRoundtrip {
             }
             throw e;
         }
+
+        //
+        // Example 2: encrypting/decrypting a file, using the filesystem for persistence
+        //
+        
+        String sourceFile = "success.jpg";
+        byte[] sourceFileBytes = Files.readAllBytes(Paths.get(sourceFile));
+        Map<String, byte[]> toEncrypt = new HashMap<>();
+        toEncrypt.put("file", sourceFileBytes);
+
+
+        // Request a key from the KMS and use it to encrypt the document
+        CompletableFuture<PlaintextDocument> roundtripFile =
+                // Initialize the client with a Tenant Security Proxy domain and API key.
+                // Typically this would be done once when the application or service initializes
+                TenantSecurityClient.create(TSP_ADDR, API_KEY).thenCompose(client -> {
+
+                    try {
+                        return client.encrypt(toEncrypt, metadata)
+                                .thenCompose(encryptedResults -> {
+                                    // write the encrypted file and the encrypted key to the filesystem
+                                    try {
+                                        Files.write(Paths.get(sourceFile + ".enc"), encryptedResults.getEncryptedFields().get("file"));
+                                        Files.write(Paths.get(sourceFile + ".edek"), encryptedResults.getEdek().getBytes(StandardCharsets.UTF_8));
+                                    } catch (IOException e) {
+                                        throw new CompletionException(e);
+                                    }
+
+                                    // some time later... read the file from the disk
+                                    try {
+                                        byte[] encryptedBytes = Files.readAllBytes(Paths.get(sourceFile + ".enc"));
+                                        byte[] encryptedDek = Files.readAllBytes(Paths.get(sourceFile + ".edek"));
+
+                                        EncryptedDocument fileAndEdek = new EncryptedDocument(Collections.singletonMap("file", encryptedBytes), new String(encryptedDek, StandardCharsets.UTF_8));
+
+                                        // decrypt
+                                        return client.decrypt(fileAndEdek, metadata);
+
+                                    } catch (IOException e) {
+                                        throw new CompletionException(e);
+                                    }
+                                });
+                    } catch (Exception e) {
+                        throw new CompletionException(e);
+                    }
+                });
+
+        try {
+            // write the decrypted file back to the filesystem
+            Files.write(Paths.get("decrypted.jpg"), roundtripFile.get().getDecryptedFields().get("file"));
+        } catch (ExecutionException e) {
+            if (e.getCause() instanceof TenantSecurityException) {
+                TenantSecurityException kmsError = (TenantSecurityException) e.getCause();
+                TenantSecurityErrorCodes errorCode = kmsError.getErrorCode();
+                System.out.println("\nError Message: " + kmsError.getMessage());
+                System.out.println("\nError Code: " + errorCode.getCode());
+                System.out.println("\nError Code Info: " + errorCode.getMessage() + "\n");
+            }
+            throw e;
+        }
+
 
         System.exit(0);
 
