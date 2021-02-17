@@ -212,7 +212,7 @@ final class TenantSecurityRequest implements Closeable {
         postData.put("encryptedDocumentKey", edek);
         postData.put("newTenantId", newTenantId);
         String error = String.format(
-                "Unable to make request to Tenant Security Proxy wrap endpoint. Endpoint requested: %s",
+                "Unable to make request to Tenant Security Proxy rekey endpoint. Endpoint requested: %s",
                 this.rekeyEndpoint);
         return this.makeRequestAndParseFailure(this.rekeyEndpoint, postData, RekeyedDocumentKey.class, error);
     }
