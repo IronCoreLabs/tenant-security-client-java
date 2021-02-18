@@ -528,21 +528,21 @@ public final class TenantSecurityClient implements Closeable {
                 });
     }
 
-    /**
-     * Re-key an EncryptedDocument to a new tenant without decrypting the document data. Decrypts the 
-     * document's encrypted document key (EDEK) then re-encrypts it to the new tenant. The DEK is then discarded.
-     * 
-     * @param encryptedDocument Document to re-key which includes encrypted bytes as well as EDEK.
-     * @param metadata          Metadata about the document being re-keyed.
-     * @param newTenantId       Tenant ID the document should be re-keyed to.
-     * @return                  EncryptedDocument that contains the new EDEK and unaltered encrypted fields.
-     */
-    public CompletableFuture<EncryptedDocument> rekeyDocument(EncryptedDocument encryptedDocument,
-            DocumentMetadata metadata, String newTenantId) {
-        return this.encryptionService.rekey(encryptedDocument.getEdek(), metadata, newTenantId).thenApply(newKey -> {
-            return new EncryptedDocument(encryptedDocument.getEncryptedFields(), newKey.getEdek());
-        });
-    }
+        /**
+         * Re-key an EncryptedDocument to a new tenant without decrypting the document data. Decrypts the 
+         * document's encrypted document key (EDEK) then re-encrypts it to the new tenant. The DEK is then discarded.
+         * 
+         * @param encryptedDocument Document to re-key which includes encrypted bytes as well as EDEK.
+         * @param metadata          Metadata about the document being re-keyed.
+         * @param newTenantId       Tenant ID the document should be re-keyed to.
+         * @return                  EncryptedDocument that contains the new EDEK and unaltered encrypted fields.
+         */
+        public CompletableFuture<EncryptedDocument> rekeyDocument(EncryptedDocument encryptedDocument,
+                        DocumentMetadata metadata, String newTenantId) {
+                return this.encryptionService.rekey(encryptedDocument.getEdek(), metadata, newTenantId)
+                                .thenApply(newKey -> new EncryptedDocument(encryptedDocument.getEncryptedFields(),
+                                                newKey.getEdek()));
+        }
 
     /**
      * Decrypt a map of documents from the ID of the document to its encrypted content. Makes a call

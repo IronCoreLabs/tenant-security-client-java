@@ -55,6 +55,8 @@ public class RekeyRoundTrip {
                         return client.encrypt(documentMap, metadata).thenCompose(encryptedDocument -> {
                             return client.rekeyDocument(encryptedDocument, metadata, new_tenant_id)
                                     .thenCompose(encryptedDocumentRekeyed -> {
+                                        assertEquals(encryptedDocumentRekeyed.getEncryptedFields(),
+                                                encryptedDocument.getEncryptedFields());
                                         DocumentMetadata newMetadata = new DocumentMetadata(new_tenant_id,
                                                 "integrationTest", "sample", customFields, "customRayID");
                                         return client.decrypt(encryptedDocumentRekeyed, newMetadata);

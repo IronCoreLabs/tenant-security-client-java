@@ -201,6 +201,7 @@ public class DevIntegrationTest {
                 return client.encrypt(documentMap, metadata).thenCompose(encryptedResults -> {
                     return client.rekeyDocument(encryptedResults, metadata, this.AZURE_TENANT_ID)
                             .thenCompose(rekeyResults -> {
+                                assertEquals(rekeyResults.getEncryptedFields(), encryptedResults.getEncryptedFields());
                                 DocumentMetadata newMetadata = getRoundtripMetadata(this.AZURE_TENANT_ID);
                                 return client.decrypt(rekeyResults, newMetadata);
                             });
