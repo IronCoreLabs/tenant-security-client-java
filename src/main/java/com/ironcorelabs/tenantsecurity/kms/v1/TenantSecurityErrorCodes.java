@@ -12,7 +12,7 @@ public enum TenantSecurityErrorCodes {
     UNABLE_TO_MAKE_REQUEST(0, "Request to Tenant Security Proxy could not be made"),
     UNKNOWN_ERROR(100, "Unknown request error occurred"),
     UNAUTHORIZED_REQUEST(101, "Request authorization header API key was incorrect."),
-    INVALID_REQUEST_BODY(102, "Request body was invalid for wrap request."),
+    INVALID_REQUEST_BODY(102, "Request body was invalid."),
 
     //map to KmsException
     NO_PRIMARY_KMS_CONFIGURATION(200, "Tenant has no primary KMS configuration."),
