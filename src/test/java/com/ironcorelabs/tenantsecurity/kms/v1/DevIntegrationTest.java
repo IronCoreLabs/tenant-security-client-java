@@ -192,6 +192,31 @@ public class DevIntegrationTest {
         assertEqualBytes(decryptedValuesMap.get("doc3"), documentMap.get("doc3"));
     }
 
+    public void roundTripRekeyAWSToAzure() throws Exception {
+        DocumentMetadata metadata = getRoundtripMetadata(this.AWS_TENANT_ID);
+        Map<String, byte[]> documentMap = getRoundtripDataToEncrypt();
+
+        CompletableFuture<PlaintextDocument> roundtrip = getClient().thenCompose(client -> {
+            try {
+                return client.encrypt(documentMap, metadata).thenCompose(encryptedResults -> {
+                    return client.rekeyDocument(encryptedResults, metadata, this.AZURE_TENANT_ID)
+                            .thenCompose(rekeyResults -> {
+                                assertEquals(rekeyResults.getEncryptedFields(), encryptedResults.getEncryptedFields());
+                                DocumentMetadata newMetadata = getRoundtripMetadata(this.AZURE_TENANT_ID);
+                                return client.decrypt(rekeyResults, newMetadata);
+                            });
+                });
+            } catch (Exception e) {
+                throw new CompletionException(e);
+            }
+        });
+
+        Map<String, byte[]> decryptedValuesMap = roundtrip.get().getDecryptedFields();
+        assertEqualBytes(decryptedValuesMap.get("doc1"), documentMap.get("doc1"));
+        assertEqualBytes(decryptedValuesMap.get("doc2"), documentMap.get("doc2"));
+        assertEqualBytes(decryptedValuesMap.get("doc3"), documentMap.get("doc3"));
+    }
+
     public void batchRoundtripTest() throws Exception {
         DocumentMetadata metadata = getRoundtripMetadata(this.GCP_TENANT_ID);
 

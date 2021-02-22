@@ -47,6 +47,7 @@ final class TenantSecurityRequest implements Closeable {
     private final GenericUrl batchWrapEndpoint;
     private final GenericUrl unwrapEndpoint;
     private final GenericUrl batchUnwrapEndpoint;
+    private final GenericUrl rekeyEndpoint;
     private final GenericUrl securityEventEndpoint;
     private final HttpRequestFactory requestFactory;
     private final int timeout;
@@ -62,6 +63,7 @@ final class TenantSecurityRequest implements Closeable {
         this.batchWrapEndpoint = new GenericUrl(tspApiPrefix + "document/batch-wrap");
         this.unwrapEndpoint = new GenericUrl(tspApiPrefix + "document/unwrap");
         this.batchUnwrapEndpoint = new GenericUrl(tspApiPrefix + "document/batch-unwrap");
+        this.rekeyEndpoint = new GenericUrl(tspApiPrefix + "document/rekey");
         this.securityEventEndpoint = new GenericUrl(tspApiPrefix + "event/security-event");
 
         this.webRequestExecutor = Executors.newFixedThreadPool(requestThreadSize);
@@ -200,6 +202,19 @@ final class TenantSecurityRequest implements Closeable {
                 this.batchWrapEndpoint);
         return this.makeRequestAndParseFailure(this.batchUnwrapEndpoint, postData,
                 BatchUnwrappedDocumentKeys.class, error);
+    }
+
+    /**
+     * Request re-key endpoint to unwrap an EDEK encrypted to the metadata's tenantId and then wrap it to the newTenantId.
+     */
+    CompletableFuture<RekeyedDocumentKey> rekey(String edek, DocumentMetadata metadata, String newTenantId) {
+        Map<String, Object> postData = metadata.getAsPostData();
+        postData.put("encryptedDocumentKey", edek);
+        postData.put("newTenantId", newTenantId);
+        String error = String.format(
+                "Unable to make request to Tenant Security Proxy rekey endpoint. Endpoint requested: %s",
+                this.rekeyEndpoint);
+        return this.makeRequestAndParseFailure(this.rekeyEndpoint, postData, RekeyedDocumentKey.class, error);
     }
 
     /**

@@ -456,7 +456,7 @@ public final class TenantSecurityClient implements Closeable {
      *
      * @param plaintextDocuments Map of document ID to map of fields to encrypt.
      * @param metadata           Metadata about all of the documents being encrypted
-     * @return Collection of successes and failures that occured during operation. The keys of each
+     * @return Collection of successes and failures that occurred during operation. The keys of each
      *         map returned will be the same keys provided in the original plaintextDocuments map.
      */
     public CompletableFuture<BatchResult<EncryptedDocument>> encryptBatch(
@@ -485,7 +485,7 @@ public final class TenantSecurityClient implements Closeable {
      *
      * @param plaintextDocuments Map of previously encrypted document from ID to document.
      * @param metadata           Metadata about all of the documents being encrypted
-     * @return Collection of successes and failures that occured during operation. The keys of each
+     * @return Collection of successes and failures that occurred during operation. The keys of each
      *         map returned will be the same keys provided in the original plaintextDocuments map.
      */
     public CompletableFuture<BatchResult<EncryptedDocument>> encryptExistingBatch(
@@ -528,6 +528,23 @@ public final class TenantSecurityClient implements Closeable {
                 });
     }
 
+        /**
+         * Re-key an EncryptedDocument to a new tenant without decrypting the document data. Decrypts the 
+         * document's encrypted document key (EDEK) then re-encrypts it to the new tenant. The DEK is then discarded.
+         * The old tenant and new tenant can be the same in order to re-key the document to the tenant's latest primary config. 
+         * 
+         * @param encryptedDocument Document to re-key which includes encrypted bytes as well as EDEK.
+         * @param metadata          Metadata about the document being re-keyed.
+         * @param newTenantId       Tenant ID the document should be re-keyed to.
+         * @return                  EncryptedDocument that contains the new EDEK and unaltered encrypted fields.
+         */
+        public CompletableFuture<EncryptedDocument> rekeyDocument(EncryptedDocument encryptedDocument,
+                        DocumentMetadata metadata, String newTenantId) {
+                return this.encryptionService.rekey(encryptedDocument.getEdek(), metadata, newTenantId)
+                                .thenApply(newKey -> new EncryptedDocument(encryptedDocument.getEncryptedFields(),
+                                                newKey.getEdek()));
+        }
+
     /**
      * Decrypt a map of documents from the ID of the document to its encrypted content. Makes a call
      * out to the Tenant Security Proxy to decrypt all of the EDEKs in each document. This function
@@ -537,7 +554,7 @@ public final class TenantSecurityClient implements Closeable {
      * @param encryptedDocuments Map of documents to decrypt from ID of the document to the
      *                           EncryptedDocument
      * @param metadata           Metadata to use for each decrypt operation.
-     * @return Collection of successes and failures that occured during operation. The keys of each
+     * @return Collection of successes and failures that occurred during operation. The keys of each
      *         map returned will be the same keys provided in the original encryptedDocuments map.
      */
     public CompletableFuture<BatchResult<PlaintextDocument>> decryptBatch(
