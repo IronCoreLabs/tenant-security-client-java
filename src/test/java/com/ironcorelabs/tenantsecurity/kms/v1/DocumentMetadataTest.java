@@ -6,7 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.testng.annotations.Test;
 
-@Test(groups = {"unit"})
+@Test(groups = { "unit" })
 public class DocumentMetadataTest {
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void missingTenantID() throws Exception {
@@ -51,8 +51,8 @@ public class DocumentMetadataTest {
         Map<String, String> arbData = new HashMap<>();
         arbData.put("custom", "field");
         arbData.put("other", "value");
-        DocumentMetadata meta = new DocumentMetadata("customerID", "svcID", "classification",
-                arbData, "requestID", "8.8.8.8", "document-5");
+        DocumentMetadata meta = new DocumentMetadata("customerID", "svcID", "classification", arbData, "requestID",
+                "8.8.8.8", "document-5");
 
         Map<String, Object> postData = meta.getAsPostData();
         assertEquals(postData.get("tenantId"), "customerID");

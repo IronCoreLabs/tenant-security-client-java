@@ -7,7 +7,7 @@ import java.util.Map;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.EventMetadata;
 import org.testng.annotations.Test;
 
-@Test(groups = {"unit"})
+@Test(groups = { "unit" })
 public class EventMetadataTest {
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void missingTenantId() throws Exception {
@@ -57,8 +57,8 @@ public class EventMetadataTest {
         long nowInQuotes = java.lang.System.currentTimeMillis();
         arbData.put("custom", "field");
         arbData.put("other", "value");
-        EventMetadata meta = new EventMetadata("customerID", "svcID", "classification", arbData,
-                "requestId", "8.8.8.8", "document-5", nowInQuotes);
+        EventMetadata meta = new EventMetadata("customerID", "svcID", "classification", arbData, "requestId", "8.8.8.8",
+                "document-5", nowInQuotes);
 
         Map<String, Object> postData = meta.getAsPostData();
         assertEquals(postData.get("tenantId"), "customerID");
@@ -81,8 +81,8 @@ public class EventMetadataTest {
         long nowInQuotes = java.lang.System.currentTimeMillis();
         arbData.put("custom", "field");
         arbData.put("other", "value");
-        EventMetadata meta = new EventMetadata("customerID", "svcID", "classification", arbData,
-                "requestId", "8.8.8.8", "document-5", nowInQuotes);
+        EventMetadata meta = new EventMetadata("customerID", "svcID", "classification", arbData, "requestId", "8.8.8.8",
+                "document-5", nowInQuotes);
 
         Map<String, Object> postData = meta.getAsPostData();
 

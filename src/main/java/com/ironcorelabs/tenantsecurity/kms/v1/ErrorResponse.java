@@ -35,23 +35,25 @@ public class ErrorResponse {
 
     TenantSecurityException toTenantSecurityException(int httpStatusCode) {
         int errorCode = this.getCode();
-        if (errorCode >= 0
-                && TenantSecurityErrorCodes.valueOf(errorCode) != null) {
+        if (errorCode >= 0 && TenantSecurityErrorCodes.valueOf(errorCode) != null) {
             if (errorCode == 0) {
-                return new TspServiceException(TenantSecurityErrorCodes.UNABLE_TO_MAKE_REQUEST, httpStatusCode, this.getMessage());
+                return new TspServiceException(TenantSecurityErrorCodes.UNABLE_TO_MAKE_REQUEST, httpStatusCode,
+                        this.getMessage());
             } else if (errorCode >= 100 && errorCode < 199) {
-                return new TspServiceException(TenantSecurityErrorCodes.valueOf(errorCode), httpStatusCode, this.getMessage());
+                return new TspServiceException(TenantSecurityErrorCodes.valueOf(errorCode), httpStatusCode,
+                        this.getMessage());
             } else if (errorCode >= 200 && errorCode < 299) {
                 return new KmsException(TenantSecurityErrorCodes.valueOf(errorCode), httpStatusCode, this.getMessage());
             } else if (errorCode >= 300 && errorCode < 399) {
-                return new SecurityEventException(TenantSecurityErrorCodes.valueOf(errorCode), httpStatusCode, this.getMessage());
+                return new SecurityEventException(TenantSecurityErrorCodes.valueOf(errorCode), httpStatusCode,
+                        this.getMessage());
             } else {
                 return new TspServiceException(TenantSecurityErrorCodes.UNKNOWN_ERROR, errorCode, this.getMessage());
             }
 
         } else {
-            return new TspServiceException(TenantSecurityErrorCodes.UNKNOWN_ERROR,
-                    httpStatusCode, "TSP status code outside of recognized range");
+            return new TspServiceException(TenantSecurityErrorCodes.UNKNOWN_ERROR, httpStatusCode,
+                    "TSP status code outside of recognized range");
         }
     }
 }

@@ -79,15 +79,12 @@ final class TenantSecurityRequest implements Closeable {
      * Build up a generic HttpRequest which includes the appropriate headers to make requests to the
      * Tenant Security Proxy.
      */
-    private HttpRequest getApiRequest(Map<String, Object> postData, GenericUrl endpoint)
-            throws Exception {
-        return requestFactory
-                .buildPostRequest(endpoint, new JsonHttpContent(JSON_FACTORY, postData))
+    private HttpRequest getApiRequest(Map<String, Object> postData, GenericUrl endpoint) throws Exception {
+        return requestFactory.buildPostRequest(endpoint, new JsonHttpContent(JSON_FACTORY, postData))
                 // Clone the headers on use. Otherwise Google will keep appending their custom
                 // user agent string and it will grow big enough to cause header overflow
                 // errors.
-                .setHeaders(this.httpHeaders.clone()).setReadTimeout(this.timeout)
-                .setConnectTimeout(this.timeout)
+                .setHeaders(this.httpHeaders.clone()).setReadTimeout(this.timeout).setConnectTimeout(this.timeout)
                 // We want to parse out error codes, so don't throw when we get a non-200
                 // response code
                 .setThrowExceptionOnExecuteError(false);
@@ -103,8 +100,7 @@ final class TenantSecurityRequest implements Closeable {
             // The Google client wont parse 401 response bodies. The only way we can get a 401
             // response is if the header
             // was wrong, so hardcode that result here
-            return new TspServiceException(TenantSecurityErrorCodes.UNAUTHORIZED_REQUEST,
-                    resp.getStatusCode());
+            return new TspServiceException(TenantSecurityErrorCodes.UNAUTHORIZED_REQUEST, resp.getStatusCode());
         }
         try {
             ErrorResponse errorResponse = resp.parseAs(ErrorResponse.class);
@@ -112,18 +108,15 @@ final class TenantSecurityRequest implements Closeable {
         } catch (Exception e) {
             /* Fall through and return unknown error below */
         }
-        return new TspServiceException(TenantSecurityErrorCodes.UNKNOWN_ERROR,
-                resp.getStatusCode());
+        return new TspServiceException(TenantSecurityErrorCodes.UNKNOWN_ERROR, resp.getStatusCode());
     }
-
-
 
     /**
      * Generic method for making a request to the provided URL with the provided post data. Returns
      * an instance of the provided generic JSON class or an error message with the provided error.
      */
-    private <T> CompletableFuture<T> makeRequestAndParseFailure(GenericUrl url,
-            Map<String, Object> postData, Class<T> jsonType, String errorMessage) {
+    private <T> CompletableFuture<T> makeRequestAndParseFailure(GenericUrl url, Map<String, Object> postData,
+            Class<T> jsonType, String errorMessage) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 HttpResponse resp = this.getApiRequest(postData, url).execute();
@@ -135,9 +128,8 @@ final class TenantSecurityRequest implements Closeable {
                 if (cause instanceof TenantSecurityException) {
                     throw new CompletionException(cause);
                 }
-                throw new CompletionException(new TspServiceException(
-                        TenantSecurityErrorCodes.UNABLE_TO_MAKE_REQUEST, 0, errorMessage,
-                        cause));
+                throw new CompletionException(new TspServiceException(TenantSecurityErrorCodes.UNABLE_TO_MAKE_REQUEST,
+                        0, errorMessage, cause));
             }
         }, webRequestExecutor);
     }
@@ -150,8 +142,7 @@ final class TenantSecurityRequest implements Closeable {
         String error = String.format(
                 "Unable to make request to Tenant Security Proxy wrap endpoint. Endpoint requested: %s",
                 this.wrapEndpoint);
-        return this.makeRequestAndParseFailure(this.wrapEndpoint, postData,
-                WrappedDocumentKey.class, error);
+        return this.makeRequestAndParseFailure(this.wrapEndpoint, postData, WrappedDocumentKey.class, error);
     }
 
     /**
@@ -164,8 +155,7 @@ final class TenantSecurityRequest implements Closeable {
         String error = String.format(
                 "Unable to make request to Tenant Security Proxy batch wrap endpoint. Endpoint requested: %s",
                 this.batchWrapEndpoint);
-        return this.makeRequestAndParseFailure(this.batchWrapEndpoint, postData,
-                BatchWrappedDocumentKeys.class, error);
+        return this.makeRequestAndParseFailure(this.batchWrapEndpoint, postData, BatchWrappedDocumentKeys.class, error);
     }
 
     /**
@@ -177,14 +167,13 @@ final class TenantSecurityRequest implements Closeable {
         String error = String.format(
                 "Unable to make request to Tenant Security Proxy unwrap endpoint. Endpoint requested: %s",
                 this.unwrapEndpoint);
-        return this.makeRequestAndParseFailure(this.unwrapEndpoint, postData,
-                UnwrappedDocumentKey.class, error).thenApply(unwrapResponse -> {
+        return this.makeRequestAndParseFailure(this.unwrapEndpoint, postData, UnwrappedDocumentKey.class, error)
+                .thenApply(unwrapResponse -> {
                     try {
                         return unwrapResponse.getDekBytes();
                     } catch (Exception e) {
                         throw new CompletionException(new TspServiceException(
-                                TenantSecurityErrorCodes.UNABLE_TO_MAKE_REQUEST, 0,
-                                e.getMessage(), e));
+                                TenantSecurityErrorCodes.UNABLE_TO_MAKE_REQUEST, 0, e.getMessage(), e));
                     }
                 });
     }
@@ -200,8 +189,8 @@ final class TenantSecurityRequest implements Closeable {
         String error = String.format(
                 "Unable to make request to Tenant Security Proxy batch unwrap endpoint. Endpoint requested: %s",
                 this.batchWrapEndpoint);
-        return this.makeRequestAndParseFailure(this.batchUnwrapEndpoint, postData,
-                BatchUnwrappedDocumentKeys.class, error);
+        return this.makeRequestAndParseFailure(this.batchUnwrapEndpoint, postData, BatchUnwrappedDocumentKeys.class,
+                error);
     }
 
     /**
@@ -229,12 +218,10 @@ final class TenantSecurityRequest implements Closeable {
         String error = String.format(
                 "Unable to make request to Tenant Security Proxy security event endpoint. Endpoint requested: %s",
                 this.securityEventEndpoint);
-        return this.makeRequestAndParseFailure(this.securityEventEndpoint, postData, Void.class,
-                error);
+        return this.makeRequestAndParseFailure(this.securityEventEndpoint, postData, Void.class, error);
     }
 
-    private Map<String, Object> combinePostableEventAndMetadata(SecurityEvent event,
-            EventMetadata metadata) {
+    private Map<String, Object> combinePostableEventAndMetadata(SecurityEvent event, EventMetadata metadata) {
         Map<String, Object> postData = metadata.getAsPostData();
         // Add the object of this call, the event, to the post data that's ready to go out.
         // We just created this, so we know the cast is safe. There is a unit case to catch this in
@@ -253,8 +240,7 @@ final class TenantSecurityRequest implements Closeable {
      * @param maxRouteConnections max connections for a single HTTP endpoint
      * @return HttpRequestFactory with connection pooling enabled.
      */
-    static HttpRequestFactory provideHttpRequestFactory(int maxConnections,
-            int maxRouteConnections) {
+    static HttpRequestFactory provideHttpRequestFactory(int maxConnections, int maxRouteConnections) {
         final PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
         // Increase max total connections
         cm.setMaxTotal(maxConnections);

@@ -20,28 +20,28 @@ public final class BatchResult<T> {
     /**
      * Get the Map from document ID to a successfully encrypted or decrypted document.
      */
-    public ConcurrentMap<String, T> getDocuments(){
+    public ConcurrentMap<String, T> getDocuments() {
         return this.documents;
     }
 
     /**
      * Get a Map from the document ID to an exception that occured when encrypting or decrypting the document
      */
-    public ConcurrentMap<String, TenantSecurityException> getFailures(){
+    public ConcurrentMap<String, TenantSecurityException> getFailures() {
         return this.failures;
     }
 
     /**
      * Returns whether the batch result had any successful encrypted/decrypted documents.
      */
-    public boolean hasDocuments(){
+    public boolean hasDocuments() {
         return this.documents.size() > 0;
     }
 
     /**
      * Returns whether the batch result had any failures when encrypting/decrypting documents.
      */
-    public boolean hasFailures(){
+    public boolean hasFailures() {
         return this.failures.size() > 0;
     }
 }

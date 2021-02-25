@@ -59,8 +59,7 @@ public class IntegrationBenchmark {
             String tsp_port = envVars.getOrDefault("TSP_PORT", TSP_PORT);
             String api_key = envVars.getOrDefault("API_KEY", API_KEY);
             String tenant_id = envVars.getOrDefault("TENANT_ID", TENANT_ID);
-            context = new DocumentMetadata(tenant_id, "benchmark", "sample", customFields,
-                    "customRayID");
+            context = new DocumentMetadata(tenant_id, "benchmark", "sample", customFields, "customRayID");
 
             client = new TenantSecurityKMSClient(tsp_address + ":" + tsp_port, api_key);
         } catch (Exception e) {
@@ -78,8 +77,8 @@ public class IntegrationBenchmark {
     @Benchmark
     public void integrationRoundtrip(Blackhole blackhole) {
         try {
-            CompletableFuture<PlaintextDocument> roundtrip =
-                    client.encrypt(documentMap, context).thenCompose(encryptedResults -> {
+            CompletableFuture<PlaintextDocument> roundtrip = client.encrypt(documentMap, context)
+                    .thenCompose(encryptedResults -> {
                         return client.decrypt(encryptedResults, context);
                     });
             Map<String, byte[]> decryptedValuesMap = roundtrip.get().getDecryptedFields();

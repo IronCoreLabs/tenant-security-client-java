@@ -22,7 +22,8 @@ public class SecurityEventException extends TenantSecurityException {
      *                         Security Proxy for this error.
      * @param cause            The Throwable that caused this one.
      */
-    public SecurityEventException(TenantSecurityErrorCodes errorCode, int httpResponseCode, String errorMessage, Throwable cause) {
+    public SecurityEventException(TenantSecurityErrorCodes errorCode, int httpResponseCode, String errorMessage,
+            Throwable cause) {
         super(errorCode, httpResponseCode, errorMessage, cause);
     }
 

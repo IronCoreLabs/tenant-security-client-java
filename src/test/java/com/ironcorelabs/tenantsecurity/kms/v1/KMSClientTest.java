@@ -1,9 +1,8 @@
 package com.ironcorelabs.tenantsecurity.kms.v1;
 
-
 import org.testng.annotations.Test;
 
-@Test(groups = {"unit"})
+@Test(groups = { "unit" })
 public class KMSClientTest {
     @Test(expectedExceptions = java.net.MalformedURLException.class)
     public void constructorUrlTest() throws Exception {
@@ -32,8 +31,7 @@ public class KMSClientTest {
 
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void missingRandomGen() throws Exception {
-        new TenantSecurityClient("http://localhost", "apiKey",
-                TenantSecurityClient.DEFAULT_REQUEST_THREADPOOL_SIZE,
+        new TenantSecurityClient("http://localhost", "apiKey", TenantSecurityClient.DEFAULT_REQUEST_THREADPOOL_SIZE,
                 TenantSecurityClient.DEFAULT_AES_THREADPOOL_SIZE, null).close();
     }
 }

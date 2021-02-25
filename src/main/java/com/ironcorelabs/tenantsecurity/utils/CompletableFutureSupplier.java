@@ -10,6 +10,6 @@ package com.ironcorelabs.tenantsecurity.utils;
  * @param <T>
  */
 
-public interface CompletableFutureSupplier<T>{
+public interface CompletableFutureSupplier<T> {
     T get() throws Exception;
 }

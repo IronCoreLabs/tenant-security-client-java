@@ -10,7 +10,7 @@ import java.util.stream.Collectors;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 import org.testng.annotations.Test;
 
-@Test(groups = {"local-batch-integration"})
+@Test(groups = { "local-batch-integration" })
 public class LocalBatch {
     private String TENANT_ID = "";
     private String API_KEY = "";
@@ -57,11 +57,10 @@ public class LocalBatch {
      * requests).
      */
     public void batchRoundtrip() throws Exception {
-        DocumentMetadata context =
-                new DocumentMetadata(this.TENANT_ID, "integrationTest", "sample");
+        DocumentMetadata context = new DocumentMetadata(this.TENANT_ID, "integrationTest", "sample");
 
-        TenantSecurityClient client = new TenantSecurityClient(
-                TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT, this.API_KEY);
+        TenantSecurityClient client = new TenantSecurityClient(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT,
+                this.API_KEY);
 
         int batchSize = 25;
         int batchRepetitions = 50;
@@ -75,8 +74,7 @@ public class LocalBatch {
 
         for (int i = 2; i <= batchRepetitions; i++) {
             final String run = "Run " + i;
-            roundtrip = roundtrip
-                    .thenCompose(_nope -> client.encryptBatch(getBatchMap(batchSize), context))
+            roundtrip = roundtrip.thenCompose(_nope -> client.encryptBatch(getBatchMap(batchSize), context))
                     .thenCompose(encryptedResults -> {
                         System.out.println(run);
                         logFailures(encryptedResults.getFailures());

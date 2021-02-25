@@ -58,7 +58,6 @@ public class SimpleRoundtrip {
         custRecord.put("address", "2825-519 Stone Creek Rd, Bozeman, MT 59715".getBytes("UTF-8"));
         custRecord.put("name", "Jim Bridger".getBytes("UTF-8"));
 
-
         // Request a key from the KMS and use it to encrypt the document
         CompletableFuture<PlaintextDocument> roundtrip =
                 // Initialize the client with a Tenant Security Proxy domain and API key.
@@ -66,24 +65,23 @@ public class SimpleRoundtrip {
                 TenantSecurityClient.create(TSP_ADDR, API_KEY).thenCompose(client -> {
 
                     try {
-                        return client.encrypt(custRecord, metadata)
-                                .thenCompose(encryptedResults -> {
-                                    // persist the EDEK and encryptedDocument to your persistence layer
-                                    String edek = encryptedResults.getEdek();
-                                    Map<String, byte[]> encryptedDocument = encryptedResults.getEncryptedFields();
+                        return client.encrypt(custRecord, metadata).thenCompose(encryptedResults -> {
+                            // persist the EDEK and encryptedDocument to your persistence layer
+                            String edek = encryptedResults.getEdek();
+                            Map<String, byte[]> encryptedDocument = encryptedResults.getEncryptedFields();
 
-                                    // un-comment if you want to print out the encrypted data
-                                    //System.out.println("Encrypted SSN: " + new String(encryptedDocument.get("ssn"), StandardCharsets.UTF_8));
-                                    //System.out.println("Encrypted address: " + new String(encryptedDocument.get("address"), StandardCharsets.UTF_8));
-                                    //System.out.println("Encrypted name: " + new String(encryptedDocument.get("name"), StandardCharsets.UTF_8));
+                            // un-comment if you want to print out the encrypted data
+                            //System.out.println("Encrypted SSN: " + new String(encryptedDocument.get("ssn"), StandardCharsets.UTF_8));
+                            //System.out.println("Encrypted address: " + new String(encryptedDocument.get("address"), StandardCharsets.UTF_8));
+                            //System.out.println("Encrypted name: " + new String(encryptedDocument.get("name"), StandardCharsets.UTF_8));
 
+                            // retrieve the EDEK and encryptedDocument from your persistence layer
+                            EncryptedDocument retrievedEncryptedDocument = new EncryptedDocument(encryptedDocument,
+                                    edek);
 
-                                    // retrieve the EDEK and encryptedDocument from your persistence layer
-                                    EncryptedDocument retrievedEncryptedDocument = new EncryptedDocument(encryptedDocument, edek);
-
-                                    // decrypt back into plaintext
-                                    return client.decrypt(encryptedResults, metadata);
-                                });
+                            // decrypt back into plaintext
+                            return client.decrypt(encryptedResults, metadata);
+                        });
                     } catch (Exception e) {
                         throw new CompletionException(e);
                     }
@@ -94,7 +92,8 @@ public class SimpleRoundtrip {
             Map<String, byte[]> decryptedValuesMap = roundtrip.get().getDecryptedFields();
 
             System.out.println("Decrypted SSN: " + new String(decryptedValuesMap.get("ssn"), StandardCharsets.UTF_8));
-            System.out.println("Decrypted address: " + new String(decryptedValuesMap.get("address"), StandardCharsets.UTF_8));
+            System.out.println(
+                    "Decrypted address: " + new String(decryptedValuesMap.get("address"), StandardCharsets.UTF_8));
             System.out.println("Decrypted name: " + new String(decryptedValuesMap.get("name"), StandardCharsets.UTF_8));
         } catch (ExecutionException e) {
             if (e.getCause() instanceof TenantSecurityException) {
@@ -116,7 +115,6 @@ public class SimpleRoundtrip {
         Map<String, byte[]> toEncrypt = new HashMap<>();
         toEncrypt.put("file", sourceFileBytes);
 
-
         // Request a key from the KMS and use it to encrypt the document
         CompletableFuture<PlaintextDocument> roundtripFile =
                 // Initialize the client with a Tenant Security Proxy domain and API key.
@@ -124,30 +122,33 @@ public class SimpleRoundtrip {
                 TenantSecurityClient.create(TSP_ADDR, API_KEY).thenCompose(client -> {
 
                     try {
-                        return client.encrypt(toEncrypt, metadata)
-                                .thenCompose(encryptedResults -> {
-                                    // write the encrypted file and the encrypted key to the filesystem
-                                    try {
-                                        Files.write(Paths.get(sourceFile + ".enc"), encryptedResults.getEncryptedFields().get("file"));
-                                        Files.write(Paths.get(sourceFile + ".edek"), encryptedResults.getEdek().getBytes(StandardCharsets.UTF_8));
-                                    } catch (IOException e) {
-                                        throw new CompletionException(e);
-                                    }
+                        return client.encrypt(toEncrypt, metadata).thenCompose(encryptedResults -> {
+                            // write the encrypted file and the encrypted key to the filesystem
+                            try {
+                                Files.write(Paths.get(sourceFile + ".enc"),
+                                        encryptedResults.getEncryptedFields().get("file"));
+                                Files.write(Paths.get(sourceFile + ".edek"),
+                                        encryptedResults.getEdek().getBytes(StandardCharsets.UTF_8));
+                            } catch (IOException e) {
+                                throw new CompletionException(e);
+                            }
 
-                                    // some time later... read the file from the disk
-                                    try {
-                                        byte[] encryptedBytes = Files.readAllBytes(Paths.get(sourceFile + ".enc"));
-                                        byte[] encryptedDek = Files.readAllBytes(Paths.get(sourceFile + ".edek"));
+                            // some time later... read the file from the disk
+                            try {
+                                byte[] encryptedBytes = Files.readAllBytes(Paths.get(sourceFile + ".enc"));
+                                byte[] encryptedDek = Files.readAllBytes(Paths.get(sourceFile + ".edek"));
 
-                                        EncryptedDocument fileAndEdek = new EncryptedDocument(Collections.singletonMap("file", encryptedBytes), new String(encryptedDek, StandardCharsets.UTF_8));
+                                EncryptedDocument fileAndEdek = new EncryptedDocument(
+                                        Collections.singletonMap("file", encryptedBytes),
+                                        new String(encryptedDek, StandardCharsets.UTF_8));
 
-                                        // decrypt
-                                        return client.decrypt(fileAndEdek, metadata);
+                                // decrypt
+                                return client.decrypt(fileAndEdek, metadata);
 
-                                    } catch (IOException e) {
-                                        throw new CompletionException(e);
-                                    }
-                                });
+                            } catch (IOException e) {
+                                throw new CompletionException(e);
+                            }
+                        });
                     } catch (Exception e) {
                         throw new CompletionException(e);
                     }
@@ -166,7 +167,6 @@ public class SimpleRoundtrip {
             }
             throw e;
         }
-
 
         System.exit(0);
 

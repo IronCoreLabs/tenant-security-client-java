@@ -37,8 +37,7 @@ public class DocumentMetadata {
             Map<String, String> otherData, String requestId, String sourceIp, String objectId)
             throws IllegalArgumentException {
         if (tenantId == null || tenantId.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "Tenant ID value must be provided as part of document metadata.");
+            throw new IllegalArgumentException("Tenant ID value must be provided as part of document metadata.");
         }
         if (requestingUserOrServiceId == null || requestingUserOrServiceId.isEmpty()) {
             throw new IllegalArgumentException(
@@ -96,8 +95,7 @@ public class DocumentMetadata {
      *                                  Security Proxy logs.
      * @throws IllegalArgumentException If the provided tenantId is not set
      */
-    public DocumentMetadata(String tenantId, String requestingUserOrServiceId, String dataLabel,
-            String requestId) {
+    public DocumentMetadata(String tenantId, String requestingUserOrServiceId, String dataLabel, String requestId) {
         this(tenantId, requestingUserOrServiceId, dataLabel, null, requestId, null, null);
     }
 

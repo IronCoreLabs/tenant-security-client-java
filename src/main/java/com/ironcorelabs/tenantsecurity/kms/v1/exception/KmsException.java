@@ -22,8 +22,9 @@ public class KmsException extends TenantSecurityException {
      *                         Security Proxy for this error.
      * @param cause            The Throwable that caused this one.
      */
-    public KmsException(TenantSecurityErrorCodes errorCode, int httpResponseCode, String errorMessage, Throwable cause) {
-       super(errorCode, httpResponseCode, errorMessage, cause);
+    public KmsException(TenantSecurityErrorCodes errorCode, int httpResponseCode, String errorMessage,
+            Throwable cause) {
+        super(errorCode, httpResponseCode, errorMessage, cause);
     }
 
     /**

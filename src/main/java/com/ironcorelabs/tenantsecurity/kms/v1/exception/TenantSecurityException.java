@@ -18,7 +18,6 @@ public class TenantSecurityException extends Exception {
     protected TenantSecurityErrorCodes errorCode;
     protected int httpResponseCode;
 
-
     /**
      * Package private constructor so that subclasses have a common way of setting the provided error code and HTTP
      * status code.
@@ -31,7 +30,8 @@ public class TenantSecurityException extends Exception {
      *                         Security Proxy for this error.
      * @param cause            The Throwable that caused this one.
      */
-    protected TenantSecurityException(TenantSecurityErrorCodes errorCode, int httpResponseCode, String errorMessage, Throwable cause) {
+    protected TenantSecurityException(TenantSecurityErrorCodes errorCode, int httpResponseCode, String errorMessage,
+            Throwable cause) {
         super(errorMessage, cause);
         this.errorCode = errorCode;
         this.httpResponseCode = httpResponseCode;

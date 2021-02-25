@@ -16,17 +16,20 @@ public enum TenantSecurityErrorCodes {
 
     //map to KmsException
     NO_PRIMARY_KMS_CONFIGURATION(200, "Tenant has no primary KMS configuration."),
-    UNKNOWN_TENANT_OR_NO_ACTIVE_KMS_CONFIGURATIONS(201, "Tenant either doesn't exist or has no active KMS configurations."),
+    UNKNOWN_TENANT_OR_NO_ACTIVE_KMS_CONFIGURATIONS(201,
+            "Tenant either doesn't exist or has no active KMS configurations."),
     KMS_CONFIGURATION_DISABLED(202, "Tenant configuration specified in EDEK is no longer active."),
     INVALID_PROVIDED_EDEK(203, "Provided EDEK was not valid."),
     KMS_WRAP_FAILED(204, "Request to KMS API to wrap key returned invalid results."),
     KMS_UNWRAP_FAILED(205, "Request to KMS API to unwrap key returned invalid results."),
-    KMS_AUTHORIZATION_FAILED(206, "Request to KMS failed because the tenant credentials were invalid or have been revoked."),
-    KMS_CONFIGURATION_INVALID(207, "Request to KMS failed because the key configuration was invalid or the necessary permissions for the operation were missing/revoked."),
+    KMS_AUTHORIZATION_FAILED(206,
+            "Request to KMS failed because the tenant credentials were invalid or have been revoked."),
+    KMS_CONFIGURATION_INVALID(207,
+            "Request to KMS failed because the key configuration was invalid or the necessary permissions for the operation were missing/revoked."),
     KMS_UNREACHABLE(208, "Request to KMS failed because KMS was unreachable."),
 
     //map to SecurityEventException
-    SECURITY_EVENT_REJECTED( 301, "Tenant Security Proxy could not accept the security event");
+    SECURITY_EVENT_REJECTED(301, "Tenant Security Proxy could not accept the security event");
 
     private final int code;
     private final String message;
@@ -37,7 +40,7 @@ public enum TenantSecurityErrorCodes {
      * @param code    Numerical error code for this error.
      * @param message Readable error message for this error.
      */
-    TenantSecurityErrorCodes(int code, String message){
+    TenantSecurityErrorCodes(int code, String message) {
         this.code = code;
         this.message = message;
     }

@@ -7,7 +7,7 @@ import com.ironcorelabs.tenantsecurity.logdriver.v1.PeriodicEvent;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.UserEvent;
 import org.testng.annotations.Test;
 
-@Test(groups = {"unit"})
+@Test(groups = { "unit" })
 public class SecurityEventTest {
     public void interfaceConsistencyCheck() throws Exception {
         // ADMIN
@@ -27,8 +27,7 @@ public class SecurityEventTest {
         assertEquals(DataEvent.CHANGE_PERMISSIONS.getFlatEvent(), "DATA_CHANGE_PERMISSIONS");
 
         // PERIODIC
-        assertEquals(PeriodicEvent.ENFORCE_RETENTION_POLICY.getFlatEvent(),
-                "PERIODIC_ENFORCE_RETENTION_POLICY");
+        assertEquals(PeriodicEvent.ENFORCE_RETENTION_POLICY.getFlatEvent(), "PERIODIC_ENFORCE_RETENTION_POLICY");
         assertEquals(PeriodicEvent.CREATE_BACKUP.getFlatEvent(), "PERIODIC_CREATE_BACKUP");
 
         // USER
@@ -47,10 +46,8 @@ public class SecurityEventTest {
         assertEquals(UserEvent.ENABLE_TWO_FACTOR.getFlatEvent(), "USER_ENABLE_TWO_FACTOR");
         assertEquals(UserEvent.DISABLE_TWO_FACTOR.getFlatEvent(), "USER_DISABLE_TWO_FACTOR");
         assertEquals(UserEvent.CHANGE_EMAIL.getFlatEvent(), "USER_CHANGE_EMAIL");
-        assertEquals(UserEvent.REQUEST_EMAIL_VERIFICATION.getFlatEvent(),
-                "USER_REQUEST_EMAIL_VERIFICATION");
+        assertEquals(UserEvent.REQUEST_EMAIL_VERIFICATION.getFlatEvent(), "USER_REQUEST_EMAIL_VERIFICATION");
         assertEquals(UserEvent.VERIFY_EMAIL.getFlatEvent(), "USER_VERIFY_EMAIL");
-
 
     }
 }

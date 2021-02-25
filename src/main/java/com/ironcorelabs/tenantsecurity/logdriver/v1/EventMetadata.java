@@ -37,11 +37,10 @@ public class EventMetadata {
      * @throws IllegalArgumentException If the provided tenantId is not set
      */
     public EventMetadata(String tenantId, String requestingUserOrServiceId, String dataLabel,
-            Map<String, String> otherData, String requestId, String sourceIp, String objectId,
-            Long timestampMillis) throws IllegalArgumentException {
+            Map<String, String> otherData, String requestId, String sourceIp, String objectId, Long timestampMillis)
+            throws IllegalArgumentException {
         if (tenantId == null || tenantId.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "Tenant ID value must be provided as part of event metadata.");
+            throw new IllegalArgumentException("Tenant ID value must be provided as part of event metadata.");
         }
         if (requestingUserOrServiceId == null || requestingUserOrServiceId.isEmpty()) {
             throw new IllegalArgumentException(
@@ -53,8 +52,7 @@ public class EventMetadata {
         this.dataLabel = dataLabel;
         this.sourceIp = sourceIp;
         this.objectId = objectId;
-        this.timestampMillis =
-                timestampMillis == null ? java.lang.System.currentTimeMillis() : timestampMillis;
+        this.timestampMillis = timestampMillis == null ? java.lang.System.currentTimeMillis() : timestampMillis;
         this.otherData = otherData == null ? new HashMap<String, String>() : otherData;
     }
 
@@ -73,8 +71,7 @@ public class EventMetadata {
      */
     public EventMetadata(String tenantId, String requestingUserOrServiceId, String dataLabel,
             Map<String, String> otherData, String requestId) {
-        this(tenantId, requestingUserOrServiceId, dataLabel, otherData, requestId, null, null,
-                null);
+        this(tenantId, requestingUserOrServiceId, dataLabel, otherData, requestId, null, null, null);
     }
 
     /**
@@ -105,8 +102,7 @@ public class EventMetadata {
      *                                  Security Proxy logs.
      * @throws IllegalArgumentException If the provided tenantId is not set
      */
-    public EventMetadata(String tenantId, String requestingUserOrServiceId, String dataLabel,
-            String requestId) {
+    public EventMetadata(String tenantId, String requestingUserOrServiceId, String dataLabel, String requestId) {
         this(tenantId, requestingUserOrServiceId, dataLabel, null, requestId, null, null, null);
     }
 
