@@ -76,22 +76,24 @@ public class RekeyExample {
 
                     final String NEW_TENANT_ID = "tenant-aws";
 
-                    // Create metadata new metadata for this document indicating that it will
-                    // be rekeyed to the second tenant. The name and identifying information
-                    // could also be changed at this time.
-                    DocumentMetadata newMetadata =
-                        new DocumentMetadata(NEW_TENANT_ID, "serviceOrUserId", "PII");
-
                     System.out.println("Rekeying to tenant " + NEW_TENANT_ID);
 
                     CompletableFuture<EncryptedDocument> rekeyedDocument =
                         encryptedDocument.thenCompose(
-                            // Rekey the document to `tenant-aws` using their primary config
+                            // Rekey the document to `tenant-aws` using their primary config. The
+                            // metadata's name and identifying information could also be changed at
+                            // this time.
                             encrypted -> client.rekeyDocument(encrypted, metadata, NEW_TENANT_ID));
 
                     //
                     // Part 3: Decrypt the encrypted record using the new tenant
                     //
+
+                    // Create new metadata for this document indicating that it was
+                    // rekeyed to the second tenant. The name and identifying information
+                    // could also be changed at this time.
+                    DocumentMetadata newMetadata =
+                        new DocumentMetadata(NEW_TENANT_ID, "serviceOrUserId", "PII");
 
                     System.out.println("Decrypting with tenant " + NEW_TENANT_ID);
 
