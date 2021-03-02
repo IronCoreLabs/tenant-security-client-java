@@ -1,4 +1,8 @@
-# Simple Round-Trip Example
+# Simple Rekey Example
+
+Rekeying encrypted data changes the KMS config needed to decrypt the data without touching the data itself. This is
+done by unwrapping just the encrypted document encryption key (EDEK) and then re-wrapping it using a new config.
+The EDEK can be re-wrapped to a new tenant, or to its existing tenant as a way of updating the primary config used.
 
 In order to run this example, you need to be running a _Tenant Security Proxy_ (TSP) on your machine.
 Check the [README.md](../README.md) file in the parent directory to see how to start the TSP, if you haven't done so
