@@ -31,8 +31,8 @@ Using tenant tenant-azure-l
 Writing encrypted files to: /tmp/saas-shield566835192357707822
 ```
 
-The output "Writing encryped files to:" is printed after successfully encrypting files using a key from the TSP.
-If you inspect that folder you'll see many encrypted documents and a single edek that was used to encypt all of them.
+The output "Writing encrypted files to:" is printed after successfully encrypting files using a key from the TSP.
+If you inspect that folder you'll see many encrypted documents and a single edek that was used to encrypt all of them.
 
 If you look in the TSP logs you should see output with information about calls to the KMS for that tenant.
 

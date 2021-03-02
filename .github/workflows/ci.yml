@@ -10,10 +10,9 @@ jobs:
   build_and_test:
     runs-on: ubuntu-20.04
     needs: get_refs
-
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2.1.5
+      - uses: actions/setup-node@v2
         with:
           version: 10.x
       - name: decrypt ironhide keys
@@ -29,7 +28,7 @@ jobs:
         with:
           java-version: 1.8
       - name: cache mvn repository
-        uses: actions/cache@v2.1.4
+        uses: actions/cache@v2
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -49,7 +48,7 @@ jobs:
       - name: use rust beta (remove once ironoxide is on stable)
         run: rustup update beta && rustup default beta
       - name: cache cargo registry
-        uses: actions/cache@v2.1.4
+        uses: actions/cache@v2
         with:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           path: |
@@ -72,7 +71,7 @@ jobs:
   get_refs:
     # Only run if it's on a PR.
     if: github.base_ref != ''
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     outputs:
       tenant-security-proxy: ${{ steps.get_refs.outputs.tenant-security-proxy }}
     steps:
@@ -139,3 +138,27 @@ jobs:
           issue-number: ${{ steps.get_pr.outputs.pr }}
           comment-id: ${{ steps.find_comment.outputs.comment-id }}
           reactions: confused
+
+  build_examples:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        example-dir:
+          [large-documents, logging-example, rekey-example, simple-roundtrip]
+    steps:
+      - uses: actions/checkout@v2
+      - name: set up jdk 1.8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+      - name: cache mvn repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      - name: Build example
+        run: mvn compile
+        working-directory: ./examples/${{ example-dir }}
