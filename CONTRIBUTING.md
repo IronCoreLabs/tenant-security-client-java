@@ -35,7 +35,7 @@ We deploy the SDK to [Maven Central](https://search.maven.org/artifact/com.ironc
   `sonatype-nexus` server to be stored in your `.m2/settings.xml` file. The user name and password we use for releasing are stored
   on Drive in `IT_Info/sonatype-info.txt.iron`.
 - You'll also need a GPG signing key to sign the release. Decrypt `IT_Info/pgp/rsa-signing-subkey.asc.iron`, then
-  `gpg --import rsa_signing_key.asc`.
+  `gpg --import rsa-signing-subkey.asc`. The master password is in `IT_Info/pgp/ops-info.txt.iron`.
 - Update the `<version>` in `pom.xml`.
 - Run `mvn clean source:jar javadoc:jar deploy -Dsuite=test-suites/test-unit` to deploy the release to Maven Central.
   **NOTE**: this command will need the passphrase associated with the GPG signing key.
