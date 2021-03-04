@@ -28,7 +28,7 @@ jobs:
         with:
           java-version: 1.8
       - name: cache mvn repository
-        uses: actions/cache@v2
+        uses: actions/cache@v2.1.4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -46,7 +46,7 @@ jobs:
           path: tenant-security-proxy
           token: ${{ secrets.GitHub_PAT }}
       - name: cache cargo registry
-        uses: actions/cache@v2
+        uses: actions/cache@v2.1.4
         with:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           path: |
@@ -151,7 +151,7 @@ jobs:
         with:
           java-version: 1.8
       - name: cache mvn repository
-        uses: actions/cache@v2
+        uses: actions/cache@v2.1.4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
