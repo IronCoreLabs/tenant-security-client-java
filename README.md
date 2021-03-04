@@ -7,6 +7,6 @@ More extensive documentation about usage is available on our [docs site](https:/
 
 ## License
 
-The Tenant Security Client is licensed under the [GNU Affero General Public License](https://github.com/IronCoreLabs/ironoxide/blob/master/LICENSE). We also offer commercial licenses - [email](mailto:info@ironcorelabs.com) for more information.
+The Tenant Security Client is licensed under the [GNU Affero General Public License](https://github.com/IronCoreLabs/ironoxide/blob/main/LICENSE). We also offer commercial licenses - [email](mailto:info@ironcorelabs.com) for more information.
 
-Copyright (c) 2019 IronCore Labs, Inc. All rights reserved.
+Copyright (c) 2021 IronCore Labs, Inc. All rights reserved.

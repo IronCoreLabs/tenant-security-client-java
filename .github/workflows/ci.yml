@@ -3,7 +3,7 @@ name: Tenant Security Client Java CI
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
 
 jobs:
@@ -117,7 +117,7 @@ jobs:
           for REPO in $(cat repos) ; do
             REF=$(jq -r '.["'"${REPO}"'"]' < refs.json)
             if [ "${REF}" = "null" ] ; then
-              REF="master"
+              REF="main"
             fi
             echo "${REPO}: ${REF}"
             echo "::set-output name=${REPO}::${REF}"
