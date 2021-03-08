@@ -3,6 +3,8 @@
 We deploy the SDK to [Maven Central](https://search.maven.org/artifact/com.ironcorelabs/tenant-security-java/).
 
 - Update the `<version>` in [pom.xml](./pom.xml).
+- Add an entry to [CHANGELOG.md](./CHANGELOG.md).
+- Commit the changes to the `main` branch. Wait until the release has succeeded to push the changes.
 - Put the username and password for the `icl-devops` Sonatype account into your `.m2/settings.xml` file. These credentials are stored on Drive in `IT_Info/sonatype-info.txt.iron`. A sample of this file is given below.
 - Import the GPG signing key needed to sign the release. In Google Drive, navigate to the `IT_Info/pgp` folder, download `rsa-signing-subkey.asc.iron` and `ops-info.txt.iron`, and decrypt them using IronHide. Then do the following:
   1. Copy the master password from `ops-info.txt` to your clipboard so it can be provided in step 3 when importing the secret key.
@@ -18,6 +20,7 @@ We deploy the SDK to [Maven Central](https://search.maven.org/artifact/com.ironc
     release process complete successfully.
 - When the artifacts have been deployed, go to https://oss.sonatype.org, log in using the `icl-devops` username and
   password from `sonatype-info.txt`, and find the new release in the _Staging Repositories_. Close that repository and then release it in order to actually push the package out to the public repo.
+- Push your new version and CHANGELOG entry to GitHub.
 
 ### Sample .m2/settings.xml
 
