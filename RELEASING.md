@@ -10,6 +10,7 @@ We deploy the SDK to [Maven Central](https://search.maven.org/artifact/com.ironc
   1. Copy the master password from `ops-info.txt` to your clipboard so it can be provided in step 3 when importing the secret key.
   2. `gpg --keyserver keys.gnupg.net --receive-keys 62F57B1B87928CAC`
   3. `gpg --import rsa-signing-subkey.asc`
+- Set the `JAVA_HOME` environment variable to point to your Java installation folder.
 - Run `mvn clean source:jar javadoc:jar deploy -Dsuite=test-suites/test-unit` to deploy the release to Maven Central.
   **NOTE**: this command will need the master password associated with the GPG signing key.
   If this hasn't been entered recently, the command may error with a `signing failed` message.
