@@ -1,6 +1,6 @@
 # Tenant Security Client Java Library
 
-A Java client for implementing CMK within a vendors infrastructure. Makes requests through an
+A Java client for implementing CMK within a vendor's infrastructure. Makes requests through an
 IronCore Tenant Security Proxy to tenants' KMS/logging infrastructures.
 
 More extensive documentation about usage is available on our [docs site](https://ironcorelabs.com/docs/customer-managed-keys/tenant-security-client/overview).
