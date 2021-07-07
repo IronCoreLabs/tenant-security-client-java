@@ -3,14 +3,20 @@
 This directory contains a benchmark suite for the Java version of the Tenant Security Client (TSC).
 To build and run the benchmark, just execute the following commands in this directory:
 
+To show single threaded latency of a roundtrip (encrypt/decrypt):
 ```
 mvn clean install
-java -Xms1024m -Xmx1024m -jar target/benchmarks.jar
+java -Xms1024m -Xmx1024m -jar target/benchmarks.jar -f0 -wi 1
+```
+
+A variation that will show throughput using key leasing:
+```
+mvn clean insteall
+TENANT_ID=tenant-gcp-l java -Xms1024m -Xmx1024m -jar target/benchmarks.jar -f 0 -wi 1 -bm thrpt -tu s
 ```
 
 You have to benchmark an actual version of the TSC, though this can be a `SNAPSHOT` version published locally.
 Update the `pom.xml` to whatever version you'd like to test.
-
 
 
 ## Tenant Security Proxy
@@ -67,3 +73,11 @@ export TENANT_ID=<select tenant ID>
 ```
 
 before running the benchmark.
+
+## Interpreting Results
+
+Since TSC-java is a library that interacts with a back-end service (TSP), the benchmark results are not always straightforward to interpret. Most API calls in the TSC make a round-trip to the TSP, and the TSP also does some computation. If testing on a single machine, it is good to monitor the CPU/RAM usage of the TSP processes in addition to the Java benchmark process to make sure you aren't resource constrained.
+
+In general, operation latency is a function of latency to the TSP + latency to the tenant's KMS (if key-leasing is disabled). 
+
+The TSP's tenant logging mechanism has some tunable limits. By default, a TSP should be able to sustain 500 ops/sec/tenant, with the ability to burst higher for a limited time. The benchmark is using a single tenant, and (depending on your machine and benchmark config) can easily be executing a few thousand ops/sec. If you run a benchmark long enough you will overwhelm the TSP. In a real application, you would scale-out the TSP at this point.
