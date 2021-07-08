@@ -11,7 +11,7 @@ java -Xms1024m -Xmx1024m -jar target/benchmarks.jar -f0 -wi 1
 
 A variation that will show throughput using key leasing:
 ```
-mvn clean insteall
+mvn clean install
 TENANT_ID=tenant-gcp-l java -Xms1024m -Xmx1024m -jar target/benchmarks.jar -f 0 -wi 1 -bm thrpt -tu s
 ```
 
