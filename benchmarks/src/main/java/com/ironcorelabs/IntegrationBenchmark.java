@@ -10,9 +10,9 @@ import java.util.concurrent.TimeUnit;
 
 import com.ironcorelabs.tenantsecurity.kms.v1.DocumentMetadata;
 import com.ironcorelabs.tenantsecurity.kms.v1.PlaintextDocument;
-import com.ironcorelabs.tenantsecurity.kms.v1.TenantSecurityKMSClient;
+import com.ironcorelabs.tenantsecurity.kms.v1.TenantSecurityClient;
 import com.ironcorelabs.tenantsecurity.kms.v1.TenantSecurityErrorCodes;
-import com.ironcorelabs.tenantsecurity.kms.v1.TenantSecurityKMSException;
+import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -49,7 +49,7 @@ public class IntegrationBenchmark {
         documentMap = Collections.unmodifiableMap(dM);
     }
 
-    private static TenantSecurityKMSClient client;
+    private static TenantSecurityClient client;
 
     @Setup
     public void doSetup() {
@@ -62,7 +62,7 @@ public class IntegrationBenchmark {
             context = new DocumentMetadata(tenant_id, "benchmark", "sample", customFields,
                     "customRayID");
 
-            client = new TenantSecurityKMSClient(tsp_address + ":" + tsp_port, api_key);
+            client = new TenantSecurityClient(tsp_address + ":" + tsp_port, api_key);
         } catch (Exception e) {
         }
     }
@@ -85,8 +85,8 @@ public class IntegrationBenchmark {
             Map<String, byte[]> decryptedValuesMap = roundtrip.get().getDecryptedFields();
             blackhole.consume(decryptedValuesMap);
         } catch (Exception e) {
-            if (e.getCause() instanceof TenantSecurityKMSException) {
-                TenantSecurityKMSException kmsError = (TenantSecurityKMSException) e.getCause();
+            if (e.getCause() instanceof TenantSecurityException) {
+                TenantSecurityException kmsError = (TenantSecurityException) e.getCause();
                 TenantSecurityErrorCodes errorCode = kmsError.getErrorCode();
                 System.out.println("\nError Message: " + kmsError.getMessage());
                 System.out.println("\nError Code: " + errorCode.getCode());
