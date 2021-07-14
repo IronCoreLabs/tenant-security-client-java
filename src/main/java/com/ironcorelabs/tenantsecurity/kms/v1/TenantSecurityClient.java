@@ -22,7 +22,7 @@ import com.ironcorelabs.tenantsecurity.logdriver.v1.SecurityEvent;
 import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
 
 /**
- * TenantSecurityKMSClient class that can be used to encrypt and decrypt documents.
+ * TenantSecurityClient class that can be used to encrypt and decrypt documents.
  *
  * @author IronCore Labs
  */
@@ -55,7 +55,7 @@ public final class TenantSecurityClient implements Closeable {
     public static int DEFAULT_AES_THREADPOOL_SIZE = Runtime.getRuntime().availableProcessors();
 
     /**
-     * Constructor for TenantSecurityKMSClient class that uses the SecureRandom
+     * Constructor for TenantSecurityClient class that uses the SecureRandom
      * NativePRNGNonBlocking instance for random number generation.
      *
      * @param tspDomain Domain where the Tenant Security Proxy is running.
@@ -68,7 +68,7 @@ public final class TenantSecurityClient implements Closeable {
     }
 
     /**
-     * Constructor for TenantSecurityKMSClient class that allows call to provide web request and AES
+     * Constructor for TenantSecurityClient class that allows call to provide web request and AES
      * operation thread pool sizes. Uses the SecureRandom NativePRNGNonBlocking instance for random
      * number generation.
      *
@@ -85,7 +85,7 @@ public final class TenantSecurityClient implements Closeable {
     }
 
     /**
-     * Constructor for TenantSecurityKMSClient class that allows call to provide web request and AES
+     * Constructor for TenantSecurityClient class that allows call to provide web request and AES
      * operation thread pool sizes. Uses the SecureRandom NativePRNGNonBlocking instance for random
      * number generation.
      *
@@ -104,7 +104,7 @@ public final class TenantSecurityClient implements Closeable {
     }
 
     /**
-     * Constructor for TenantSecurityKMSClient class that allows for modifying the random number
+     * Constructor for TenantSecurityClient class that allows for modifying the random number
      * generator used for encryption. Sets a default connect and read timeout of 20s.
      *
      * @param tspDomain         Domain where the Tenant Security Proxy is running.
@@ -122,7 +122,7 @@ public final class TenantSecurityClient implements Closeable {
     }
 
     /**
-     * Constructor for TenantSecurityKMSClient class that allows for modifying the random number
+     * Constructor for TenantSecurityClient class that allows for modifying the random number
      * generator used for encryption.
      *
      * @param tspDomain         Domain where the Tenant Security Proxy is running.
@@ -175,7 +175,7 @@ public final class TenantSecurityClient implements Closeable {
      *
      * @param tspDomain Domain where the Tenant Security Proxy is running.
      * @param apiKey    Key to use for requests to the Tenant Security Proxy.
-     * @return CompletableFuture that resolves in a instance of the TenantSecurityKMSClient class.
+     * @return CompletableFuture that resolves in a instance of the TenantSecurityClient class.
      */
     public static CompletableFuture<TenantSecurityClient> create(String tspDomain, String apiKey) {
         return CompletableFutures
@@ -392,7 +392,7 @@ public final class TenantSecurityClient implements Closeable {
 
     /**
      * Given a map of document IDs to TSP error responses which have an error code and a message,
-     * convert the map to a map of the same document ID but to a TenantSecurityKMSException.
+     * convert the map to a map of the same document ID but to a TenantSecurityException.
      */
     private ConcurrentMap<String, TenantSecurityException> getBatchFailures(
             ConcurrentMap<String, ErrorResponse> failures) {
@@ -452,7 +452,7 @@ public final class TenantSecurityClient implements Closeable {
      * Makes a call out to the Tenant Security Proxy to generate a collection of new DEK/EDEK pairs
      * for each document ID provided. This function supports partial failure so it returns two Maps,
      * one of document ID to successfully encrypted document and one of document ID to a
-     * TenantSecurityKMSException.
+     * TenantSecurityException.
      *
      * @param plaintextDocuments Map of document ID to map of fields to encrypt.
      * @param metadata           Metadata about all of the documents being encrypted
@@ -481,7 +481,7 @@ public final class TenantSecurityClient implements Closeable {
      * encrypted document. Makes a call out to the Tenant Security Proxy to decrypt the EDEKs
      * present in each provided document. This function supports partial failure so it returns two
      * Maps, one of document ID to successfully re-encrypted document and one of document ID to a
-     * TenantSecurityKMSException.
+     * TenantSecurityException.
      *
      * @param plaintextDocuments Map of previously encrypted document from ID to document.
      * @param metadata           Metadata about all of the documents being encrypted
@@ -549,7 +549,7 @@ public final class TenantSecurityClient implements Closeable {
      * Decrypt a map of documents from the ID of the document to its encrypted content. Makes a call
      * out to the Tenant Security Proxy to decrypt all of the EDEKs in each document. This function
      * supports partial failure so it returns two Maps, one of document ID to successfully decrypted
-     * document and one of document ID to a TenantSecurityKMSException.
+     * document and one of document ID to a TenantSecurityException.
      *
      * @param encryptedDocuments Map of documents to decrypt from ID of the document to the
      *                           EncryptedDocument
