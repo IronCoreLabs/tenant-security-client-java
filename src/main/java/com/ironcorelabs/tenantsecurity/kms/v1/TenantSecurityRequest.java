@@ -54,8 +54,11 @@ final class TenantSecurityRequest implements Closeable {
 
     TenantSecurityRequest(String tspDomain, String apiKey, int requestThreadSize, int timeout) {
         HttpHeaders headers = new HttpHeaders();
-        headers.put("Content-Type", "application/json");
-        headers.put("Authorization", "cmk " + apiKey);
+        //Instead of calling `put` which causes issues with older versions of the google http library
+        //call the set for each of these.
+        headers.setContentType("application/json");
+        headers.setAuthorization("cmk " + apiKey);
+
         this.httpHeaders = headers;
 
         String tspApiPrefix = tspDomain + "/api/1/";

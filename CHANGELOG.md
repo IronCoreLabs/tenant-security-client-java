@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.1.1
+
+- No public api changes. Internal change to increase compatibility with 1.20 google-http-client.
+
 ## v3.1.0
 
 - Added `TenantSecurityClient.rekeyDocument` method and supporting `RekeyedDocumentKey` type
