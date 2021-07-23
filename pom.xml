@@ -70,11 +70,6 @@
       <artifactId>google-http-client-apache-v2</artifactId>
     </dependency>
     <dependency>
-      <groupId>commons-logging</groupId>
-      <artifactId>commons-logging</artifactId>
-      <version>1.2</version>
-    </dependency>
-    <dependency>
       <groupId>org.testng</groupId>
       <artifactId>testng</artifactId>
       <version>6.14.2</version>
@@ -185,6 +180,10 @@
                 <relocation>
                   <pattern>io.opencensus</pattern>
                   <shadedPattern>com.ironcorelabs.shaded.opencensus</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>io.grpc</pattern>
+                  <shadedPattern>com.ironcorelabs.shaded.grpc</shadedPattern>
                 </relocation>
               </relocations>
             </configuration>
