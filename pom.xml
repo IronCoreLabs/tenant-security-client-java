@@ -174,10 +174,6 @@
                   <shadedPattern>com.ironcorelabs.shaded.fasterxml</shadedPattern>
                 </relocation>
                 <relocation>
-                  <pattern>javax.annotation</pattern>
-                  <shadedPattern>com.ironcorelabs.shaded.javax.annotation</shadedPattern>
-                </relocation>
-                <relocation>
                   <pattern>io.opencensus</pattern>
                   <shadedPattern>com.ironcorelabs.shaded.opencensus</shadedPattern>
                 </relocation>
