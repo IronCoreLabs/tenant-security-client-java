@@ -69,6 +69,12 @@
       <groupId>com.google.http-client</groupId>
       <artifactId>google-http-client-apache-v2</artifactId>
     </dependency>
+    <!-- This is declared here because we shade the apache client, but can't shade the logging.-->
+    <dependency>
+      <groupId>commons-logging</groupId>
+      <artifactId>commons-logging</artifactId>
+      <version>1.2</version>
+    </dependency>
     <dependency>
       <groupId>org.testng</groupId>
       <artifactId>testng</artifactId>
@@ -149,15 +155,10 @@
                   <include>com.google.code.findbugs:jsr305</include>
                   <include>com.google.guava:failureaccess</include>
                   <include>com.google.guava:listenablefuture</include>
-                  <!-- <include>org.checkerframework:checker-compat-qual</include> -->
-                  <!-- <include>com.google.errorprone:error_prone_annotations</include> -->
-                  <!-- <include>com.google.j2objc:j2objc-anwnotations</include> -->
                   <include>io.opencensus:opencensus-api</include>
                   <include>io.grpc:grpc-context</include>
                   <include>io.opencensus:opencensus-contrib-http-util</include>
                   <include>com.fasterxml.jackson.core:jackson-core</include>
-                  <!-- <include>commons-logging:commons-logging</include> -->
-                  <!-- <include>commons-codec:commons-codec</include> -->
                 </includes>
               </artifactSet>
               <relocations>
