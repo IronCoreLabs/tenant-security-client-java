@@ -1,5 +1,10 @@
 # Changelog
 
+## v4.0.0
+
+- Shade google-http-client and all related jars to increase compatibility with conflicting versions.
+- No public api changes, but bumping major version since we've changed the contents of our jar significantly.
+
 ## v3.1.1
 
 - No public api changes. Internal change to increase compatibility with 1.20 google-http-client.
