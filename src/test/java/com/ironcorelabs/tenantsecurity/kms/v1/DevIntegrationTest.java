@@ -13,6 +13,8 @@ import java.util.stream.Collectors;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.EventMetadata;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.UserEvent;
+import com.ironcorelabs.tenantsecurity.utils.CryptoUtils;
+
 import org.testng.annotations.Test;
 
 @Test(groups = {"dev-integration"})
@@ -91,15 +93,15 @@ public class DevIntegrationTest {
         });
 
         Map<String, byte[]> encryptedValuesMap = roundtrip.get().getEncryptedFields();
-        assertEquals(TenantSecurityClient.isCiphertext(encryptedValuesMap.get("doc1")), true);
-        assertEquals(TenantSecurityClient.isCiphertext(encryptedValuesMap.get("doc2")), true);
-        assertEquals(TenantSecurityClient.isCiphertext(encryptedValuesMap.get("doc3")), true);
+        assertEquals(CryptoUtils.isCiphertext(encryptedValuesMap.get("doc1")), true);
+        assertEquals(CryptoUtils.isCiphertext(encryptedValuesMap.get("doc2")), true);
+        assertEquals(CryptoUtils.isCiphertext(encryptedValuesMap.get("doc3")), true);
     }
 
     public void isCiphertextJunkBytesTest() throws Exception {
-        assertEquals(TenantSecurityClient.isCiphertext("doom guy".getBytes()), false);
-        assertEquals(TenantSecurityClient.isCiphertext("1293982173982398217".getBytes()), false);
-        assertEquals(TenantSecurityClient.isCiphertext(new byte[0]), false);
+        assertEquals(CryptoUtils.isCiphertext("doom guy".getBytes()), false);
+        assertEquals(CryptoUtils.isCiphertext("1293982173982398217".getBytes()), false);
+        assertEquals(CryptoUtils.isCiphertext(new byte[0]), false);
     }
 
     public void encryptBytesWithExistingKey() throws Exception {
