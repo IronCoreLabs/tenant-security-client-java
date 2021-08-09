@@ -6,7 +6,7 @@
   <groupId>com.ironcorelabs</groupId>
   <artifactId>tenant-security-java</artifactId>
   <packaging>jar</packaging>
-  <version>4.0.0</version>
+  <version>4.0.1</version>
   <name>tenant-security-java</name>
   <url>https://ironcorelabs.com/docs</url>
   <description>Java client library for the IronCore Labs Tenant Security Proxy.</description>
@@ -152,7 +152,6 @@
                   <include>org.apache.httpcomponents:httpcore</include>
                   <include>org.apache.httpcomponents:httpclient</include>
                   <include>com.google.http-client:google-http-client</include>
-                  <include>com.google.code.findbugs:jsr305</include>
                   <include>com.google.guava:failureaccess</include>
                   <include>com.google.guava:listenablefuture</include>
                   <include>io.opencensus:opencensus-api</include>
