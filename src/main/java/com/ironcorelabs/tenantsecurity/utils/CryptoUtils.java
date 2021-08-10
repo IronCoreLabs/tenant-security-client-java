@@ -113,6 +113,24 @@ public class CryptoUtils {
     }
 
     /**
+     * Given the provided encrypted document (which has an IV prepended to it) and
+     * an AES key, decrypt and return the decrypted bytes.
+     */
+    public static CompletableFuture<byte[]> decryptBytes(ByteBuffer encryptedDocument, byte[] documentKey) {
+        byte[] iv = new byte[CryptoUtils.IV_BYTE_LENGTH];
+
+        // Pull out the IV from the front of the encrypted data
+        encryptedDocument.get(iv);
+        byte[] encryptedBytes = new byte[encryptedDocument.remaining()];
+        encryptedDocument.get(encryptedBytes);
+
+        return CompletableFutures.tryCatchNonFatal(() -> {
+            final Cipher cipher = CryptoUtils.getNewAesCipher(documentKey, iv, false);
+            return cipher.doFinal(encryptedBytes);
+        });
+    }
+
+    /**
      * Generate a header to mark the encrypted document as ours. Right now this is
      * all constant; in the future this will contain a protobuf bytes header of
      * variable length.

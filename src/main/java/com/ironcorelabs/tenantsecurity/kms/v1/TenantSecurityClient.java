@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
-import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.security.Security;
 import java.util.Map;
@@ -15,7 +14,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
-import javax.crypto.Cipher;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.EventMetadata;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.SecurityEvent;
@@ -176,25 +174,6 @@ public final class TenantSecurityClient implements Closeable {
     }  
 
     /**
-     * Given the provided encrypted document (which has an IV prepended to it) and an AES key,
-     * decrypt and return the decrypted bytes.
-     */
-    private CompletableFuture<byte[]> decryptBytes(ByteBuffer encryptedDocument,
-            byte[] documentKey) {
-        byte[] iv = new byte[CryptoUtils.IV_BYTE_LENGTH];
-
-        // Pull out the IV from the front of the encrypted data
-        encryptedDocument.get(iv);
-        byte[] encryptedBytes = new byte[encryptedDocument.remaining()];
-        encryptedDocument.get(encryptedBytes);
-
-        return CompletableFutures.tryCatchNonFatal(() -> {
-            final Cipher cipher = CryptoUtils.getNewAesCipher(documentKey, iv, false);
-            return cipher.doFinal(encryptedBytes);
-        });
-    }
-
-    /**
      * Encrypt the provided map of fields using the provided encryption key (DEK) and return the
      * resulting encrypted fields in a map from String to encrypted bytes.
      */
@@ -232,7 +211,7 @@ public final class TenantSecurityClient implements Closeable {
                     // tried doing this in a .map above the .collect we'd have to return another
                     // Entry which is more complicated
                     return CompletableFuture.supplyAsync(() -> CryptoUtils.parseDocumentParts(entry.getValue())
-                            .thenCompose(encryptedDocument -> decryptBytes(encryptedDocument, dek))
+                            .thenCompose(encryptedDocument -> CryptoUtils.decryptBytes(encryptedDocument, dek))
                             .join(), encryptionExecutor);
                 }));
         // Then iterate over the map of Futures and join them to get the decrypted bytes
