@@ -1,5 +1,7 @@
 package com.ironcorelabs.tenantsecurity.utils;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PushbackInputStream;
@@ -11,7 +13,9 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
+import com.ironcorelabs.tenantsecurity.kms.v1.DocumentMetadata;
 import com.ironcorelabs.tenantsecurity.kms.v1.StreamingResponse;
+import com.ironcorelabs.proto.DocumentHeader;
 
 public class CryptoUtils {
     static final String AES_ALGO = "AES/GCM/NoPadding";
@@ -20,6 +24,8 @@ public class CryptoUtils {
     // the size of the fixed length portion of the header (version, magic, size)
     static final int DOCUMENT_HEADER_META_LENGTH = 7;
     static final byte CURRENT_DOCUMENT_HEADER_VERSION = 3;
+    static final int GCM_TAG_BYTE_LEN = GCM_TAG_BIT_LENGTH / 8;
+
     static final byte[] DOCUMENT_MAGIC = { 73, 82, 79, 78 }; // bytes for ASCII IRON
                                                              // characters
 
@@ -61,7 +67,6 @@ public class CryptoUtils {
                 // TODO do we need to check that the iv isn't empty?
                 Cipher cipher = getNewAesCipher(documentKey, iv, false);
                 byte[] currentChunk = new byte[0];
-                int GCM_TAG_BYTE_LEN = GCM_TAG_BIT_LENGTH / 8;
                 PushbackInputStream pushbackStream = new PushbackInputStream(encryptedStream, GCM_TAG_BYTE_LEN + 1);
                 while ((currentChunk = pushbackStream.readNBytes(STREAM_CHUNKING)).length > 0) {
                     ;
@@ -113,10 +118,23 @@ public class CryptoUtils {
     }
 
     /**
+     * Decrypt a ICL document and return the plaintext.
+     * 
+     * @param encryptedDocument The encrypted document including the ICL document
+     *                          header.
+     * @param documentKey       The AES key to decrypt the document.
+     * @return A future with the document decrypted.
+     */
+    public static CompletableFuture<byte[]> decryptDocument(byte[] encryptedDocumentBytes, byte[] documentKey) {
+        return parseDocumentParts(encryptedDocumentBytes)
+                .thenCompose(encryptedDocument -> decryptBytes(encryptedDocument, documentKey));
+    }
+
+    /**
      * Given the provided encrypted document (which has an IV prepended to it) and
      * an AES key, decrypt and return the decrypted bytes.
      */
-    public static CompletableFuture<byte[]> decryptBytes(ByteBuffer encryptedDocument, byte[] documentKey) {
+    private static CompletableFuture<byte[]> decryptBytes(ByteBuffer encryptedDocument, byte[] documentKey) {
         byte[] iv = new byte[CryptoUtils.IV_BYTE_LENGTH];
 
         // Pull out the IV from the front of the encrypted data
@@ -146,10 +164,10 @@ public class CryptoUtils {
      * Get the header bytes off of the stream. This will mutate the stream and read
      * up until the cipher text with the IV on the front of it.
      * 
-     * @param inputStream
-     * @return
+     * @param inputStream The input stream to read the header from.
+     * @return The document header.
      */
-    static CompletableFuture<Integer> getHeaderFromStream(InputStream inputStream) {
+    static CompletableFuture<DocumentHeader.v3DocumentHeader> getHeaderFromStream(InputStream inputStream) {
         return CompletableFutures.tryCatchNonFatal(() -> {
             byte[] fixedPreamble = inputStream.readNBytes(HEADER_FIXED_SIZE_CONTENT_LENGTH);
             if (!isCiphertext(fixedPreamble)) {
@@ -158,8 +176,30 @@ public class CryptoUtils {
                 // This call is safe only because it's in the else of the cyphertext check.
                 int headerLength = getHeaderSize(fixedPreamble);
                 byte[] headerBytes = inputStream.readNBytes(headerLength);
-                return headerBytes.length;
+                InputStream headerStream = new ByteArrayInputStream(headerBytes);
+                return DocumentHeader.v3DocumentHeader.parseFrom(headerStream);
             }
+        });
+    }
+
+    static CompletableFuture<DocumentHeader.v3DocumentHeader> createHeaderProto(byte[] documentKey,
+            DocumentMetadata metadata, SecureRandom secureRandom) {
+        return CompletableFutures.tryCatchNonFatal(() -> {
+            DocumentHeader.SaaSShieldHeader saasHeader = DocumentHeader.SaaSShieldHeader.newBuilder()
+                    .setTenantId(metadata.getTenantId()).build();
+            ByteArrayOutputStream saasHeaderOutput = new ByteArrayOutputStream();
+            saasHeader.writeTo(saasHeaderOutput);
+            byte[] saasHeaderBytes = saasHeaderOutput.toByteArray();
+            byte[] iv = new byte[IV_BYTE_LENGTH];
+            secureRandom.nextBytes(iv);
+            Cipher encryptCipher = getNewAesCipher(documentKey, iv, true);
+            byte[] encryptResult = encryptCipher.doFinal(saasHeaderBytes);
+            byte[] tag = new byte[GCM_TAG_BYTE_LEN];
+            ByteBuffer.wrap(encryptResult).get(tag, encryptResult.length - GCM_TAG_BYTE_LEN, GCM_TAG_BYTE_LEN);
+            return DocumentHeader.v3DocumentHeader.newBuilder().setSaasShield(saasHeader)
+                    .setSig(com.google.protobuf.ByteString
+                            .copyFrom(ByteBuffer.allocate(IV_BYTE_LENGTH + GCM_TAG_BYTE_LEN).put(iv).put(tag).array()))
+                    .build();
         });
     }
 

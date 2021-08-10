@@ -210,9 +210,7 @@ public final class TenantSecurityClient implements Closeable {
                     // Do this mapping in the .collect because we can just map the value. If we
                     // tried doing this in a .map above the .collect we'd have to return another
                     // Entry which is more complicated
-                    return CompletableFuture.supplyAsync(() -> CryptoUtils.parseDocumentParts(entry.getValue())
-                            .thenCompose(encryptedDocument -> CryptoUtils.decryptBytes(encryptedDocument, dek))
-                            .join(), encryptionExecutor);
+                    return CompletableFuture.supplyAsync(() ->CryptoUtils.decryptDocument(entry.getValue(), dek).join(), encryptionExecutor);
                 }));
         // Then iterate over the map of Futures and join them to get the decrypted bytes
         // out. Return the map with the same keys passed in, but the values will now be
