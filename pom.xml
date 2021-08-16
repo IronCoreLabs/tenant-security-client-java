@@ -103,19 +103,13 @@
       <plugin>
         <groupId>com.github.os72</groupId>
         <artifactId>protoc-jar-maven-plugin</artifactId>
-        <version>3.1.0.1</version>
+        <version>3.11.4</version>
         <executions>
           <execution>
             <phase>generate-sources</phase>
             <goals>
               <goal>run</goal>
             </goals>
-            <configuration>
-              <protocVersion>3.1.0</protocVersion>
-              <inputDirectories>
-                <include>src/main/resources</include>
-              </inputDirectories>
-            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -207,6 +201,25 @@
                   <shadedPattern>com.ironcorelabs.shaded.grpc</shadedPattern>
                 </relocation>
               </relocations>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>3.2.0</version>
+        <executions>
+          <execution>
+            <id>add-source</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>target/generated-sources/</source>
+              </sources>
             </configuration>
           </execution>
         </executions>

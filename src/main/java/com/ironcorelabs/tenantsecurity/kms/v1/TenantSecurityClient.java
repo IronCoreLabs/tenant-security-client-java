@@ -171,13 +171,13 @@ public final class TenantSecurityClient implements Closeable {
     public static CompletableFuture<TenantSecurityClient> create(String tspDomain, String apiKey) {
         return CompletableFutures
                 .tryCatchNonFatal(() -> new TenantSecurityClient(tspDomain, apiKey));
-    }  
+    }
 
     /**
      * Encrypt the provided map of fields using the provided encryption key (DEK) and return the
      * resulting encrypted fields in a map from String to encrypted bytes.
      */
-    private Map<String, byte[]> encryptFields(Map<String, byte[]> document, byte[] dek) {
+    private Map<String, byte[]> encryptFields(Map<String, byte[]> document,DocumentMetadata metadata, byte[] dek) {
         // First, iterate over the map of documents and kick off the encrypt operation
         // Future for each one. As part of doing this, we kick off the operation on to
         // another thread so they run in parallel.
@@ -187,8 +187,8 @@ public final class TenantSecurityClient implements Closeable {
                     // tried doing this in a .map above the .collect we'd have to return another
                     // Entry which is more complicated
                     return CompletableFuture.supplyAsync(
-                            () -> CryptoUtils.encryptBytes(entry.getValue(), dek, this.secureRandom).join(), encryptionExecutor);
-                }));
+                            () -> CryptoUtils.encryptBytes(entry.getValue(), metadata, dek, this.secureRandom).join(), encryptionExecutor);
+               } ));
 
         // Now iterate over our map of keys to Futures and call join on all of them. We
         // do this in a separate stream() because if we called join() above it'd block
@@ -227,13 +227,14 @@ public final class TenantSecurityClient implements Closeable {
      */
     private ConcurrentMap<String, EncryptedDocument> encryptBatchOfDocuments(
             Map<String, Map<String, byte[]>> documents,
+            DocumentMetadata metadata,
             ConcurrentMap<String, WrappedDocumentKey> dekList) {
         return dekList.entrySet().parallelStream()
                 .collect(Collectors.toConcurrentMap(ConcurrentMap.Entry::getKey, dekResult -> {
                     String documentId = dekResult.getKey();
                     WrappedDocumentKey documentKeys = dekResult.getValue();
                     Map<String, byte[]> encryptedDoc =
-                            encryptFields(documents.get(documentId), documentKeys.getDekBytes());
+                            encryptFields(documents.get(documentId), metadata, documentKeys.getDekBytes());
                     return new EncryptedDocument(encryptedDoc, documentKeys.getEdek());
                 }));
     }
@@ -246,13 +247,14 @@ public final class TenantSecurityClient implements Closeable {
      */
     private ConcurrentMap<String, EncryptedDocument> encryptExistingBatchOfDocuments(
             Map<String, PlaintextDocument> documents,
+            DocumentMetadata metadata,
             ConcurrentMap<String, UnwrappedDocumentKey> dekList) {
         return dekList.entrySet().parallelStream()
                 .collect(Collectors.toConcurrentMap(ConcurrentMap.Entry::getKey, dekResult -> {
                     String documentId = dekResult.getKey();
                     UnwrappedDocumentKey documentKeys = dekResult.getValue();
                     Map<String, byte[]> encryptedDoc =
-                            encryptFields(documents.get(documentId).getDecryptedFields(),
+                            encryptFields(documents.get(documentId).getDecryptedFields(),metadata,
                                     documentKeys.getDekBytes());
                     return new EncryptedDocument(encryptedDoc, documents.get(documentId).getEdek());
                 }));
@@ -298,21 +300,31 @@ TODO
     public CompletableFuture<StreamingResponse> encryptStream(InputStream input, OutputStream output,
                     DocumentMetadata metadata) {
             return this.encryptionService.wrapKey(metadata).thenApplyAsync(
-                            wrapResponse -> CryptoUtils.encryptStreamInternal(wrapResponse.getDekBytes(), input, output, this.secureRandom)
+                            wrapResponse -> CryptoUtils.encryptStreamInternal(wrapResponse.getDekBytes(), metadata, input, output, this.secureRandom)
                                             .thenApply(unused -> new StreamingResponse(wrapResponse.getEdek())).join(),
                             encryptionExecutor);
     }
 
-            /**
-TODO
+    /**
+     * Decrypt the bytes that are represented by input using the key contained
+     * inside the edek. Unverified bytes will be written to the output stream. Once
+     * the GCM tag has been reached and verified, this function will return. If
+     * there is a problem with the document represented by input or a problem
+     * unwrapping the edek the returned CompletableFuture will return an exception
+     * instead. If an exception is thrown the contents of the output stream should
+     * not be used at all.
+     * 
+     * @param edek The encrypted dek which should be unwrapped by the TSP.
+     * @param input A stream representing the encrypted document.
+     * @param output An output stream to write the decrypted document to. Note that this output should not be used until after the future exits successfully because the GCM tag is not fully verified until that time.
+     * @param metadata Metadata about the document being encrypted.
+     * @return
      */
-    public CompletableFuture<Boolean> decryptStream(String edek, InputStream input, OutputStream output,
+    public CompletableFuture<Void> decryptStream(String edek, InputStream input, OutputStream output,
                     DocumentMetadata metadata) {
             return this.encryptionService.unwrapKey(edek, metadata).thenApplyAsync(
-                            dek -> CryptoUtils.decryptStreamInternal(dek, input, output).join(),
-                            encryptionExecutor);
+                            dek -> CryptoUtils.decryptStreamInternal(dek, input, output).join(), encryptionExecutor);
     }
-
 
 
     /**
@@ -331,7 +343,7 @@ TODO
     public CompletableFuture<EncryptedDocument> encrypt(Map<String, byte[]> document,
             DocumentMetadata metadata) {
         return this.encryptionService.wrapKey(metadata).thenApplyAsync(newDocumentKeys -> {
-            return new EncryptedDocument(encryptFields(document, newDocumentKeys.getDekBytes()),
+            return new EncryptedDocument(encryptFields(document, metadata, newDocumentKeys.getDekBytes()),
                     newDocumentKeys.getEdek());
         });
     }
@@ -355,7 +367,7 @@ TODO
             DocumentMetadata metadata) {
         return this.encryptionService.unwrapKey(document.getEdek(), metadata)
                 .thenApplyAsync(dek -> new EncryptedDocument(
-                        encryptFields(document.getDecryptedFields(), dek), document.getEdek()),
+                        encryptFields(document.getDecryptedFields(), metadata, dek), document.getEdek()),
                         encryptionExecutor);
     }
 
@@ -380,7 +392,7 @@ TODO
                     ConcurrentMap<String, ErrorResponse> failureList =
                             new ConcurrentHashMap<>(batchResponse.getFailures());
                     return CompletableFuture
-                            .supplyAsync(() -> encryptBatchOfDocuments(plaintextDocuments, dekList))
+                            .supplyAsync(() -> encryptBatchOfDocuments(plaintextDocuments, metadata, dekList))
                             .thenCombine(
                                     CompletableFuture
                                             .supplyAsync(() -> getBatchFailures(failureList)),
@@ -413,7 +425,7 @@ TODO
                     ConcurrentMap<String, ErrorResponse> failureList =
                             new ConcurrentHashMap<>(batchResponse.getFailures());
                     return CompletableFuture.supplyAsync(
-                            () -> encryptExistingBatchOfDocuments(plaintextDocuments, dekList))
+                            () -> encryptExistingBatchOfDocuments(plaintextDocuments, metadata, dekList))
                             .thenCombine(
                                     CompletableFuture
                                             .supplyAsync(() -> getBatchFailures(failureList)),
@@ -441,10 +453,10 @@ TODO
     }
 
         /**
-         * Re-key an EncryptedDocument to a new tenant without decrypting the document data. Decrypts the 
+         * Re-key an EncryptedDocument to a new tenant without decrypting the document data. Decrypts the
          * document's encrypted document key (EDEK) then re-encrypts it to the new tenant. The DEK is then discarded.
-         * The old tenant and new tenant can be the same in order to re-key the document to the tenant's latest primary config. 
-         * 
+         * The old tenant and new tenant can be the same in order to re-key the document to the tenant's latest primary config.
+         *
          * @param encryptedDocument Document to re-key which includes encrypted bytes as well as EDEK.
          * @param metadata          Metadata about the document being re-keyed.
          * @param newTenantId       Tenant ID the document should be re-keyed to.
@@ -494,7 +506,7 @@ TODO
      * asynchronous operation at the TSP, so successful receipt of a security event does not mean
      * that the event is deliverable or has been delivered to the tenant's logging system. It simply
      * means that the event has been received and will be processed.
-     * 
+     *
      * @param event    Security event that represents the action that took place.
      * @param metadata Metadata that provides additional context about the event.
      * @return Void on successful receipt by TSP

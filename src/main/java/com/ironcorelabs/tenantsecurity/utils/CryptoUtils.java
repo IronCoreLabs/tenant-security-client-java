@@ -14,7 +14,6 @@ import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import com.ironcorelabs.tenantsecurity.kms.v1.DocumentMetadata;
-import com.ironcorelabs.tenantsecurity.kms.v1.StreamingResponse;
 import com.ironcorelabs.proto.DocumentHeader;
 
 public class CryptoUtils {
@@ -36,52 +35,82 @@ public class CryptoUtils {
     static final int HEADER_FIXED_SIZE_CONTENT_LENGTH = 1 + DOCUMENT_MAGIC.length + HEADER_META_LENGTH_LENGTH;
     // How many bytes to read in each loop when doing streaming encryption.
     static final int STREAM_CHUNKING = 32;
+    static final int MAX_HEADER_SIZE = 65535; // 256 * 255 + 255 since we do a 2 byte size.
 
-    public static CompletableFuture<Boolean> encryptStreamInternal(byte[] documentKey, InputStream input,
-            OutputStream output, SecureRandom secureRandom) {
+    public static class V3HeaderSignature {
+        private final byte[] iv;
+        private final byte[] gcmTag;
+
+        public V3HeaderSignature(byte[] iv, byte[] gcmTag) {
+            this.iv = iv;
+            this.gcmTag = gcmTag;
+        }
+
+        public ByteBuffer getIv() {
+            return ByteBuffer.wrap(iv);
+        }
+
+        public ByteBuffer getGcmTag() {
+            return ByteBuffer.wrap(gcmTag);
+        }
+
+        public ByteBuffer getSig() {
+            return ByteBuffer.allocate(iv.length + gcmTag.length).put(iv).put(gcmTag).position(0);
+        }
+    }
+
+    public static CompletableFuture<Void> encryptStreamInternal(byte[] documentKey, DocumentMetadata metadata,
+            InputStream input, OutputStream output, SecureRandom secureRandom) {
         byte[] iv = new byte[IV_BYTE_LENGTH];
         secureRandom.nextBytes(iv);
-
-        return CompletableFutures.tryCatchNonFatal(() -> {
-            byte[] bytesRead = new byte[0];
-            Cipher cipher = getNewAesCipher(documentKey, iv, true);
-            output.write(generateHeader());
-            output.write(iv);
-            while ((bytesRead = input.readNBytes(STREAM_CHUNKING)).length != 0) {
-                byte[] encryptedBytes = cipher.update(bytesRead);
-                output.write(encryptedBytes);
-            }
-            // Final bytes, which might be buffered data or just the GCM tag.
-            byte[] finalBytes = cipher.doFinal();
-            output.write(finalBytes);
-            return true;
+        return generateHeader(documentKey, metadata, secureRandom).thenCompose(headerBytes -> {
+            return CompletableFutures.tryCatchNonFatal(() -> {
+                byte[] bytesRead = new byte[0];
+                Cipher cipher = getNewAesCipher(documentKey, iv, true);
+                output.write(headerBytes);
+                output.write(iv);
+                while ((bytesRead = input.readNBytes(STREAM_CHUNKING)).length != 0) {
+                    byte[] encryptedBytes = cipher.update(bytesRead);
+                    output.write(encryptedBytes);
+                }
+                // Final bytes, which might be buffered data or just the GCM tag.
+                byte[] finalBytes = cipher.doFinal();
+                output.write(finalBytes);
+                return null; // This is the only value that inhabits Void. I'm sorry.
+            });
         });
     }
 
-    public static CompletableFuture<Boolean> decryptStreamInternal(byte[] documentKey, InputStream encryptedStream,
+    public static CompletableFuture<Void> decryptStreamInternal(byte[] documentKey, InputStream encryptedStream,
             OutputStream decryptedStream) {
-        // TODO really get the header and use it for something
         return getHeaderFromStream(encryptedStream).thenCompose(header -> {
-            return CompletableFutures.tryCatchNonFatal(() -> {
-                byte[] iv = encryptedStream.readNBytes(IV_BYTE_LENGTH);
-                // TODO do we need to check that the iv isn't empty?
-                Cipher cipher = getNewAesCipher(documentKey, iv, false);
-                byte[] currentChunk = new byte[0];
-                PushbackInputStream pushbackStream = new PushbackInputStream(encryptedStream, GCM_TAG_BYTE_LEN + 1);
-                while ((currentChunk = pushbackStream.readNBytes(STREAM_CHUNKING)).length > 0) {
-                    ;
-                    // Check to see if there is at least 1 byte more than the GCM tag so we know
-                    // that
-                    // the next loop won't read less than the GCM tag.
-                    byte[] maybeTagBytes = pushbackStream.readNBytes(GCM_TAG_BYTE_LEN + 1);
-                    if (maybeTagBytes.length <= GCM_TAG_BYTE_LEN) {
-                        decryptedStream.write(cipher.doFinal(ByteBuffer.wrap(currentChunk).put(maybeTagBytes).array()));
-                    } else {
-                        decryptedStream.write(cipher.update(currentChunk));
-                        pushbackStream.unread(maybeTagBytes);
+            return verifyHeaderProto(documentKey, header).thenCompose(verification -> {
+                return CompletableFutures.tryCatchNonFatal(() -> {
+                    if (!verification) {
+                        throw new Exception(
+                                "The signature computed did not match. Likely that the documentKey is incorrect.");
                     }
-                }
-                return true;
+                    byte[] iv = encryptedStream.readNBytes(IV_BYTE_LENGTH);
+                    if (iv.length != IV_BYTE_LENGTH) {
+                        throw new Exception("IV not found on the front of the encrypted document.");
+                    }
+                    Cipher cipher = getNewAesCipher(documentKey, iv, false);
+                    byte[] currentChunk = new byte[0];
+                    PushbackInputStream pushbackStream = new PushbackInputStream(encryptedStream, GCM_TAG_BYTE_LEN + 1);
+                    while ((currentChunk = pushbackStream.readNBytes(STREAM_CHUNKING)).length > 0) {
+                        // Check to see if there is at least 1 byte more than the GCM tag so we know
+                        // that the next loop won't read less than the GCM tag.
+                        byte[] maybeTagBytes = pushbackStream.readNBytes(GCM_TAG_BYTE_LEN + 1);
+                        if (maybeTagBytes.length <= GCM_TAG_BYTE_LEN) {
+                            decryptedStream
+                                    .write(cipher.doFinal(ByteBuffer.wrap(currentChunk).put(maybeTagBytes).array()));
+                        } else {
+                            decryptedStream.write(cipher.update(currentChunk));
+                            pushbackStream.unread(maybeTagBytes);
+                        }
+                    }
+                    return null;
+                });
             });
 
         });
@@ -99,27 +128,22 @@ public class CryptoUtils {
      * Given the provided document bytes and an AES key, encrypt and return the
      * encrypted bytes.
      */
-    public static CompletableFuture<byte[]> encryptBytes(byte[] document, byte[] documentKey,
+    public static CompletableFuture<byte[]> encryptBytes(byte[] document, DocumentMetadata metadata, byte[] documentKey,
             SecureRandom secureRandom) {
-        byte[] iv = new byte[IV_BYTE_LENGTH];
-        secureRandom.nextBytes(iv);
 
-        return CompletableFutures.tryCatchNonFatal(() -> {
-            final Cipher cipher = Cipher.getInstance(AES_ALGO);
-            cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(documentKey, "AES"),
-                    new GCMParameterSpec(GCM_TAG_BIT_LENGTH, iv));
-            byte[] encryptedBytes = cipher.doFinal(document);
-            byte[] header = generateHeader();
-
-            // Store the IV at the front of the resulting encrypted data
-            return ByteBuffer.allocate(header.length + IV_BYTE_LENGTH + encryptedBytes.length).put(header).put(iv)
-                    .put(encryptedBytes).array();
-        });
+        // Create the output at a reasonable size. This means that the header can be up
+        // to 512 bytes of content without growing.
+        ByteArrayOutputStream output = new ByteArrayOutputStream(
+                document.length + IV_BYTE_LENGTH + GCM_TAG_BYTE_LEN + HEADER_FIXED_SIZE_CONTENT_LENGTH + 512);
+        return encryptStreamInternal(documentKey, metadata, new ByteArrayInputStream(document), output, secureRandom)
+                .thenApply(unused -> {
+                    return output.toByteArray();
+                });
     }
 
     /**
      * Decrypt a ICL document and return the plaintext.
-     * 
+     *
      * @param encryptedDocument The encrypted document including the ICL document
      *                          header.
      * @param documentKey       The AES key to decrypt the document.
@@ -153,17 +177,31 @@ public class CryptoUtils {
      * all constant; in the future this will contain a protobuf bytes header of
      * variable length.
      */
-    static byte[] generateHeader() {
+    static CompletableFuture<byte[]> generateHeader(byte[] documentKey, DocumentMetadata metadata,
+            SecureRandom secureRandom) {
         final byte headerVersion = CURRENT_DOCUMENT_HEADER_VERSION;
         final byte[] magic = DOCUMENT_MAGIC;
-        final byte[] headerSize = { (byte) 0, (byte) 0 };
-        return ByteBuffer.allocate(DOCUMENT_HEADER_META_LENGTH).put(headerVersion).put(magic).put(headerSize).array();
+        return createHeaderProto(documentKey, metadata, secureRandom)
+                .thenCompose(proto -> CompletableFutures.tryCatchNonFatal(() -> {
+                    ByteArrayOutputStream saasHeaderOutput = new ByteArrayOutputStream();
+                    proto.writeTo(saasHeaderOutput);
+                    byte[] saasHeaderBytes = saasHeaderOutput.toByteArray();
+                    if (saasHeaderBytes.length > MAX_HEADER_SIZE) {
+                        throw new Exception(
+                                "The header is too large. It is " + saasHeaderBytes.length + " bytes long.");
+                    }
+                    int firstByte = saasHeaderBytes.length / 256;
+                    int secondByte = saasHeaderBytes.length % 256;
+                    final byte[] headerSize = { (byte) firstByte, (byte) secondByte };
+                    return ByteBuffer.allocate(DOCUMENT_HEADER_META_LENGTH + saasHeaderBytes.length).put(headerVersion)
+                            .put(magic).put(headerSize).put(saasHeaderBytes).array();
+                }));
     }
 
     /**
      * Get the header bytes off of the stream. This will mutate the stream and read
      * up until the cipher text with the IV on the front of it.
-     * 
+     *
      * @param inputStream The input stream to read the header from.
      * @return The document header.
      */
@@ -184,22 +222,54 @@ public class CryptoUtils {
 
     static CompletableFuture<DocumentHeader.v3DocumentHeader> createHeaderProto(byte[] documentKey,
             DocumentMetadata metadata, SecureRandom secureRandom) {
+
+        DocumentHeader.SaaSShieldHeader saasHeader = DocumentHeader.SaaSShieldHeader.newBuilder()
+                .setTenantId(metadata.getTenantId()).build();
+        byte[] iv = new byte[IV_BYTE_LENGTH];
+        secureRandom.nextBytes(iv);
+        return generateSignature(documentKey, iv, saasHeader).thenApply(sig -> {
+            return DocumentHeader.v3DocumentHeader.newBuilder().setSaasShield(saasHeader)
+                    .setSig(com.google.protobuf.ByteString.copyFrom(sig.getSig())).build();
+
+        });
+    }
+
+    static CompletableFuture<V3HeaderSignature> generateSignature(byte[] documentKey, byte[] iv,
+            DocumentHeader.SaaSShieldHeader header) {
         return CompletableFutures.tryCatchNonFatal(() -> {
-            DocumentHeader.SaaSShieldHeader saasHeader = DocumentHeader.SaaSShieldHeader.newBuilder()
-                    .setTenantId(metadata.getTenantId()).build();
             ByteArrayOutputStream saasHeaderOutput = new ByteArrayOutputStream();
-            saasHeader.writeTo(saasHeaderOutput);
+            header.writeTo(saasHeaderOutput);
             byte[] saasHeaderBytes = saasHeaderOutput.toByteArray();
-            byte[] iv = new byte[IV_BYTE_LENGTH];
-            secureRandom.nextBytes(iv);
             Cipher encryptCipher = getNewAesCipher(documentKey, iv, true);
             byte[] encryptResult = encryptCipher.doFinal(saasHeaderBytes);
             byte[] tag = new byte[GCM_TAG_BYTE_LEN];
-            ByteBuffer.wrap(encryptResult).get(tag, encryptResult.length - GCM_TAG_BYTE_LEN, GCM_TAG_BYTE_LEN);
-            return DocumentHeader.v3DocumentHeader.newBuilder().setSaasShield(saasHeader)
-                    .setSig(com.google.protobuf.ByteString
-                            .copyFrom(ByteBuffer.allocate(IV_BYTE_LENGTH + GCM_TAG_BYTE_LEN).put(iv).put(tag).array()))
-                    .build();
+            ByteBuffer.wrap(encryptResult, encryptResult.length - GCM_TAG_BYTE_LEN, GCM_TAG_BYTE_LEN).get(tag);
+            return new V3HeaderSignature(iv, tag);
+        });
+    }
+
+    static CompletableFuture<Boolean> verifyHeaderProto(byte[] documentKey, DocumentHeader.v3DocumentHeader header) {
+        // Note that this is mutable and will be pulled off in both futures. They're
+        // sequenced so it's safe to do so.
+        ByteBuffer sigBuffer = header.getSig().asReadOnlyByteBuffer();
+        return CompletableFutures.tryCatchNonFatal(() -> {
+            if (sigBuffer.remaining() != IV_BYTE_LENGTH + GCM_TAG_BYTE_LEN) {
+                throw new Exception("Signature was not well formed."); // TODO fix exceptions to be better.
+            }
+            if (header.getSaasShield() == null) {
+                throw new Exception("Header was invalid.");
+            }
+            return true; // TODO unused value.
+        }).thenCompose(unused -> {
+            byte[] iv = new byte[IV_BYTE_LENGTH];
+            byte[] gcmTag = new byte[GCM_TAG_BYTE_LEN];
+
+            // Fill out the iv and gcmTag arrays, which should always succeed because we
+            // checked above that the buffer is what we expect.
+            sigBuffer.get(iv);
+            sigBuffer.get(gcmTag);
+            return generateSignature(documentKey, iv, header.getSaasShield())
+                    .thenApply(computedGcmBuffer -> computedGcmBuffer.getGcmTag().equals(ByteBuffer.wrap(gcmTag)));
         });
     }
 
@@ -208,7 +278,7 @@ public class CryptoUtils {
      * size. If those bytes don't exist this will throw.
      */
     static int getHeaderSize(byte[] bytes) {
-        return bytes[5] * 256 + bytes[6];
+        return (bytes[5] & 0xFF) * 256 + (bytes[6] & 0xFF);
     }
 
     /**
