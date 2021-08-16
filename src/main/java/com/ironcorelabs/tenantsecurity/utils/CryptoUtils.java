@@ -7,6 +7,7 @@ import java.io.OutputStream;
 import java.io.PushbackInputStream;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 
 import javax.crypto.Cipher;
@@ -108,8 +109,9 @@ public class CryptoUtils {
                         // that the next loop won't read less than the GCM tag.
                         byte[] maybeTagBytes = pushbackStream.readNBytes(GCM_TAG_BYTE_LEN + 1);
                         if (maybeTagBytes.length <= GCM_TAG_BYTE_LEN) {
-                            decryptedStream
-                                    .write(cipher.doFinal(ByteBuffer.wrap(currentChunk).put(maybeTagBytes).array()));
+                            decryptedStream.write(
+                                    cipher.doFinal(ByteBuffer.allocate(currentChunk.length + maybeTagBytes.length)
+                                            .put(currentChunk).put(maybeTagBytes).array()));
                         } else {
                             decryptedStream.write(cipher.update(currentChunk));
                             pushbackStream.unread(maybeTagBytes);
@@ -162,6 +164,7 @@ public class CryptoUtils {
         ByteArrayOutputStream decryptedStream = new ByteArrayOutputStream(encryptedDocumentBytes.length);
         return decryptStreamInternal(documentKey, encryptedStream, decryptedStream)
                 .thenApply(unused -> decryptedStream.toByteArray());
+
     }
 
     /**

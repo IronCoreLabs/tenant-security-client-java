@@ -5,6 +5,7 @@ import static org.testng.Assert.assertEquals;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.stream.IntStream;
@@ -78,7 +79,6 @@ public class CryptoUtilsTest {
                 "tenantIdtenantIdtenantIdtenantIdtenantIdtenantIdtenantIdtenantIdtenantIdtenantIdtenantIdtenantIdtenantIdtenantIdtenantIdtenantIdtenantIdtenantId",
                 "requestingUserOrServiceId", "dataLabel");
         byte[] header = CryptoUtils.generateHeader(documentKey, metadata, localSecureRandom).get();
-        System.out.println(ByteBuffer.wrap(header));
         ByteArrayInputStream inputStream = new ByteArrayInputStream(header);
         // The test is just that it works to get the header from the stream.
         CryptoUtils.getHeaderFromStream(inputStream).get();
@@ -102,7 +102,7 @@ public class CryptoUtilsTest {
     public void encryptWithStreamingDecryptTest() throws Exception {
         byte[] documentKey = new byte[32];
         secureRandom.nextBytes(documentKey);
-        byte[] plaintext = new byte[10000];
+        byte[] plaintext = new byte[244];
         secureRandom.nextBytes(plaintext);
         byte[] encryptedBytes = CryptoUtils.encryptBytes(plaintext, metadata, documentKey, secureRandom).get();
         ByteArrayOutputStream decryptedStream = new ByteArrayOutputStream();
@@ -114,8 +114,20 @@ public class CryptoUtilsTest {
     public void streamingEncryptWithNormalDecrypt() throws Exception {
         byte[] documentKey = new byte[32];
         secureRandom.nextBytes(documentKey);
-        String message = "This is a longish message about something that is replicated. This is a longish message about something that is replicated. This is a longish message about something that is replicated. This is a longish message about something that is replicated.";
-        byte[] plaintext = message.getBytes();
+        byte[] plaintext = new byte[112];
+        secureRandom.nextBytes(plaintext);
+        ByteArrayInputStream inputStream = new ByteArrayInputStream(plaintext);
+        ByteArrayOutputStream encryptOutputStream = new ByteArrayOutputStream();
+        CryptoUtils.encryptStreamInternal(documentKey, metadata, inputStream, encryptOutputStream, secureRandom).get();
+        byte[] encryptedBytes = encryptOutputStream.toByteArray();
+        byte[] decryptedBytes = CryptoUtils.decryptDocument(encryptedBytes, documentKey).get();
+        assertEquals(decryptedBytes, plaintext);
+    }
+
+    public void streamingEncryptWithNormalDecrypt60bytes() throws Exception {
+        byte[] documentKey = new byte[32];
+        secureRandom.nextBytes(documentKey);
+        byte[] plaintext = new byte[60];
         secureRandom.nextBytes(plaintext);
         ByteArrayInputStream inputStream = new ByteArrayInputStream(plaintext);
         ByteArrayOutputStream encryptOutputStream = new ByteArrayOutputStream();
