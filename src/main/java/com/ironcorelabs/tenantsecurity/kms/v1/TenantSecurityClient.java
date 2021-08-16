@@ -293,14 +293,22 @@ public final class TenantSecurityClient implements Closeable {
                 }));
     }
 
-
-        /**
-TODO
+    /**
+     * Encrypt the bytes in input and write it to output. A new key will be wrapped
+     * using the TSP. The returned value contains the edek needed to decrypt the
+     * resulting stream.
+     * 
+     * @param input    The input stream of bytes to encrypt.
+     * @param output   The output stream to write encrypted bytes to.
+     * @param metadata Metadata about the document being encrypted.
+     * @return The edek which can be used to decrypt the resulting stream
      */
     public CompletableFuture<StreamingResponse> encryptStream(InputStream input, OutputStream output,
                     DocumentMetadata metadata) {
             return this.encryptionService.wrapKey(metadata).thenApplyAsync(
-                            wrapResponse -> CryptoUtils.encryptStreamInternal(wrapResponse.getDekBytes(), metadata, input, output, this.secureRandom)
+                            wrapResponse -> CryptoUtils
+                                            .encryptStreamInternal(wrapResponse.getDekBytes(), metadata, input, output,
+                                                            this.secureRandom)
                                             .thenApply(unused -> new StreamingResponse(wrapResponse.getEdek())).join(),
                             encryptionExecutor);
     }

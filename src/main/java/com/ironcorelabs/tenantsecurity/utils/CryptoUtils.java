@@ -59,6 +59,12 @@ public class CryptoUtils {
         }
     }
 
+    public static class EncryptionFailedException extends Exception {
+        public EncryptionFailedException(String message) {
+            super(message);
+        }
+    }
+
     public static CompletableFuture<Void> encryptStreamInternal(byte[] documentKey, DocumentMetadata metadata,
             InputStream input, OutputStream output, SecureRandom secureRandom) {
         byte[] iv = new byte[IV_BYTE_LENGTH];
@@ -87,12 +93,12 @@ public class CryptoUtils {
             return verifyHeaderProto(documentKey, header).thenCompose(verification -> {
                 return CompletableFutures.tryCatchNonFatal(() -> {
                     if (!verification) {
-                        throw new Exception(
+                        throw new EncryptionFailedException(
                                 "The signature computed did not match. Likely that the documentKey is incorrect.");
                     }
                     byte[] iv = encryptedStream.readNBytes(IV_BYTE_LENGTH);
                     if (iv.length != IV_BYTE_LENGTH) {
-                        throw new Exception("IV not found on the front of the encrypted document.");
+                        throw new EncryptionFailedException("IV not found on the front of the encrypted document.");
                     }
                     Cipher cipher = getNewAesCipher(documentKey, iv, false);
                     byte[] currentChunk = new byte[0];
@@ -132,7 +138,9 @@ public class CryptoUtils {
             SecureRandom secureRandom) {
 
         // Create the output at a reasonable size. This means that the header can be up
-        // to 512 bytes of content without growing.
+        // to 512 bytes of content without growing. This is a very comfortable upper
+        // bound for v3 header as only the tenant id is in there. If it needs to, the
+        // stream can grow, but this should help limit allocations.
         ByteArrayOutputStream output = new ByteArrayOutputStream(
                 document.length + IV_BYTE_LENGTH + GCM_TAG_BYTE_LEN + HEADER_FIXED_SIZE_CONTENT_LENGTH + 512);
         return encryptStreamInternal(documentKey, metadata, new ByteArrayInputStream(document), output, secureRandom)
@@ -150,26 +158,10 @@ public class CryptoUtils {
      * @return A future with the document decrypted.
      */
     public static CompletableFuture<byte[]> decryptDocument(byte[] encryptedDocumentBytes, byte[] documentKey) {
-        return parseDocumentParts(encryptedDocumentBytes)
-                .thenCompose(encryptedDocument -> decryptBytes(encryptedDocument, documentKey));
-    }
-
-    /**
-     * Given the provided encrypted document (which has an IV prepended to it) and
-     * an AES key, decrypt and return the decrypted bytes.
-     */
-    private static CompletableFuture<byte[]> decryptBytes(ByteBuffer encryptedDocument, byte[] documentKey) {
-        byte[] iv = new byte[CryptoUtils.IV_BYTE_LENGTH];
-
-        // Pull out the IV from the front of the encrypted data
-        encryptedDocument.get(iv);
-        byte[] encryptedBytes = new byte[encryptedDocument.remaining()];
-        encryptedDocument.get(encryptedBytes);
-
-        return CompletableFutures.tryCatchNonFatal(() -> {
-            final Cipher cipher = CryptoUtils.getNewAesCipher(documentKey, iv, false);
-            return cipher.doFinal(encryptedBytes);
-        });
+        ByteArrayInputStream encryptedStream = new ByteArrayInputStream(encryptedDocumentBytes);
+        ByteArrayOutputStream decryptedStream = new ByteArrayOutputStream(encryptedDocumentBytes.length);
+        return decryptStreamInternal(documentKey, encryptedStream, decryptedStream)
+                .thenApply(unused -> decryptedStream.toByteArray());
     }
 
     /**
@@ -187,7 +179,7 @@ public class CryptoUtils {
                     proto.writeTo(saasHeaderOutput);
                     byte[] saasHeaderBytes = saasHeaderOutput.toByteArray();
                     if (saasHeaderBytes.length > MAX_HEADER_SIZE) {
-                        throw new Exception(
+                        throw new EncryptionFailedException(
                                 "The header is too large. It is " + saasHeaderBytes.length + " bytes long.");
                     }
                     int firstByte = saasHeaderBytes.length / 256;
@@ -254,13 +246,13 @@ public class CryptoUtils {
         ByteBuffer sigBuffer = header.getSig().asReadOnlyByteBuffer();
         return CompletableFutures.tryCatchNonFatal(() -> {
             if (sigBuffer.remaining() != IV_BYTE_LENGTH + GCM_TAG_BYTE_LEN) {
-                throw new Exception("Signature was not well formed."); // TODO fix exceptions to be better.
+                throw new EncryptionFailedException("Signature was not well formed.");
             }
             if (header.getSaasShield() == null) {
-                throw new Exception("Header was invalid.");
+                throw new EncryptionFailedException("Header was invalid.");
             }
-            return true; // TODO unused value.
-        }).thenCompose(unused -> {
+            return null; // Future of void has to be null.
+        }).thenCompose(thisIsNull -> {
             byte[] iv = new byte[IV_BYTE_LENGTH];
             byte[] gcmTag = new byte[GCM_TAG_BYTE_LEN];
 
@@ -293,22 +285,6 @@ public class CryptoUtils {
         // that would have been encrypted.
         return bytes.length >= DOCUMENT_HEADER_META_LENGTH && bytes[0] == CURRENT_DOCUMENT_HEADER_VERSION
                 && containsIroncoreMagic(bytes) && getHeaderSize(bytes) >= 0;
-    }
-
-    /**
-     * Parses the header off the encrypted document and returns a ByteBuffer
-     * wrapping the document bytes. Once the header contains metadata we care about,
-     * this will return a class containing the document bytes and the header.
-     */
-    public static CompletableFuture<ByteBuffer> parseDocumentParts(byte[] document) {
-        return CompletableFutures.tryCatchNonFatal(() -> {
-            if (!isCiphertext(document)) {
-                throw new IllegalArgumentException("Provided bytes were not an Ironcore encrypted document.");
-            }
-            int totalHeaderSize = getHeaderSize(document) + DOCUMENT_HEADER_META_LENGTH;
-            int newLength = document.length - totalHeaderSize;
-            return ByteBuffer.wrap(document, totalHeaderSize, newLength);
-        });
     }
 
     /**

@@ -9,10 +9,10 @@ import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.stream.IntStream;
 
-import com.ironcorelabs.proto.DocumentHeader;
 import com.ironcorelabs.tenantsecurity.kms.v1.DocumentMetadata;
 
 import org.testng.annotations.Test;
+import com.ironcorelabs.tenantsecurity.utils.CryptoUtils.EncryptionFailedException;
 
 @Test(groups = { "unit" })
 public class CryptoUtilsTest {
@@ -39,7 +39,7 @@ public class CryptoUtilsTest {
     // it.
     public static byte[] getBytesFromBuffer(ByteBuffer buffer, int num) throws Exception {
         if (num < 0) {
-            throw new Exception("Can't get negative bytes from buffer.");
+            throw new EncryptionFailedException("Can't get negative bytes from buffer.");
         }
         byte[] output = new byte[num];
         buffer.get(output);
@@ -102,7 +102,7 @@ public class CryptoUtilsTest {
     public void encryptWithStreamingDecryptTest() throws Exception {
         byte[] documentKey = new byte[32];
         secureRandom.nextBytes(documentKey);
-        byte[] plaintext = new byte[8];
+        byte[] plaintext = new byte[10000];
         secureRandom.nextBytes(plaintext);
         byte[] encryptedBytes = CryptoUtils.encryptBytes(plaintext, metadata, documentKey, secureRandom).get();
         ByteArrayOutputStream decryptedStream = new ByteArrayOutputStream();
@@ -114,7 +114,8 @@ public class CryptoUtilsTest {
     public void streamingEncryptWithNormalDecrypt() throws Exception {
         byte[] documentKey = new byte[32];
         secureRandom.nextBytes(documentKey);
-        byte[] plaintext = new byte[2000];
+        String message = "This is a longish message about something that is replicated. This is a longish message about something that is replicated. This is a longish message about something that is replicated. This is a longish message about something that is replicated.";
+        byte[] plaintext = message.getBytes();
         secureRandom.nextBytes(plaintext);
         ByteArrayInputStream inputStream = new ByteArrayInputStream(plaintext);
         ByteArrayOutputStream encryptOutputStream = new ByteArrayOutputStream();
