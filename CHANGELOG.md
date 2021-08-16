@@ -1,5 +1,9 @@
 # Changelog
 
+## v4.0.1
+
+- Remove javax.annotation from the shaded jar.
+
 ## v4.0.0
 
 - Shade google-http-client and all related jars to increase compatibility with conflicting versions.

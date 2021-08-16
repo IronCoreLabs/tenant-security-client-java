@@ -180,7 +180,6 @@
                   <include>org.apache.httpcomponents:httpcore</include>
                   <include>org.apache.httpcomponents:httpclient</include>
                   <include>com.google.http-client:google-http-client</include>
-                  <include>com.google.code.findbugs:jsr305</include>
                   <include>com.google.guava:failureaccess</include>
                   <include>com.google.guava:listenablefuture</include>
                   <include>io.opencensus:opencensus-api</include>
