@@ -18,7 +18,6 @@ import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.EventMetadata;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.SecurityEvent;
 import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
-import com.ironcorelabs.tenantsecurity.utils.CryptoUtils;
 
 /**
  * TenantSecurityClient class that can be used to encrypt and decrypt documents.

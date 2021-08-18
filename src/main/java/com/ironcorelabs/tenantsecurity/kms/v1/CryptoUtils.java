@@ -1,4 +1,4 @@
-package com.ironcorelabs.tenantsecurity.utils;
+package com.ironcorelabs.tenantsecurity.kms.v1;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -13,10 +13,10 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-import com.ironcorelabs.tenantsecurity.kms.v1.DocumentMetadata;
 import com.ironcorelabs.proto.DocumentHeader;
+import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
 
-public class CryptoUtils {
+class CryptoUtils {
     static final String AES_ALGO = "AES/GCM/NoPadding";
     public static final int IV_BYTE_LENGTH = 12;
     static final int GCM_TAG_BIT_LENGTH = 128;

@@ -1,4 +1,4 @@
-package com.ironcorelabs.tenantsecurity.utils;
+package com.ironcorelabs.tenantsecurity.kms.v1;
 
 import static org.testng.Assert.assertEquals;
 
@@ -11,10 +11,10 @@ import java.util.Arrays;
 import java.util.stream.IntStream;
 
 import com.ironcorelabs.proto.DocumentHeader;
-import com.ironcorelabs.tenantsecurity.kms.v1.DocumentMetadata;
+import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
+import com.ironcorelabs.tenantsecurity.kms.v1.CryptoUtils.EncryptionFailedException;
 
 import org.testng.annotations.Test;
-import com.ironcorelabs.tenantsecurity.utils.CryptoUtils.EncryptionFailedException;
 
 @Test(groups = { "unit" })
 public class CryptoUtilsTest {
