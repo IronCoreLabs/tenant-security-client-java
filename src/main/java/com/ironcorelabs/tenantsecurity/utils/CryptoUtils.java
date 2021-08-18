@@ -7,7 +7,6 @@ import java.io.OutputStream;
 import java.io.PushbackInputStream;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
-import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 
 import javax.crypto.Cipher;
@@ -247,25 +246,29 @@ public class CryptoUtils {
         // Note that this is mutable and will be pulled off in both futures. They're
         // sequenced so it's safe to do so.
         ByteBuffer sigBuffer = header.getSig().asReadOnlyByteBuffer();
-        return CompletableFutures.tryCatchNonFatal(() -> {
-            if (sigBuffer.remaining() != IV_BYTE_LENGTH + GCM_TAG_BYTE_LEN) {
-                throw new EncryptionFailedException("Signature was not well formed.");
-            }
-            if (header.getSaasShield() == null) {
-                throw new EncryptionFailedException("Header was invalid.");
-            }
-            return null; // Future of void has to be null.
-        }).thenCompose(thisIsNull -> {
-            byte[] iv = new byte[IV_BYTE_LENGTH];
-            byte[] gcmTag = new byte[GCM_TAG_BYTE_LEN];
+        if (sigBuffer.remaining() == 0) {
+            return CompletableFuture.completedFuture(true);
+        } else {
+            return CompletableFutures.tryCatchNonFatal(() -> {
+                if (sigBuffer.remaining() != IV_BYTE_LENGTH + GCM_TAG_BYTE_LEN) {
+                    throw new EncryptionFailedException("Signature was not well formed.");
+                }
+                if (header.getSaasShield() == null) {
+                    throw new EncryptionFailedException("Header was invalid.");
+                }
+                return null; // Future of void has to be null.
+            }).thenCompose(thisIsNull -> {
+                byte[] iv = new byte[IV_BYTE_LENGTH];
+                byte[] gcmTag = new byte[GCM_TAG_BYTE_LEN];
 
-            // Fill out the iv and gcmTag arrays, which should always succeed because we
-            // checked above that the buffer is what we expect.
-            sigBuffer.get(iv);
-            sigBuffer.get(gcmTag);
-            return generateSignature(documentKey, iv, header.getSaasShield())
-                    .thenApply(computedGcmBuffer -> computedGcmBuffer.getGcmTag().equals(ByteBuffer.wrap(gcmTag)));
-        });
+                // Fill out the iv and gcmTag arrays, which should always succeed because we
+                // checked above that the buffer is what we expect.
+                sigBuffer.get(iv);
+                sigBuffer.get(gcmTag);
+                return generateSignature(documentKey, iv, header.getSaasShield())
+                        .thenApply(computedGcmBuffer -> computedGcmBuffer.getGcmTag().equals(ByteBuffer.wrap(gcmTag)));
+            });
+        }
     }
 
     /**

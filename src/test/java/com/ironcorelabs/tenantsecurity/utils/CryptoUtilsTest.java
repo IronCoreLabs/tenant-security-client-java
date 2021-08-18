@@ -10,6 +10,7 @@ import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.stream.IntStream;
 
+import com.ironcorelabs.proto.DocumentHeader;
 import com.ironcorelabs.tenantsecurity.kms.v1.DocumentMetadata;
 
 import org.testng.annotations.Test;
@@ -122,6 +123,16 @@ public class CryptoUtilsTest {
         byte[] encryptedBytes = encryptOutputStream.toByteArray();
         byte[] decryptedBytes = CryptoUtils.decryptDocument(encryptedBytes, documentKey).get();
         assertEquals(decryptedBytes, plaintext);
+    }
+
+    public void verifyV3DocWithZeroSize() throws Exception {
+        byte[] edoc = new byte[] { 3, 73, 82, 79, 78, 0, 0, 52, 97, 69, -17, -65, 32, 85, -70, 101, 109, -67, 31, -28,
+                -38, -19, -78, 42, 125, 124, -47, 80, 31, 10, 127, -109, -20, 90, 7, 88, 104, 103, -64, -56, 38, 95, 96,
+                -97, -92, -54 };
+        ByteArrayInputStream edoc_stream = new ByteArrayInputStream(edoc);
+        boolean isHeaderValid = CryptoUtils.getHeaderFromStream(edoc_stream)
+                .thenCompose(header -> CryptoUtils.verifyHeaderProto(new byte[0], header)).get();
+        assert (isHeaderValid);
     }
 
     public void streamingEncryptWithNormalDecrypt60bytes() throws Exception {

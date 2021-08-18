@@ -322,11 +322,14 @@ public final class TenantSecurityClient implements Closeable {
      * instead. If an exception is thrown the contents of the output stream should
      * not be used at all.
      * 
-     * @param edek The encrypted dek which should be unwrapped by the TSP.
-     * @param input A stream representing the encrypted document.
-     * @param output An output stream to write the decrypted document to. Note that this output should not be used until after the future exits successfully because the GCM tag is not fully verified until that time.
+     * @param edek     The encrypted dek which should be unwrapped by the TSP.
+     * @param input    A stream representing the encrypted document.
+     * @param output   An output stream to write the decrypted document to. Note
+     *                 that this output should not be used until after the future
+     *                 exits successfully because the GCM tag is not fully verified
+     *                 until that time.
      * @param metadata Metadata about the document being encrypted.
-     * @return
+     * @return Future which will complete when input has been decrypted.
      */
     public CompletableFuture<Void> decryptStream(String edek, InputStream input, OutputStream output,
                     DocumentMetadata metadata) {
