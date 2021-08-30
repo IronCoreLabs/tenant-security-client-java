@@ -2,6 +2,7 @@ package com.ironcorelabs.tenantsecurity.kms.v1;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PushbackInputStream;
@@ -54,8 +55,11 @@ class CryptoUtils {
             return ByteBuffer.wrap(gcmTag);
         }
 
-        public ByteBuffer getSig() {
-            return ByteBuffer.allocate(iv.length + gcmTag.length).put(iv).put(gcmTag).position(0);
+        public byte[] getSig() {
+            byte[] result = new byte[IV_BYTE_LENGTH + GCM_TAG_BYTE_LEN];
+            System.arraycopy(iv, 0, result, 0, iv.length);
+            System.arraycopy(gcmTag, 0, result, iv.length, gcmTag.length);
+            return result;
         }
     }
 
@@ -75,7 +79,7 @@ class CryptoUtils {
                 Cipher cipher = getNewAesCipher(documentKey, iv, true);
                 output.write(headerBytes);
                 output.write(iv);
-                while ((bytesRead = input.readNBytes(STREAM_CHUNKING)).length != 0) {
+                while ((bytesRead = readNBytes(input, STREAM_CHUNKING)).length != 0) {
                     byte[] encryptedBytes = cipher.update(bytesRead);
                     output.write(encryptedBytes);
                 }
@@ -96,17 +100,17 @@ class CryptoUtils {
                         throw new EncryptionFailedException(
                                 "The signature computed did not match. Likely that the documentKey is incorrect.");
                     }
-                    byte[] iv = encryptedStream.readNBytes(IV_BYTE_LENGTH);
+                    byte[] iv = readNBytes(encryptedStream, IV_BYTE_LENGTH);
                     if (iv.length != IV_BYTE_LENGTH) {
                         throw new EncryptionFailedException("IV not found on the front of the encrypted document.");
                     }
                     Cipher cipher = getNewAesCipher(documentKey, iv, false);
                     byte[] currentChunk = new byte[0];
                     PushbackInputStream pushbackStream = new PushbackInputStream(encryptedStream, GCM_TAG_BYTE_LEN + 1);
-                    while ((currentChunk = pushbackStream.readNBytes(STREAM_CHUNKING)).length > 0) {
+                    while ((currentChunk = readNBytes(pushbackStream, STREAM_CHUNKING)).length > 0) {
                         // Check to see if there is at least 1 byte more than the GCM tag so we know
                         // that the next loop won't read less than the GCM tag.
-                        byte[] maybeTagBytes = pushbackStream.readNBytes(GCM_TAG_BYTE_LEN + 1);
+                        byte[] maybeTagBytes = readNBytes(pushbackStream, GCM_TAG_BYTE_LEN + 1);
                         if (maybeTagBytes.length <= GCM_TAG_BYTE_LEN) {
                             decryptedStream.write(
                                     cipher.doFinal(ByteBuffer.allocate(currentChunk.length + maybeTagBytes.length)
@@ -167,9 +171,12 @@ class CryptoUtils {
     }
 
     /**
-     * Generate a header to mark the encrypted document as ours. Right now this is
-     * all constant; in the future this will contain a protobuf bytes header of
-     * variable length.
+     * Generate a header to mark the encrypted document as ours.
+     * 
+     * Current version is as follows: VERSION_NUMBER (1 bytes, fixed at 3),
+     * IRONCORE_MAGIC (4 bytes, IRON in ASCII), HEADER_LENGTH (2 bytes Uint16),
+     * PROTOBUF_HEADER_DATA (variable bytes)
+     * 
      */
     static CompletableFuture<byte[]> generateHeader(byte[] documentKey, DocumentMetadata metadata,
             SecureRandom secureRandom) {
@@ -201,13 +208,13 @@ class CryptoUtils {
      */
     static CompletableFuture<DocumentHeader.v3DocumentHeader> getHeaderFromStream(InputStream inputStream) {
         return CompletableFutures.tryCatchNonFatal(() -> {
-            byte[] fixedPreamble = inputStream.readNBytes(HEADER_FIXED_SIZE_CONTENT_LENGTH);
+            byte[] fixedPreamble = readNBytes(inputStream, HEADER_FIXED_SIZE_CONTENT_LENGTH);
             if (!isCiphertext(fixedPreamble)) {
                 throw new IllegalArgumentException("Provided bytes were not an Ironcore encrypted document.");
             } else {
                 // This call is safe only because it's in the else of the cyphertext check.
                 int headerLength = getHeaderSize(fixedPreamble);
-                byte[] headerBytes = inputStream.readNBytes(headerLength);
+                byte[] headerBytes = readNBytes(inputStream, headerLength);
                 InputStream headerStream = new ByteArrayInputStream(headerBytes);
                 return DocumentHeader.v3DocumentHeader.parseFrom(headerStream);
             }
@@ -300,5 +307,28 @@ class CryptoUtils {
      */
     static boolean containsIroncoreMagic(byte[] bytes) {
         return bytes.length >= 5 && ByteBuffer.wrap(bytes, 1, 4).compareTo(ByteBuffer.wrap(DOCUMENT_MAGIC)) == 0;
+    }
+
+    /**
+     * Read up to len bytes from the inputStream and return them.
+     * 
+     * @param inputStream The input stream to read from.
+     * @param len         The number of bytes to read.
+     * @return bytes read from the input stream.
+     * @throws IOException If length is less than 0 or if
+     */
+    static byte[] readNBytes(InputStream inputStream, int len) throws IOException {
+        if (len < 0) {
+            throw new IllegalArgumentException("length cannot be < 0.");
+        }
+        int remaining = len;
+        byte[] result = new byte[remaining];
+        int bytesRead = inputStream.read(result);
+
+        if (bytesRead > 0) {
+            return result.length == bytesRead ? result : java.util.Arrays.copyOf(result, bytesRead);
+        } else {
+            return new byte[0];
+        }
     }
 }

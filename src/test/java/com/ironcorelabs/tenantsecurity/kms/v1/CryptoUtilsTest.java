@@ -165,4 +165,31 @@ public class CryptoUtilsTest {
                                                // decrypt should fail.
         CryptoUtils.decryptDocument(messedUpEncyptedBytes, documentKey).get();
     }
+
+    public void getNBytesHappy() throws Exception {
+        byte[] buffer = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+        byte[] expected = { 1 };
+        assertEquals(CryptoUtils.readNBytes(new ByteArrayInputStream(buffer), 1), expected);
+    }
+
+    public void getNBytesRequestMore() throws Exception {
+        byte[] buffer = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+        assertEquals(CryptoUtils.readNBytes(new ByteArrayInputStream(buffer), 11), buffer);
+    }
+
+    public void getNBytesRequestEmpty() throws Exception {
+        byte[] buffer = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+        assertEquals(CryptoUtils.readNBytes(new ByteArrayInputStream(buffer), 0), new byte[0]);
+    }
+
+    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = ".*length.*")
+    public void getNBytesNegativelen() throws Exception {
+        byte[] buffer = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+        CryptoUtils.readNBytes(new ByteArrayInputStream(buffer), -1);
+    }
+
+    public void getNBytesRequestMoreOnEmpty() throws Exception {
+        byte[] buffer = new byte[0];
+        assertEquals(CryptoUtils.readNBytes(new ByteArrayInputStream(buffer), 10), new byte[0]);
+    }
 }
