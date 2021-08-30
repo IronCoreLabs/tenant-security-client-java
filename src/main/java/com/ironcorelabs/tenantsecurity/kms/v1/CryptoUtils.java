@@ -15,6 +15,7 @@ import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import com.ironcorelabs.proto.DocumentHeader;
+import com.ironcorelabs.tenantsecurity.kms.v1.exception.CryptoException;
 import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
 
 class CryptoUtils {
@@ -63,12 +64,6 @@ class CryptoUtils {
         }
     }
 
-    public static class EncryptionFailedException extends Exception {
-        public EncryptionFailedException(String message) {
-            super(message);
-        }
-    }
-
     public static CompletableFuture<Void> encryptStreamInternal(byte[] documentKey, DocumentMetadata metadata,
             InputStream input, OutputStream output, SecureRandom secureRandom) {
         byte[] iv = new byte[IV_BYTE_LENGTH];
@@ -97,12 +92,12 @@ class CryptoUtils {
             return verifyHeaderProto(documentKey, header).thenCompose(verification -> {
                 return CompletableFutures.tryCatchNonFatal(() -> {
                     if (!verification) {
-                        throw new EncryptionFailedException(
+                        throw new CryptoException(
                                 "The signature computed did not match. Likely that the documentKey is incorrect.");
                     }
                     byte[] iv = readNBytes(encryptedStream, IV_BYTE_LENGTH);
                     if (iv.length != IV_BYTE_LENGTH) {
-                        throw new EncryptionFailedException("IV not found on the front of the encrypted document.");
+                        throw new CryptoException("IV not found on the front of the encrypted document.");
                     }
                     Cipher cipher = getNewAesCipher(documentKey, iv, false);
                     byte[] currentChunk = new byte[0];
@@ -188,7 +183,7 @@ class CryptoUtils {
                     proto.writeTo(saasHeaderOutput);
                     byte[] saasHeaderBytes = saasHeaderOutput.toByteArray();
                     if (saasHeaderBytes.length > MAX_HEADER_SIZE) {
-                        throw new EncryptionFailedException(
+                        throw new CryptoException(
                                 "The header is too large. It is " + saasHeaderBytes.length + " bytes long.");
                     }
                     int firstByte = saasHeaderBytes.length / 256;
@@ -258,10 +253,10 @@ class CryptoUtils {
         } else {
             return CompletableFutures.tryCatchNonFatal(() -> {
                 if (sigBuffer.remaining() != IV_BYTE_LENGTH + GCM_TAG_BYTE_LEN) {
-                    throw new EncryptionFailedException("Signature was not well formed.");
+                    throw new CryptoException("Signature was not well formed.");
                 }
                 if (header.getSaasShield() == null) {
-                    throw new EncryptionFailedException("Header was invalid.");
+                    throw new CryptoException("Header was invalid.");
                 }
                 return null; // Future of void has to be null.
             }).thenCompose(thisIsNull -> {

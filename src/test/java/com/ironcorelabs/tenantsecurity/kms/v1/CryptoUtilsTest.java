@@ -5,15 +5,9 @@ import static org.testng.Assert.assertEquals;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.stream.IntStream;
-
-import com.ironcorelabs.proto.DocumentHeader;
-import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
-import com.ironcorelabs.tenantsecurity.kms.v1.CryptoUtils.EncryptionFailedException;
-
 import org.testng.annotations.Test;
 
 @Test(groups = { "unit" })
@@ -41,7 +35,7 @@ public class CryptoUtilsTest {
     // it.
     public static byte[] getBytesFromBuffer(ByteBuffer buffer, int num) throws Exception {
         if (num < 0) {
-            throw new EncryptionFailedException("Can't get negative bytes from buffer.");
+            throw new IllegalArgumentException("Can't get negative bytes from buffer.");
         }
         byte[] output = new byte[num];
         buffer.get(output);
