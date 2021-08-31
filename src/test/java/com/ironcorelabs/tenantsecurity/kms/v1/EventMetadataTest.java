@@ -85,7 +85,7 @@ public class EventMetadataTest {
                 "requestId", "8.8.8.8", "document-5", nowInQuotes);
 
         Map<String, Object> postData = meta.getAsPostData();
-
+        @SuppressWarnings("unchecked")
         Map<String, Object> ironcoreData = (Map<String, Object>) postData.get("iclFields");
         assertEquals(ironcoreData.get("requestingId"), "svcID");
         assertEquals(ironcoreData.get("dataLabel"), "classification");
