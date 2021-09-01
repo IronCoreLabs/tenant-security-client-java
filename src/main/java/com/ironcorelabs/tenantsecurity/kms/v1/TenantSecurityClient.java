@@ -2,8 +2,9 @@ package com.ironcorelabs.tenantsecurity.kms.v1;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URL;
-import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.security.Security;
 import java.util.Map;
@@ -13,9 +14,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
-import javax.crypto.Cipher;
-import javax.crypto.spec.GCMParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.EventMetadata;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.SecurityEvent;
@@ -27,14 +25,6 @@ import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
  * @author IronCore Labs
  */
 public final class TenantSecurityClient implements Closeable {
-    private static final String AES_ALGO = "AES/GCM/NoPadding";
-    private static final int IV_BYTE_LENGTH = 12;
-    private static final int GCM_TAG_BIT_LENGTH = 128;
-    // the size of the fixed length portion of the header (version, magic, size)
-    private static final int DOCUMENT_HEADER_META_LENGTH = 7;
-    private static final byte CURRENT_DOCUMENT_HEADER_VERSION = 3;
-    private static final byte[] DOCUMENT_MAGIC = {73, 82, 79, 78}; // bytes for ASCII IRON
-                                                                   // characters
     private final SecureRandom secureRandom;
 
     // Use fixed size thread pool for CPU bound operations (crypto ops). Defaults to
@@ -183,111 +173,10 @@ public final class TenantSecurityClient implements Closeable {
     }
 
     /**
-     * Generate a header to mark the encrypted document as ours. Right now this is all constant; in
-     * the future this will contain a protobuf bytes header of variable length.
-     */
-    private static byte[] generateHeader() {
-        final byte headerVersion = CURRENT_DOCUMENT_HEADER_VERSION;
-        final byte[] magic = DOCUMENT_MAGIC;
-        final byte[] headerSize = {(byte) 0, (byte) 0};
-        return ByteBuffer.allocate(DOCUMENT_HEADER_META_LENGTH).put(headerVersion).put(magic)
-                .put(headerSize).array();
-    }
-
-    /**
-     * Given the provided document bytes and an AES key, encrypt and return the encrypted bytes.
-     */
-    private CompletableFuture<byte[]> encryptBytes(byte[] document, byte[] documentKey) {
-        byte[] iv = new byte[IV_BYTE_LENGTH];
-        secureRandom.nextBytes(iv);
-
-        return CompletableFutures.tryCatchNonFatal(() -> {
-            final Cipher cipher = Cipher.getInstance(AES_ALGO);
-            cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(documentKey, "AES"),
-                    new GCMParameterSpec(GCM_TAG_BIT_LENGTH, iv));
-            byte[] encryptedBytes = cipher.doFinal(document);
-            byte[] header = generateHeader();
-
-            // Store the IV at the front of the resulting encrypted data
-            return ByteBuffer.allocate(header.length + IV_BYTE_LENGTH + encryptedBytes.length)
-                    .put(header).put(iv).put(encryptedBytes).array();
-        });
-    }
-
-    /**
-     * Check that the given bytes contain 4 bytes of ASCII representing "IRON" document magic. This
-     * magic should start at index 1, after the expected header version byte.
-     */
-    private static boolean containsIroncoreMagic(byte[] bytes) {
-        return bytes.length >= 5
-                && ByteBuffer.wrap(bytes, 1, 4).compareTo(ByteBuffer.wrap(DOCUMENT_MAGIC)) == 0;
-    }
-
-    /**
-     * Multiply the header size bytes at the 5th and 6th indices to get the header size. If those
-     * bytes don't exist this will throw.
-     */
-    private static int getHeaderSize(byte[] bytes) {
-        return bytes[5] * 256 + bytes[6];
-    }
-
-    /**
-     * Check if an IronCore header is present in some bytes, indicating that it is ciphertext.
-     *
-     * @param bytes bytes to be checked
-     */
-    public static boolean isCiphertext(byte[] bytes) {
-        // Header size is variable for CMK encrypted docs depending on whether
-        // the header is present. Expect at least one byte following the header
-        // that would have been encrypted.
-        return bytes.length > DOCUMENT_HEADER_META_LENGTH
-                && bytes[0] == CURRENT_DOCUMENT_HEADER_VERSION && containsIroncoreMagic(bytes)
-                && getHeaderSize(bytes) >= 0;
-    }
-
-    /**
-     * Parses the header off the encrypted document and returns a ByteBuffer wrapping the document
-     * bytes. Once the header contains metadata we care about, this will return a class containing
-     * the document bytes and the header.
-     */
-    private static CompletableFuture<ByteBuffer> parseDocumentParts(byte[] document) {
-        return CompletableFutures.tryCatchNonFatal(() -> {
-            if (!isCiphertext(document)) {
-                throw new IllegalArgumentException(
-                        "Provided bytes were not an Ironcore encrypted document.");
-            }
-            int totalHeaderSize = getHeaderSize(document) + DOCUMENT_HEADER_META_LENGTH;
-            int newLength = document.length - totalHeaderSize;
-            return ByteBuffer.wrap(document, totalHeaderSize, newLength);
-        });
-    }
-
-    /**
-     * Given the provided encrypted document (which has an IV prepended to it) and an AES key,
-     * decrypt and return the decrypted bytes.
-     */
-    private CompletableFuture<byte[]> decryptBytes(ByteBuffer encryptedDocument,
-            byte[] documentKey) {
-        byte[] iv = new byte[IV_BYTE_LENGTH];
-
-        // Pull out the IV from the front of the encrypted data
-        encryptedDocument.get(iv);
-        byte[] encryptedBytes = new byte[encryptedDocument.remaining()];
-        encryptedDocument.get(encryptedBytes);
-
-        return CompletableFutures.tryCatchNonFatal(() -> {
-            final Cipher cipher = Cipher.getInstance(AES_ALGO);
-            cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(documentKey, "AES"),
-                    new GCMParameterSpec(GCM_TAG_BIT_LENGTH, iv));
-            return cipher.doFinal(encryptedBytes);
-        });
-    }
-
-    /**
      * Encrypt the provided map of fields using the provided encryption key (DEK) and return the
      * resulting encrypted fields in a map from String to encrypted bytes.
      */
-    private Map<String, byte[]> encryptFields(Map<String, byte[]> document, byte[] dek) {
+    private Map<String, byte[]> encryptFields(Map<String, byte[]> document,DocumentMetadata metadata, byte[] dek) {
         // First, iterate over the map of documents and kick off the encrypt operation
         // Future for each one. As part of doing this, we kick off the operation on to
         // another thread so they run in parallel.
@@ -297,8 +186,8 @@ public final class TenantSecurityClient implements Closeable {
                     // tried doing this in a .map above the .collect we'd have to return another
                     // Entry which is more complicated
                     return CompletableFuture.supplyAsync(
-                            () -> encryptBytes(entry.getValue(), dek).join(), encryptionExecutor);
-                }));
+                            () -> CryptoUtils.encryptBytes(entry.getValue(), metadata, dek, this.secureRandom).join(), encryptionExecutor);
+               } ));
 
         // Now iterate over our map of keys to Futures and call join on all of them. We
         // do this in a separate stream() because if we called join() above it'd block
@@ -320,9 +209,7 @@ public final class TenantSecurityClient implements Closeable {
                     // Do this mapping in the .collect because we can just map the value. If we
                     // tried doing this in a .map above the .collect we'd have to return another
                     // Entry which is more complicated
-                    return CompletableFuture.supplyAsync(() -> parseDocumentParts(entry.getValue())
-                            .thenCompose(encryptedDocument -> decryptBytes(encryptedDocument, dek))
-                            .join(), encryptionExecutor);
+                    return CompletableFuture.supplyAsync(() ->CryptoUtils.decryptDocument(entry.getValue(), dek).join(), encryptionExecutor);
                 }));
         // Then iterate over the map of Futures and join them to get the decrypted bytes
         // out. Return the map with the same keys passed in, but the values will now be
@@ -339,13 +226,14 @@ public final class TenantSecurityClient implements Closeable {
      */
     private ConcurrentMap<String, EncryptedDocument> encryptBatchOfDocuments(
             Map<String, Map<String, byte[]>> documents,
+            DocumentMetadata metadata,
             ConcurrentMap<String, WrappedDocumentKey> dekList) {
         return dekList.entrySet().parallelStream()
                 .collect(Collectors.toConcurrentMap(ConcurrentMap.Entry::getKey, dekResult -> {
                     String documentId = dekResult.getKey();
                     WrappedDocumentKey documentKeys = dekResult.getValue();
                     Map<String, byte[]> encryptedDoc =
-                            encryptFields(documents.get(documentId), documentKeys.getDekBytes());
+                            encryptFields(documents.get(documentId), metadata, documentKeys.getDekBytes());
                     return new EncryptedDocument(encryptedDoc, documentKeys.getEdek());
                 }));
     }
@@ -358,13 +246,14 @@ public final class TenantSecurityClient implements Closeable {
      */
     private ConcurrentMap<String, EncryptedDocument> encryptExistingBatchOfDocuments(
             Map<String, PlaintextDocument> documents,
+            DocumentMetadata metadata,
             ConcurrentMap<String, UnwrappedDocumentKey> dekList) {
         return dekList.entrySet().parallelStream()
                 .collect(Collectors.toConcurrentMap(ConcurrentMap.Entry::getKey, dekResult -> {
                     String documentId = dekResult.getKey();
                     UnwrappedDocumentKey documentKeys = dekResult.getValue();
                     Map<String, byte[]> encryptedDoc =
-                            encryptFields(documents.get(documentId).getDecryptedFields(),
+                            encryptFields(documents.get(documentId).getDecryptedFields(),metadata,
                                     documentKeys.getDekBytes());
                     return new EncryptedDocument(encryptedDoc, documents.get(documentId).getEdek());
                 }));
@@ -404,6 +293,52 @@ public final class TenantSecurityClient implements Closeable {
     }
 
     /**
+     * Encrypt the bytes in input and write it to output. A new key will be wrapped
+     * using the TSP. The returned value contains the edek needed to decrypt the
+     * resulting stream.
+     * 
+     * @param input    The input stream of bytes to encrypt.
+     * @param output   The output stream to write encrypted bytes to.
+     * @param metadata Metadata about the document being encrypted.
+     * @return The edek which can be used to decrypt the resulting stream
+     */
+    public CompletableFuture<StreamingResponse> encryptStream(InputStream input, OutputStream output,
+                    DocumentMetadata metadata) {
+            return this.encryptionService.wrapKey(metadata).thenApplyAsync(
+                            wrapResponse -> CryptoUtils
+                                            .encryptStreamInternal(wrapResponse.getDekBytes(), metadata, input, output,
+                                                            this.secureRandom)
+                                            .thenApply(unused -> new StreamingResponse(wrapResponse.getEdek())).join(),
+                            encryptionExecutor);
+    }
+
+    /**
+     * Decrypt the bytes that are represented by input using the key contained
+     * inside the edek. No bytes will be written to the output stream until the entire
+     * document has been decrypted. This means that even though the data is streamed in
+     * the decrypted data will be cached in memory until the tag has been verified. Once
+     * the GCM tag has been reached and verified, this function will return. If
+     * there is a problem with the document represented by input or a problem
+     * unwrapping the edek the returned CompletableFuture will return an exception
+     * instead.
+     * 
+     * @param edek     The encrypted dek which should be unwrapped by the TSP.
+     * @param input    A stream representing the encrypted document.
+     * @param output   An output stream to write the decrypted document to. Note
+     *                 that this output should not be used until after the future
+     *                 exits successfully because the GCM tag is not fully verified
+     *                 until that time.
+     * @param metadata Metadata about the document being encrypted.
+     * @return Future which will complete when input has been decrypted.
+     */
+    public CompletableFuture<Void> decryptStream(String edek, InputStream input, OutputStream output,
+                    DocumentMetadata metadata) {
+            return this.encryptionService.unwrapKey(edek, metadata).thenApplyAsync(
+                            dek -> CryptoUtils.decryptStreamInternal(dek, input, output).join(), encryptionExecutor);
+    }
+
+
+    /**
      * Encrypt the provided document. Documents are provided as a map of fields from the document
      * id/name (String) to bytes (byte[]). Uses the Tenant Security Proxy to generate a new document
      * encryption key (DEK), encrypt that key (EDEK) and then uses the DEK to encrypt all of the
@@ -419,7 +354,7 @@ public final class TenantSecurityClient implements Closeable {
     public CompletableFuture<EncryptedDocument> encrypt(Map<String, byte[]> document,
             DocumentMetadata metadata) {
         return this.encryptionService.wrapKey(metadata).thenApplyAsync(newDocumentKeys -> {
-            return new EncryptedDocument(encryptFields(document, newDocumentKeys.getDekBytes()),
+            return new EncryptedDocument(encryptFields(document, metadata, newDocumentKeys.getDekBytes()),
                     newDocumentKeys.getEdek());
         });
     }
@@ -443,7 +378,7 @@ public final class TenantSecurityClient implements Closeable {
             DocumentMetadata metadata) {
         return this.encryptionService.unwrapKey(document.getEdek(), metadata)
                 .thenApplyAsync(dek -> new EncryptedDocument(
-                        encryptFields(document.getDecryptedFields(), dek), document.getEdek()),
+                        encryptFields(document.getDecryptedFields(), metadata, dek), document.getEdek()),
                         encryptionExecutor);
     }
 
@@ -468,7 +403,7 @@ public final class TenantSecurityClient implements Closeable {
                     ConcurrentMap<String, ErrorResponse> failureList =
                             new ConcurrentHashMap<>(batchResponse.getFailures());
                     return CompletableFuture
-                            .supplyAsync(() -> encryptBatchOfDocuments(plaintextDocuments, dekList))
+                            .supplyAsync(() -> encryptBatchOfDocuments(plaintextDocuments, metadata, dekList))
                             .thenCombine(
                                     CompletableFuture
                                             .supplyAsync(() -> getBatchFailures(failureList)),
@@ -501,7 +436,7 @@ public final class TenantSecurityClient implements Closeable {
                     ConcurrentMap<String, ErrorResponse> failureList =
                             new ConcurrentHashMap<>(batchResponse.getFailures());
                     return CompletableFuture.supplyAsync(
-                            () -> encryptExistingBatchOfDocuments(plaintextDocuments, dekList))
+                            () -> encryptExistingBatchOfDocuments(plaintextDocuments, metadata, dekList))
                             .thenCombine(
                                     CompletableFuture
                                             .supplyAsync(() -> getBatchFailures(failureList)),
@@ -529,10 +464,10 @@ public final class TenantSecurityClient implements Closeable {
     }
 
         /**
-         * Re-key an EncryptedDocument to a new tenant without decrypting the document data. Decrypts the 
+         * Re-key an EncryptedDocument to a new tenant without decrypting the document data. Decrypts the
          * document's encrypted document key (EDEK) then re-encrypts it to the new tenant. The DEK is then discarded.
-         * The old tenant and new tenant can be the same in order to re-key the document to the tenant's latest primary config. 
-         * 
+         * The old tenant and new tenant can be the same in order to re-key the document to the tenant's latest primary config.
+         *
          * @param encryptedDocument Document to re-key which includes encrypted bytes as well as EDEK.
          * @param metadata          Metadata about the document being re-keyed.
          * @param newTenantId       Tenant ID the document should be re-keyed to.
@@ -582,7 +517,7 @@ public final class TenantSecurityClient implements Closeable {
      * asynchronous operation at the TSP, so successful receipt of a security event does not mean
      * that the event is deliverable or has been delivered to the tenant's logging system. It simply
      * means that the event has been received and will be processed.
-     * 
+     *
      * @param event    Security event that represents the action that took place.
      * @param metadata Metadata that provides additional context about the event.
      * @return Void on successful receipt by TSP

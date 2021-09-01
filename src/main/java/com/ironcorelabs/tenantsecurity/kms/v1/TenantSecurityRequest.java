@@ -242,6 +242,7 @@ final class TenantSecurityRequest implements Closeable {
         // Add the object of this call, the event, to the post data that's ready to go out.
         // We just created this, so we know the cast is safe. There is a unit case to catch this in
         // case it changes.
+        @SuppressWarnings("unchecked")
         Map<String, Object> iclFields = (HashMap<String, Object>) postData.get("iclFields");
         iclFields.put("event", event.getFlatEvent());
         postData.put("iclFields", iclFields);

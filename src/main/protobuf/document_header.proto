@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package ironcorelabs.proto;
+option java_package = "com.ironcorelabs.proto";
+
+message DataControlPlatformHeader {
+  string document_id = 1;
+  uint64 segment_id = 2;
+}
+
+message SaaSShieldHeader { string tenant_id = 1; }
+
+message v3DocumentHeader {
+  bytes sig = 1;
+  oneof header {
+    DataControlPlatformHeader data_control = 2;
+    SaaSShieldHeader saas_shield = 3;
+  }
+}
