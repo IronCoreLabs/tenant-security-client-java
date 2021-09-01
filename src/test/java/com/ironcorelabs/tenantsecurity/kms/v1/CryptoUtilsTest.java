@@ -160,6 +160,29 @@ public class CryptoUtilsTest {
         CryptoUtils.decryptDocument(messedUpEncyptedBytes, documentKey).get();
     }
 
+    public void streamingEncryptWithNormalDecryptLargeDocument() throws Exception {
+        // 30 seconds
+        long cutoffMillis = 30 * 1000;
+        SecureRandom sha1SecureRandom = getSecureRandom("some seed");
+        byte[] documentKey = new byte[32];
+        sha1SecureRandom.nextBytes(documentKey);
+        // 64MB
+        byte[] plaintext = new byte[64 * 1024 * 1024];
+        sha1SecureRandom.nextBytes(plaintext);
+        long startTime = System.currentTimeMillis();
+        ByteArrayInputStream inputStream = new ByteArrayInputStream(plaintext);
+        ByteArrayOutputStream encryptOutputStream = new ByteArrayOutputStream();
+        CryptoUtils.encryptStreamInternal(documentKey, metadata, inputStream, encryptOutputStream, secureRandom).get();
+        byte[] encryptedBytes = encryptOutputStream.toByteArray();
+        byte[] decryptedBytes = CryptoUtils.decryptDocument(encryptedBytes, documentKey).get();
+        long timeTaken = System.currentTimeMillis() - startTime;
+        if (timeTaken > cutoffMillis) {
+            throw new Exception(
+                    "Decrypting " + plaintext.length + " took " + timeTaken + ". It shouldn't take that long.");
+        }
+        assertEquals(decryptedBytes, plaintext);
+    }
+
     public void getNBytesHappy() throws Exception {
         byte[] buffer = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
         byte[] expected = { 1 };

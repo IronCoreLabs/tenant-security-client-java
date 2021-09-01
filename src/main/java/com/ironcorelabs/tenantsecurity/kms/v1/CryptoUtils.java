@@ -36,7 +36,7 @@ class CryptoUtils {
     // might be empty.
     static final int HEADER_FIXED_SIZE_CONTENT_LENGTH = 1 + DOCUMENT_MAGIC.length + HEADER_META_LENGTH_LENGTH;
     // How many bytes to read in each loop when doing streaming encryption.
-    static final int STREAM_CHUNKING = 32;
+    static final int STREAM_CHUNKING = 256 * 1024;
     static final int MAX_HEADER_SIZE = 65535; // 256 * 255 + 255 since we do a 2 byte size.
 
     public static class V3HeaderSignature {
@@ -101,20 +101,10 @@ class CryptoUtils {
                     }
                     Cipher cipher = getNewAesCipher(documentKey, iv, false);
                     byte[] currentChunk = new byte[0];
-                    PushbackInputStream pushbackStream = new PushbackInputStream(encryptedStream, GCM_TAG_BYTE_LEN + 1);
-                    while ((currentChunk = readNBytes(pushbackStream, STREAM_CHUNKING)).length > 0) {
-                        // Check to see if there is at least 1 byte more than the GCM tag so we know
-                        // that the next loop won't read less than the GCM tag.
-                        byte[] maybeTagBytes = readNBytes(pushbackStream, GCM_TAG_BYTE_LEN + 1);
-                        if (maybeTagBytes.length <= GCM_TAG_BYTE_LEN) {
-                            decryptedStream.write(
-                                    cipher.doFinal(ByteBuffer.allocate(currentChunk.length + maybeTagBytes.length)
-                                            .put(currentChunk).put(maybeTagBytes).array()));
-                        } else {
-                            decryptedStream.write(cipher.update(currentChunk));
-                            pushbackStream.unread(maybeTagBytes);
-                        }
+                    while ((currentChunk = readNBytes(encryptedStream, STREAM_CHUNKING)).length > 0) {
+                        decryptedStream.write(cipher.update(currentChunk));
                     }
+                    decryptedStream.write(cipher.doFinal());
                     return null;
                 });
             });
