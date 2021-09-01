@@ -314,12 +314,13 @@ public final class TenantSecurityClient implements Closeable {
 
     /**
      * Decrypt the bytes that are represented by input using the key contained
-     * inside the edek. Unverified bytes will be written to the output stream. Once
+     * inside the edek. No bytes will be written to the output stream until the entire
+     * document has been decrypted. This means that even though the data is streamed in
+     * the decrypted data will be cached in memory until the tag has been verified. Once
      * the GCM tag has been reached and verified, this function will return. If
      * there is a problem with the document represented by input or a problem
      * unwrapping the edek the returned CompletableFuture will return an exception
-     * instead. If an exception is thrown the contents of the output stream should
-     * not be used at all.
+     * instead.
      * 
      * @param edek     The encrypted dek which should be unwrapped by the TSP.
      * @param input    A stream representing the encrypted document.
