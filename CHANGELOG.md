@@ -53,7 +53,7 @@ This version of the Tenant Security Java Client will only work with version `3.0
 
 ### Compatibility
 
-This version of the Tenant Security Java Client will only work with version `2.0.0+` of the Tenant Security Proxy container.
+This version of the Tenant Security Java Client will only work with version `>= 2.0.0 < 4.0.0` of the Tenant Security Proxy container.
 
 ## v1.2.2
 
@@ -83,10 +83,10 @@ This version of the Tenant Security Java Client will only work with version `2.0
 
 ### Compatibility
 
-This version of the Tenant Security Java Client will only work with version `1.2.0+` of the Tenant Security Proxy container.
+This version of the Tenant Security Java Client will only work with version `>= 1.2.0 < 4.0.0` of the Tenant Security Proxy container.
 
 ## v1.0.0
 
 ### Compatibility
 
-This version of the Tenant Security Java Client will only work with version `1.2.0+` of the Tenant Security Proxy container.
+This version of the Tenant Security Java Client will only work with version `>= 1.2.0 < 4.0.0` of the Tenant Security Proxy container.
