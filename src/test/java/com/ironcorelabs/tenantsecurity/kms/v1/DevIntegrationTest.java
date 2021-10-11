@@ -21,7 +21,7 @@ public class DevIntegrationTest {
     private String GCP_TENANT_ID = "INTEGRATION-TEST-DEV1-GCP";
     private String AWS_TENANT_ID = "INTEGRATION-TEST-DEV1-AWS";
     private String AZURE_TENANT_ID = "INTEGRATION-TEST-DEV1-AZURE";
-    private String INTEGRATION_API_KEY = "qlhqGW+Azctfy1ld";
+    private String INTEGRATION_API_KEY = System.getenv("API_KEY");
 
     @Test(expectedExceptions = java.net.MalformedURLException.class)
     public void constructorUrlTest() throws Exception {
