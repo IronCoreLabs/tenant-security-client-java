@@ -14,7 +14,7 @@ import org.testng.annotations.Test;
 @Test(groups = {"dev-integration"})
 public class NotPrimaryAndDisabledConfigs {
     public static String MULTIPLE_TENANT_ID = "INTEGRATION-TEST-DEV1-COMBO";
-    public static String INTEGRATION_API_KEY = "qlhqGW+Azctfy1ld";
+    protected static String INTEGRATION_API_KEY = System.getenv("API_KEY");
 
     /**
      * Data encrypted from a previous configuration. The configuration this data was encrypted to is
