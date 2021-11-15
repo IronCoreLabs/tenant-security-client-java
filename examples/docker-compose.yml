@@ -6,7 +6,7 @@ services:
     ports:
       - 32804:7777
       - 32805:9000
-    image: gcr.io/ironcore-images/tenant-security-proxy:4.0
+    image: gcr.io/ironcore-images/tenant-security-proxy:4
     links:
       - tenant-security-logdriver
   tenant-security-logdriver:
@@ -16,7 +16,7 @@ services:
       - ./demo-tsp.conf
     ports:
       - "32806:9001"
-    image: gcr.io/ironcore-images/tenant-security-logdriver:4.0
+    image: gcr.io/ironcore-images/tenant-security-logdriver:4
     volumes:
       - type: bind
         source: /tmp
