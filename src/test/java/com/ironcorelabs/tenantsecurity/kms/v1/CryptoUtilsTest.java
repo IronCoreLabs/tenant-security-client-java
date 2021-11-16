@@ -31,14 +31,18 @@ public class CryptoUtilsTest {
                 (baos1, baos2) -> baos1.write(baos2.toByteArray(), 0, baos2.size())).toByteArray();
     }
 
-    /* s must be an even-length string. */
+    // Converts a hex string to a byte array. The hex string must be an even number
+    // of characters.
     public static byte[] hexStringToByteArray(String s) {
         int len = s.length();
-        byte[] data = new byte[len / 2];
-        for (int i = 0; i < len; i += 2) {
-            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4) + Character.digit(s.charAt(i + 1), 16));
+        if (len % 2 != 0) {
+            throw new IllegalArgumentException(s + " is not a string with an even number of characters.");
         }
-        return data;
+        byte[] result = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            result[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4) + Character.digit(s.charAt(i + 1), 16));
+        }
+        return result;
     }
 
     // WARNING: This method side effects the buffer that's passed in by advancing
