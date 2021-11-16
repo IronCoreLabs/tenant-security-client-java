@@ -31,6 +31,16 @@ public class CryptoUtilsTest {
                 (baos1, baos2) -> baos1.write(baos2.toByteArray(), 0, baos2.size())).toByteArray();
     }
 
+    /* s must be an even-length string. */
+    public static byte[] hexStringToByteArray(String s) {
+        int len = s.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4) + Character.digit(s.charAt(i + 1), 16));
+        }
+        return data;
+    }
+
     // WARNING: This method side effects the buffer that's passed in by advancing
     // it.
     public static byte[] getBytesFromBuffer(ByteBuffer buffer, int num) throws Exception {
@@ -117,6 +127,16 @@ public class CryptoUtilsTest {
         byte[] encryptedBytes = encryptOutputStream.toByteArray();
         byte[] decryptedBytes = CryptoUtils.decryptDocument(encryptedBytes, documentKey).get();
         assertEquals(decryptedBytes, plaintext);
+    }
+
+    public void phpDocumentWithLargeTenantIdDecrypt() throws Exception {
+        byte[] encryptedDocument = hexStringToByteArray(
+                "0349524f4e016c0a1c3130eaf8ff88c1a08df550095522aebfdc7b0d060d3adad8836fea7e1acb020ac80274656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e74496474656e616e744964bb54218111033f5c68c92feb8fae88c255cc56e902becdfde679defa2628950beb966e0e43d27f42dcdbd98587e8bf5f8458411760fb72ca4442ae79877da90dff7de6df43e549df3085aae5f55f05aa37cdd045ffa7");
+        byte[] dek = hexStringToByteArray("3939393939393939393939393939393939393939393939393939393939393939");
+        byte[] result = CryptoUtils.decryptDocument(encryptedDocument, dek).get();
+        String resultString = new String(result); // These bytes were utf-8 bytes so we just load them into a string for
+                                                  // our assertion.
+        assertEquals(resultString, "I have a fever and the only cure is nine nine nine nine...");
     }
 
     public void verifyV3DocWithZeroSize() throws Exception {
