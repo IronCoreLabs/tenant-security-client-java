@@ -26,7 +26,10 @@ This service is provided as a Docker container, so it is easy to run the proxy o
 installed. IronCore Labs hosts the Docker container on a publicly accessible container registry, so you can pull
 the image from there and run it locally.
 
-In addition to the Docker container, you need a configuration file that specifies how the TSP should communicate
+The TSP has a companion Docker container, the _Tenant Security Logdriver_ (LD) that runs alongside it in your environment. It is also hosted on the same publicly accessible container registry.
+
+
+In addition to the Docker containers, you need a configuration file that specifies how the TSP should communicate
 with the IronCore Labs Configuration Broker and Data Control Platform, which work together to enable the end-to-end
 encryption that keeps all of the tenant KMS configuration information secure. To simplify the process of running
 these examples, we have created a demo vendor and tenants that you can use for the examples; all the necessary
@@ -36,13 +39,10 @@ Kubernetes secret or similar mechanism for securely loading the configuration in
 have included this configuration in the repository as a convenience. Also note that these accounts are all
 created in IronCore's staging infrastructure.
 
-The following commands will get a TSP running on your computer with the provided configuration:
-
-```bash
-docker pull gcr.io/ironcore-images/tenant-security-proxy:3.3
-docker run --env-file demo-tsp.conf -p 32804:7777 gcr.io/ironcore-images/tenant-security-proxy:3.3
+The following `docker-compose` command will get a TSP+LD running on your computer with the provided configuration:
 ```
-
+docker-compose -f docker-compose.yml up
+```
 This starts the TSP locally listening on port 32804. The benchmark expects to connect to the TSP at that address.
 
 To connect with and use the TSP, you need to supply a couple more configuration values:
