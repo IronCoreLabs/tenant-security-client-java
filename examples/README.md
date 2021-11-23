@@ -7,7 +7,9 @@ This service is provided as a Docker container, so it is easy to run the proxy o
 installed. IronCore Labs hosts the Docker container on a publicly accessible container registry, so you can pull
 the image from there and run it locally.
 
-In addition to the Docker container, you need a configuration file that specifies how the TSP should communicate
+The TSP has a companion Docker container, the _Tenant Security Logdriver_ (LD) that runs alongside it in your environment. It is also hosted on the same publicly accessible container registry.
+
+In addition to the Docker containers, you need a configuration file that specifies how the TSP and LD should communicate
 with the IronCore Labs Configuration Broker and Data Control Platform, which work together to enable the end-to-end
 encryption that keeps all of the tenant KMS configuration information secure. To simplify the process of running
 these examples, we have created a demo vendor and tenants that you can use for the examples; all the necessary
@@ -17,16 +19,17 @@ Kubernetes secret or similar mechanism for securely loading the configuration in
 have included this configuration in the repository as a convenience. Also note that these accounts are all
 created in IronCore's staging infrastructure.
 
-The following commands will get a TSP running on your computer with the provided configuration:
+The following command will get a TSP and LD running together on your computer with the provided configuration.
+The `docker-compose` command will pull both container images, then start them up together on a subnetwork, so they can
+communicate with each other.
 
 ```bash
-docker pull gcr.io/ironcore-images/tenant-security-proxy:3.3
-docker run --env-file demo-tsp.conf -p 32804:7777 -m 512M --mount 'type=bind,src=/tmp,dst=/logdriver' gcr.io/ironcore-images/tenant-security-proxy:3.3
+docker-compose -f docker-compose.yml up
 ```
 
-This starts the TSP locally listening on port 32804.
+The TSP will be listening locally on port 32804.
 
-Once the TSP is running, you can experiment with the example Java programs. Each of the subdirectories contains
+Once the TSP and LD are running, you can experiment with the example Java programs. Each of the subdirectories contains
 a different illustrative example, with instructions to run.
 
 Each of the examples executes as an individual tenant of our demo SaaS vendor. There are six tenants defined;
