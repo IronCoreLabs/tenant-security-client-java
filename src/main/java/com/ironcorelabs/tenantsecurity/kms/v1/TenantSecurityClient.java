@@ -463,8 +463,8 @@ public final class TenantSecurityClient implements Closeable {
     }
 
     /**
-     * Re-key an EncryptedDocument to a new tenant without decrypting the document data. Decrypts the
-     * document's encrypted document key (EDEK) then re-encrypts it to the new tenant. The DEK is then discarded.
+     * Re-key an EncryptedDocument using a new KMS config without decrypting the document data. Decrypts the
+     * document's encrypted document key (EDEK) then re-encrypts it using the specified tenant's current primary KMS. The DEK is then discarded.
      * The old tenant and new tenant can be the same in order to re-key the document to the tenant's latest primary config.
      *
      * @deprecated
@@ -485,9 +485,8 @@ public final class TenantSecurityClient implements Closeable {
     }
 
     /**
-     * Re-key a document's encrypted document key (EDEK) to a new tenant. Decrypts the EDEK then re-encrypts it to the new tenant. 
-     * The DEK is then discarded. The old tenant and new tenant can be the same in order to re-key the document to the tenant's 
-     * latest primary config.
+     * Re-key a document's encrypted document key (EDEK) using a new KMS config. Decrypts the EDEK then re-encrypts it using the specified tenant's current primary KMS config.
+     * The DEK is then discarded.
      *
      * @param edek        Encrypted document key to re-key.
      * @param metadata    Metadata about the EDEK being re-keyed.
