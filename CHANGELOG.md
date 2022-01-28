@@ -1,5 +1,10 @@
 # Changelog
 
+## v4.1.0
+
+- Added `TenantSecurityClient.rekeyEdek` method
+- Deprecated `TenantSecurityClient.rekeyDocument` method
+
 ## v4.0.1
 
 - Remove javax.annotation from the shaded jar.
