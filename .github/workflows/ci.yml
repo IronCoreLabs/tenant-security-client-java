@@ -12,7 +12,7 @@ jobs:
     needs: get_refs
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
           version: 10.x
       - name: decrypt ironhide keys
