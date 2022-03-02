@@ -15,14 +15,6 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           version: 10.x
-      - name: decrypt ironhide keys
-        env:
-          CI_KEYS_KEY: ${{ secrets.CI_KEYS_KEY }}
-          CI_KEYS_IV: ${{ secrets.CI_KEYS_IV }}
-        run: |
-          mkdir -p ${HOME}/.iron
-          npm install -g @ironcorelabs/ironhide
-          openssl aes-256-cbc -K ${CI_KEYS_KEY} -iv ${CI_KEYS_IV} -in ci-keys.json.enc -out ${HOME}/.iron/keys -d
       - name: set up jdk 8
         uses: actions/setup-java@v2
         with:
@@ -54,12 +46,16 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
+      - name: Decrypt TSP integration keys
+        uses: IronCoreLabs/ironhide-actions/decrypt@v1
+        with:
+          keys: ${{ secrets.IRONHIDE_KEYS }}
+          input: tenant-security-proxy/.env.integration.iron
       - name: install zmq
         run: sudo apt update && sudo apt install -y --no-install-recommends libzmq3-dev
       - name: integration test
         run: |
           cd tenant-security-proxy
-          ironhide file:decrypt .env.integration.iron
           cargo build --release
           env $(cat .env.integration) cargo run --release &
           timeout 700 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:9000/ready)" =~ ''[01346-9][0-9][0-9]'' ]]; do sleep 5; done' || false
