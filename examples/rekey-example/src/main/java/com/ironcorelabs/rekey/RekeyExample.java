@@ -83,8 +83,17 @@ public class RekeyExample {
                             // Rekey the document to `tenant-aws` using their primary config. The
                             // metadata's name and identifying information could also be changed at
                             // this time.
-                            encrypted -> new EncryptedDocument(encrypted.getEncryptedFields(), 
-                                client.rekeyEdek(encrypted.getEdek(), metadata, NEW_TENANT_ID)));
+//                            encrypted -> new EncryptedDocument(encrypted.getEncryptedFields(), 
+//                               client.rekeyEdek(encrypted.getEdek(), metadata, NEW_TENANT_ID)));
+                            encrypted -> 
+                                client.rekeyEdek(encrypted.getEdek(), metadata, NEW_TENANT_ID)
+                                    .thenApply(
+                                        newDoc -> 
+                                            new EncryptedDocument(encrypted.getEncryptedFields(), 
+                                                                  newDoc)
+                                ));
+                                    
+                                    
 
                     //
                     // Part 3: Decrypt the encrypted record using the new tenant
