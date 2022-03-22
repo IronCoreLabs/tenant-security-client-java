@@ -79,7 +79,7 @@ jobs:
           test "${PR}" -ge 0
           echo "::set-output name=pr::${PR}"
       - name: Find Comment
-        uses: peter-evans/find-comment@v1
+        uses: peter-evans/find-comment@v2
         id: find_comment
         with:
           issue-number: ${{ steps.get_pr.outputs.pr }}
