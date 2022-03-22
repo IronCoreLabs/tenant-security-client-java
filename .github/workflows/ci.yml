@@ -118,14 +118,14 @@ jobs:
           done
       - name: Post a reaction (parsed your comment)
         if: steps.get_refs.outcome == 'success'
-        uses: peter-evans/create-or-update-comment@v1
+        uses: peter-evans/create-or-update-comment@v2
         with:
           issue-number: ${{ steps.get_pr.outputs.pr }}
           comment-id: ${{ steps.find_comment.outputs.comment-id }}
           reactions: eyes
       - name: Post a reaction (unparsed comment)
         if: steps.get_refs.outcome == 'failure'
-        uses: peter-evans/create-or-update-comment@v1
+        uses: peter-evans/create-or-update-comment@v2
         with:
           issue-number: ${{ steps.get_pr.outputs.pr }}
           comment-id: ${{ steps.find_comment.outputs.comment-id }}
