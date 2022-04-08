@@ -44,7 +44,7 @@ jobs:
             ~/.cargo/git
             target
       - name: Decrypt TSP integration keys
-        uses: IronCoreLabs/ironhide-actions/decrypt@v1
+        uses: IronCoreLabs/ironhide-actions/decrypt@v2
         with:
           keys: ${{ secrets.IRONHIDE_KEYS }}
           input: tenant-security-proxy/.env.integration.iron
