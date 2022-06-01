@@ -1,5 +1,13 @@
 # Changelog
 
+## v4.2.0
+
+- Added `KmsException` for `KmsThrottled`.
+
+### Compatibility
+
+This new error code will only be returned by TSP 4.4.1+.
+
 ## v4.1.0
 
 - Added `TenantSecurityClient.rekeyEdek` method
