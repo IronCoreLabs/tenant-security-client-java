@@ -34,7 +34,7 @@ jobs:
           repository: IronCoreLabs/tenant-security-proxy
           ref: ${{ needs.get_refs.outputs.tenant-security-proxy }}
           path: tenant-security-proxy
-          token: ${{ secrets.GitHub_PAT }}
+          token: ${{ secrets.WORKFLOW_PAT }}
       - name: cache cargo registry
         uses: actions/cache@v3
         with:
