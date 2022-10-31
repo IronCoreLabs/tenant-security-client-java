@@ -18,9 +18,9 @@ import org.testng.annotations.Test;
 
 @Test(groups = { "dev-integration" })
 public class DevIntegrationTest {
-    private String GCP_TENANT_ID = "INTEGRATION-TEST-DEV1-GCP";
-    private String AWS_TENANT_ID = "INTEGRATION-TEST-DEV1-AWS";
-    private String AZURE_TENANT_ID = "INTEGRATION-TEST-DEV1-AZURE";
+    private String GCP_TENANT_ID = "INTEGRATION-TEST-GCP";
+    private String AWS_TENANT_ID = "INTEGRATION-TEST-AWS";
+    private String AZURE_TENANT_ID = "INTEGRATION-TEST-AZURE";
     private String INTEGRATION_API_KEY = System.getenv("API_KEY");
 
     @Test(expectedExceptions = java.net.MalformedURLException.class)
@@ -414,8 +414,9 @@ public class DevIntegrationTest {
     public void leasedDataTest() throws Exception {
         DocumentMetadata metadata = getRoundtripMetadata(this.GCP_TENANT_ID);
 
-        String leasedDocumentEdek = "Cr8BCjA7nnuAiXpD0Jkjc6mOBgcSyxcjFYX813WQhhYg0oKnsDJTmeyAaLs3t9pzkR6mU9cQ7AMY3gQiDCEN6aQFtglBZ0DX7yp3CnUKcAokABW+8Gfu/FSC8WQTqxw528aQXwrpvY0MjlHurZJ6yHx9S/2zEkgAs0w57oTuIHzVmauLGDi/S9zCQH20dezcc/jtw/nqCDnAtAPSB9m17YvGOVpN5xO8960C86NA4AJCoVJ291YW9OkIKto48/YQ7AM=";
-        String leasedDocumentBytes = "A0lST04AOwocjKi8E65AAxBCqUjeSqQDc7veZVQehempBfsABBobChlJTlRFR1JBVElPTi1URVNULURFVjEtR0NQbZ+1yhYOoCNdtV+VVTMTUfAQm1FdqtGyjqeE7iYxfW9TKwTc2C0=";
+        String leasedDocumentEdek = "CsABCjCNEF2vxOsHAjFQservCufgFU7sdqrvy972uZvxB/FAyrH0nQrMIN3Cwvp4NdaSjBYQlgQY8QQiDMdgyc4wAvAH2y51JSp4CnYKcQokAMuLEZWEVofFnA3hHrgCzUXrGjDAb9wet28VKw4Nakn35ZnSEkkAL8l2cSCzG+n8LnpU0eW9wTFYgPnIckzDDcbnEgRj6dmz6IpCk2WzsX7dlvzRWi0UXvA87ukYAgYkrmmCUse2wWIYbzNruP6uEJYE";
+
+        String leasedDocumentBytes = "A0lST04ANgocVzWAgU8k159ETeoE+b9F0wkZFjn6psKQhQ8dWhoWChRJTlRFR1JBVElPTi1URVNULUdDUNRZlwKbH7ZHtnQ2hdiGdNBJhqIC0p+hqMnzRO7AymqrCo8ohE8bIscVfTFk";
 
         Map<String, byte[]> documentMap = new HashMap<>();
         documentMap.put("doc", Base64.getDecoder().decode(leasedDocumentBytes));
@@ -430,7 +431,7 @@ public class DevIntegrationTest {
         });
 
         Map<String, byte[]> decryptedValuesMap = roundtrip.get().getDecryptedFields();
-        assertEqualBytes(decryptedValuesMap.get("doc"), "new daters".getBytes("UTF-8"));
+        assertEqualBytes(decryptedValuesMap.get("doc"), "I'm Gumby dammit".getBytes("UTF-8"));
     }
 
     public void logSecurityEvent() throws Exception {
