@@ -168,7 +168,7 @@ public class CryptoUtilsTest {
         assertEquals(decryptedBytes, plaintext);
     }
 
-    @Test(expectedExceptions = java.util.concurrent.ExecutionException.class, expectedExceptionsMessageRegExp = ".*Tag mismatch!.*")
+    @Test(expectedExceptions = java.util.concurrent.ExecutionException.class, expectedExceptionsMessageRegExp = ".*Tag mismatch.*")
     public void streamingEncryptWithNormalDecryptFailureWithBadTag() throws Exception {
         int length = 2000;
         byte[] documentKey = new byte[32];
