@@ -13,11 +13,11 @@ import java.util.Objects;
 public class DocumentMetadata {
     private final String tenantId;
     private final String requestingUserOrServiceId;
-    private final String requestId;
     private final String dataLabel;
+    private final Map<String, String> otherData;
+    private final String requestId;
     private final String sourceIp;
     private final String objectId;
-    private final Map<String, String> otherData;
 
     /**
      * Constructor for DocumentMetadata class which contains arbitrary key/value pairs and a unique
@@ -46,11 +46,11 @@ public class DocumentMetadata {
         }
         this.tenantId = tenantId;
         this.requestingUserOrServiceId = requestingUserOrServiceId;
-        this.requestId = requestId;
         this.dataLabel = dataLabel;
+        this.otherData = otherData == null ? new HashMap<String, String>() : otherData;
+        this.requestId = requestId;
         this.sourceIp = sourceIp;
         this.objectId = objectId;
-        this.otherData = otherData == null ? new HashMap<String, String>() : otherData;
     }
 
     /**
