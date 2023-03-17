@@ -77,7 +77,7 @@ jobs:
           echo "PR is ${PR}"
           # Sanity check that ${PR} is a number.
           test "${PR}" -ge 0
-          echo "::set-output name=pr::${PR}"
+          echo "pr=${PR}" >> "$GITHUB_OUTPUT"
       - name: Find Comment
         uses: peter-evans/find-comment@v2
         id: find_comment
@@ -114,7 +114,7 @@ jobs:
               REF="main"
             fi
             echo "${REPO}: ${REF}"
-            echo "::set-output name=${REPO}::${REF}"
+            echo "${REPO}=${REF}" >> "$GITHUB_OUTPUT"
           done
       - name: Post a reaction (parsed your comment)
         if: steps.get_refs.outcome == 'success'
