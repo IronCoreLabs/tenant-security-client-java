@@ -3,7 +3,7 @@ name: Tenant Security Client Java CI
 on:
   push:
     branches:
-      - main
+    - main
   pull_request:
 
 jobs:
@@ -11,52 +11,45 @@ jobs:
     runs-on: ubuntu-20.04
     needs: get_refs
     steps:
-      - uses: actions/checkout@v3
-      - name: set up jdk 8
-        uses: actions/setup-java@v3
-        with:
-          java-version: 8
-          distribution: adopt
-      - name: cache mvn repository
-        uses: actions/cache@v3
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-      - name: test
-        run: test-suites/unitTest.sh
-      - name: local install
-        run: mvn install -DskipTests=true -Dgpg.skip=true -Dmaven.javadoc.skip=true -B -V
-      - name: clone the tsp
-        uses: actions/checkout@v3
-        with:
-          repository: IronCoreLabs/tenant-security-proxy
-          ref: ${{ needs.get_refs.outputs.tenant-security-proxy }}
-          path: tenant-security-proxy
-          token: ${{ secrets.WORKFLOW_PAT }}
-      - name: cache cargo registry
-        uses: actions/cache@v3
-        with:
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-      - name: Decrypt TSP integration keys
-        uses: IronCoreLabs/ironhide-actions/decrypt@v2
-        with:
-          keys: ${{ secrets.IRONHIDE_KEYS }}
-          input: tenant-security-proxy/.env.integration.iron
-      - name: install zmq
-        run: sudo apt update && sudo apt install -y --no-install-recommends libzmq3-dev
-      - name: integration test
-        run: |
-          cd tenant-security-proxy
-          cargo build --release
-          env $(cat .env.integration) cargo run --release &
-          timeout 700 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:9000/ready)" =~ ''[01346-9][0-9][0-9]'' ]]; do sleep 5; done' || false
-          env $(cat .env.integration) ../test-suites/integrationTest.sh
+    - uses: actions/checkout@v3
+    - name: set up jdk 8
+      uses: actions/setup-java@v3
+      with:
+        java-version: 8
+        distribution: adopt
+    - name: test
+      run: test-suites/unitTest.sh
+    - name: local install
+      run: mvn install -DskipTests=true -Dgpg.skip=true -Dmaven.javadoc.skip=true -B -V
+    - name: clone the tsp
+      uses: actions/checkout@v3
+      with:
+        repository: IronCoreLabs/tenant-security-proxy
+        ref: ${{ needs.get_refs.outputs.tenant-security-proxy }}
+        path: tenant-security-proxy
+        token: ${{ secrets.WORKFLOW_PAT }}
+    - name: cache cargo registry
+      uses: actions/cache@v3
+      with:
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+    - name: Decrypt TSP integration keys
+      uses: IronCoreLabs/ironhide-actions/decrypt@v2
+      with:
+        keys: ${{ secrets.IRONHIDE_KEYS }}
+        input: tenant-security-proxy/.env.integration.iron
+    - name: install zmq
+      run: sudo apt update && sudo apt install -y --no-install-recommends libzmq3-dev
+    - name: integration test
+      run: |
+        cd tenant-security-proxy
+        cargo build --release
+        env $(cat .env.integration) cargo run --release &
+        timeout 700 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:9000/ready)" =~ ''[01346-9][0-9][0-9]'' ]]; do sleep 5; done' || false
+        env $(cat .env.integration) ../test-suites/integrationTest.sh
 
   # Look for a comment telling us what refs to use from the other repos we depend on.
   # To add additional repositories, add them to "outputs" and to the "Setup list of required repos" step.
@@ -67,91 +60,90 @@ jobs:
     outputs:
       tenant-security-proxy: ${{ steps.get_refs.outputs.tenant-security-proxy }}
     steps:
-      - name: Setup list of required repos
-        run: |
-          echo tenant-security-proxy >> repos
-      - name: Get PR number
-        id: get_pr
-        run: |
-          PR=$(jq -r .pull_request.number "${GITHUB_EVENT_PATH}")
-          echo "PR is ${PR}"
-          # Sanity check that ${PR} is a number.
-          test "${PR}" -ge 0
-          echo "pr=${PR}" >> "$GITHUB_OUTPUT"
-      - name: Find Comment
-        uses: peter-evans/find-comment@v2
-        id: find_comment
-        with:
-          issue-number: ${{ steps.get_pr.outputs.pr }}
-          body-includes: CI_branches
-      - name: Parse refs
-        if: steps.find_comment.outputs.comment-id != 0
-        id: get_refs
-        env:
-          COMMENT_BODY: ${{ steps.find_comment.outputs.comment-body }}
-        run: |
-          # Extract the JSON part of the comment into a file.
-          echo "${COMMENT_BODY}" | tr '\n' ' ' | sed -e 's,^[^{]*,,' -e 's,[^}]*$,,' > refs.json
-          echo "Got JSON:"
-          cat refs.json && echo ""
+    - name: Setup list of required repos
+      run: |
+        echo tenant-security-proxy >> repos
+    - name: Get PR number
+      id: get_pr
+      run: |
+        PR=$(jq -r .pull_request.number "${GITHUB_EVENT_PATH}")
+        echo "PR is ${PR}"
+        # Sanity check that ${PR} is a number.
+        test "${PR}" -ge 0
+        echo "pr=${PR}" >> "$GITHUB_OUTPUT"
+    - name: Find Comment
+      uses: peter-evans/find-comment@v2
+      id: find_comment
+      with:
+        issue-number: ${{ steps.get_pr.outputs.pr }}
+        body-includes: CI_branches
+    - name: Parse refs
+      if: steps.find_comment.outputs.comment-id != 0
+      id: get_refs
+      env:
+        COMMENT_BODY: ${{ steps.find_comment.outputs.comment-body }}
+      run: |
+        # Extract the JSON part of the comment into a file.
+        echo "${COMMENT_BODY}" | tr '\n' ' ' | sed -e 's,^[^{]*,,' -e 's,[^}]*$,,' > refs.json
+        echo "Got JSON:"
+        cat refs.json && echo ""
 
-          # Sanity check that all repos in the JSON comment are ones that we know about.
-          jq -r 'keys[]' < refs.json > extra_repos
-          for REPO in $(cat repos) ; do
-            grep -v "^${REPO}\$" < extra_repos > temp || true
-            mv temp extra_repos
-          done
-          if [ -s extra_repos ] ; then
-            echo "Unrecognized repositories:"
-            cat extra_repos
-            exit 1
+        # Sanity check that all repos in the JSON comment are ones that we know about.
+        jq -r 'keys[]' < refs.json > extra_repos
+        for REPO in $(cat repos) ; do
+          grep -v "^${REPO}\$" < extra_repos > temp || true
+          mv temp extra_repos
+        done
+        if [ -s extra_repos ] ; then
+          echo "Unrecognized repositories:"
+          cat extra_repos
+          exit 1
+        fi
+
+        # Emit an output variable for each repo.
+        for REPO in $(cat repos) ; do
+          REF=$(jq -r '.["'"${REPO}"'"]' < refs.json)
+          if [ "${REF}" = "null" ] ; then
+            REF="main"
           fi
-
-          # Emit an output variable for each repo.
-          for REPO in $(cat repos) ; do
-            REF=$(jq -r '.["'"${REPO}"'"]' < refs.json)
-            if [ "${REF}" = "null" ] ; then
-              REF="main"
-            fi
-            echo "${REPO}: ${REF}"
-            echo "${REPO}=${REF}" >> "$GITHUB_OUTPUT"
-          done
-      - name: Post a reaction (parsed your comment)
-        if: steps.get_refs.outcome == 'success'
-        uses: peter-evans/create-or-update-comment@v2
-        with:
-          issue-number: ${{ steps.get_pr.outputs.pr }}
-          comment-id: ${{ steps.find_comment.outputs.comment-id }}
-          reactions: eyes
-      - name: Post a reaction (unparsed comment)
-        if: steps.get_refs.outcome == 'failure'
-        uses: peter-evans/create-or-update-comment@v2
-        with:
-          issue-number: ${{ steps.get_pr.outputs.pr }}
-          comment-id: ${{ steps.find_comment.outputs.comment-id }}
-          reactions: confused
+          echo "${REPO}: ${REF}"
+          echo "${REPO}=${REF}" >> "$GITHUB_OUTPUT"
+        done
+    - name: Post a reaction (parsed your comment)
+      if: steps.get_refs.outcome == 'success'
+      uses: peter-evans/create-or-update-comment@v2
+      with:
+        issue-number: ${{ steps.get_pr.outputs.pr }}
+        comment-id: ${{ steps.find_comment.outputs.comment-id }}
+        reactions: eyes
+    - name: Post a reaction (unparsed comment)
+      if: steps.get_refs.outcome == 'failure'
+      uses: peter-evans/create-or-update-comment@v2
+      with:
+        issue-number: ${{ steps.get_pr.outputs.pr }}
+        comment-id: ${{ steps.find_comment.outputs.comment-id }}
+        reactions: confused
 
   build_examples:
     runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
       matrix:
-        example-dir:
-          [large-documents, logging-example, rekey-example, simple-roundtrip]
+        example-dir: [large-documents, logging-example, rekey-example, simple-roundtrip]
     steps:
-      - uses: actions/checkout@v3
-      - name: set up jdk 8
-        uses: actions/setup-java@v3
-        with:
-          java-version: 8
-          distribution: adopt
-      - name: cache mvn repository
-        uses: actions/cache@v3
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-      - name: Build example
-        run: mvn compile
-        working-directory: ./examples/${{ matrix.example-dir }}
+    - uses: actions/checkout@v3
+    - name: set up jdk 8
+      uses: actions/setup-java@v3
+      with:
+        java-version: 8
+        distribution: adopt
+    - name: cache mvn repository
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+    - name: Build example
+      run: mvn compile
+      working-directory: ./examples/${{ matrix.example-dir }}
