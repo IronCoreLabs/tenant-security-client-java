@@ -15,7 +15,7 @@ jobs:
     - name: set up jdk 8
       uses: actions/setup-java@v3
       with:
-        java-version: 8
+        java-version: 11
         distribution: adopt
     - name: test
       run: test-suites/unitTest.sh
