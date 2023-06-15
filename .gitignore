@@ -12,3 +12,4 @@ dependency-reduced-pom.xml
 **/.settings
 pom.xml.asc
 **/.factorypath
+.direnv/

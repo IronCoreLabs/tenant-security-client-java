@@ -104,6 +104,9 @@
         <groupId>com.github.os72</groupId>
         <artifactId>protoc-jar-maven-plugin</artifactId>
         <version>3.11.4</version>
+        <configuration>
+          <protocVersion>3.20.0</protocVersion>
+        </configuration>
         <executions>
           <execution>
             <phase>generate-sources</phase>
