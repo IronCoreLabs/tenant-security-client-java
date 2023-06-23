@@ -1,5 +1,11 @@
 # Contributing to Tenant Security Client Java Library
 
+## Formatting
+
+We format the Java files in this repo using the `formatter-config.xml` Eclipse configuration for google-java-format. You can run formatting with `mvn formatter:format` and verify it with `mvn formatter:validate`. CI will ensure that all files are formatted properly before passing.
+
+If you are using the `redhat.java` extension for VSCode, you can set `"java.format.settings.url": "{PATH-TO-TSC-JAVA}/formatter-config.xml"` for this workspace to ensure consistent formatting.
+
 ## Running a Tenant Security Proxy
 
 See our [TSP documentation](https://ironcorelabs.com/docs/customer-managed-keys/tenant-security-proxy/overview) for information about how to get your own TSP running to test against. The tests will expect the TSP to be running at `http://localhost:7777`.
