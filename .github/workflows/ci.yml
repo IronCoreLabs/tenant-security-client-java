@@ -8,7 +8,7 @@ on:
 
 jobs:
   build_and_test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: get_refs
     steps:
       - uses: actions/checkout@v3
@@ -63,7 +63,7 @@ jobs:
   get_refs:
     # Only run if it's on a PR.
     if: github.base_ref != ''
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     outputs:
       tenant-security-proxy: ${{ steps.get_refs.outputs.tenant-security-proxy }}
     steps:
@@ -132,7 +132,7 @@ jobs:
           reactions: confused
 
   build_examples:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -155,3 +155,12 @@ jobs:
       - name: Build example
         run: mvn compile
         working-directory: ./examples/${{ matrix.example-dir }}
+
+  formatting:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: axel-op/googlejavaformat-action@v3
+        with:
+          args: "--set-exit-if-changed"
+          files: "src/**/**.java"

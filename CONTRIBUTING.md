@@ -1,5 +1,9 @@
 # Contributing to Tenant Security Client Java Library
 
+## Formatting
+
+We format this repo according to the `google-java-format`. All file can be formatted by running `mvn process-sources`, and CI will verify that all files are properly formatted.
+
 ## Running a Tenant Security Proxy
 
 See our [TSP documentation](https://ironcorelabs.com/docs/customer-managed-keys/tenant-security-proxy/overview) for information about how to get your own TSP running to test against. The tests will expect the TSP to be running at `http://localhost:7777`.
