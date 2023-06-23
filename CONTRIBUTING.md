@@ -2,7 +2,7 @@
 
 ## Formatting
 
-We format this repo according to the `google-java-format`. All file can be formatted by running `mvn process-sources`, and CI will verify that all files are properly formatted.
+We format this repo according to the `google-java-format`. All files can be formatted by running `mvn process-sources`, and CI will verify that all files are properly formatted.
 
 ## Running a Tenant Security Proxy
 
