@@ -10,7 +10,7 @@ import com.google.api.client.util.Key;
  */
 public class BatchDocumentKeys<T> {
   @Key
-    private Map<String, T> keys;
+  private Map<String, T> keys;
 
   @Key
   private Map<String, ErrorResponse> failures;
