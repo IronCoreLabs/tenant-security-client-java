@@ -8,11 +8,9 @@ import java.util.Map;
  * includes a map of failures if any problems occurred when performing the batch wrap operation.
  */
 public class BatchDocumentKeys<T> {
-  @Key
-  private Map<String, T> keys;
+  @Key private Map<String, T> keys;
 
-  @Key
-  private Map<String, ErrorResponse> failures;
+  @Key private Map<String, ErrorResponse> failures;
 
   public Map<String, T> getKeys() {
     return this.keys;
