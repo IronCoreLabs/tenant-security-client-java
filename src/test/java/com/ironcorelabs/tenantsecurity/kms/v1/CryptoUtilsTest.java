@@ -148,8 +148,7 @@ public class CryptoUtilsTest {
         hexStringToByteArray("3939393939393939393939393939393939393939393939393939393939393939");
     byte[] result = CryptoUtils.decryptDocument(encryptedDocument, dek).get();
     String resultString = new String(result); // These bytes were utf-8 bytes so we just load them
-                                              // into a string for
-                                              // our assertion.
+                                              // into a string for our assertion.
     assertEquals(resultString, "I have a fever and the only cure is nine nine nine nine...");
   }
 
@@ -193,8 +192,7 @@ public class CryptoUtilsTest {
     byte[] messedUpEncyptedBytes = Arrays.copyOf(encryptedBytes, length);
     messedUpEncyptedBytes[length - 1] = 0;
     messedUpEncyptedBytes[length - 2] = 0; // making the last 2 bytes 0 means the tag should be
-                                           // messed up so the
-                                           // decrypt should fail.
+                                           // messed up so the decrypt should fail.
     CryptoUtils.decryptDocument(messedUpEncyptedBytes, documentKey).get();
   }
 
