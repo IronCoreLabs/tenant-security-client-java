@@ -21,6 +21,7 @@ import com.google.api.client.http.json.JsonHttpContent;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.JsonObjectParser;
 import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.client.util.Value;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TspServiceException;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.EventMetadata;
@@ -49,6 +50,7 @@ final class TenantSecurityRequest implements Closeable {
   private final GenericUrl batchUnwrapEndpoint;
   private final GenericUrl rekeyEndpoint;
   private final GenericUrl securityEventEndpoint;
+  private final GenericUrl deriveKeyEndpoint;
   private final HttpRequestFactory requestFactory;
   private final int timeout;
 
@@ -68,6 +70,7 @@ final class TenantSecurityRequest implements Closeable {
     this.batchUnwrapEndpoint = new GenericUrl(tspApiPrefix + "document/batch-unwrap");
     this.rekeyEndpoint = new GenericUrl(tspApiPrefix + "document/rekey");
     this.securityEventEndpoint = new GenericUrl(tspApiPrefix + "event/security-event");
+    this.deriveKeyEndpoint = new GenericUrl(tspApiPrefix + "key/derive-with-secret-path");
 
     this.webRequestExecutor = Executors.newFixedThreadPool(requestThreadSize);
     this.requestFactory = provideHttpRequestFactory(requestThreadSize, requestThreadSize);
@@ -107,6 +110,7 @@ final class TenantSecurityRequest implements Closeable {
       // was wrong, so hardcode that result here
       return new TspServiceException(TenantSecurityErrorCodes.UNAUTHORIZED_REQUEST,
           resp.getStatusCode());
+
     }
     try {
       ErrorResponse errorResponse = resp.parseAs(ErrorResponse.class);
@@ -117,7 +121,25 @@ final class TenantSecurityRequest implements Closeable {
     return new TspServiceException(TenantSecurityErrorCodes.UNKNOWN_ERROR, resp.getStatusCode());
   }
 
+  enum DerivationType {
+    @Value("argon2")
+    Argon2,
 
+    @Value("sha256")
+    Sha256,
+
+    @Value("sha512")
+    Sha512
+  }
+
+
+  enum SecretType {
+    @Value("search")
+    CloakedSearch,
+
+    @Value("deterministic")
+    DeterministicEncryption,
+  }
 
   /**
    * Generic method for making a request to the provided URL with the provided post data. Returns an
@@ -232,6 +254,23 @@ final class TenantSecurityRequest implements Closeable {
         "Unable to make request to Tenant Security Proxy security event endpoint. Endpoint requested: %s",
         this.securityEventEndpoint);
     return this.makeRequestAndParseFailure(this.securityEventEndpoint, postData, Void.class, error);
+  }
+
+  /**
+   * Request derive key endpoint.
+   */
+  CompletableFuture<DeriveKeyResponse> deriveKey(DocumentMetadata metadata,
+      Map<String, String[]> paths) {
+    Map<String, Object> postData = metadata.getAsPostData();
+    postData.put("derivationType", DerivationType.Sha512);
+    postData.put("secretType", SecretType.DeterministicEncryption);
+    postData.put("paths", paths);
+
+    String error = String.format(
+        "Unable to make request to Tenant Security Proxy derive key endpoint. Endpoint requested: %s",
+        this.deriveKeyEndpoint);
+    return this.makeRequestAndParseFailure(this.deriveKeyEndpoint, postData,
+        DeriveKeyResponse.class, error);
   }
 
   private Map<String, Object> combinePostableEventAndMetadata(SecurityEvent event,

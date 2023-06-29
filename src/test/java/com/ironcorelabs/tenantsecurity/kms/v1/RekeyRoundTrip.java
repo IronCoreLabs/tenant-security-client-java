@@ -50,6 +50,7 @@ public class RekeyRoundTrip {
         new DocumentMetadata(tenant_id, "integrationTest", "sample", customFields, "customRayID");
     Map<String, byte[]> documentMap = getRoundtripDataToEncrypt();
 
+    @SuppressWarnings("deprecation")
     CompletableFuture<PlaintextDocument> roundtrip =
         TenantSecurityClient.create(tsp_address + tsp_port, api_key).thenCompose(client -> {
           try {

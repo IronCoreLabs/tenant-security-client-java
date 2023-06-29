@@ -33,6 +33,8 @@ public final class TenantSecurityClient implements Closeable {
 
   private TenantSecurityRequest encryptionService;
 
+  private DeterministicTenantSecurityClient deterministicClient;
+
   /**
    * Default size of web request thread pool. Value value is 25.
    */
@@ -145,9 +147,10 @@ public final class TenantSecurityClient implements Closeable {
     }
 
     this.encryptionExecutor = Executors.newFixedThreadPool(aesThreadSize);
-
     this.encryptionService =
         new TenantSecurityRequest(tspDomain, apiKey, requestThreadSize, timeout);
+    this.deterministicClient = new DeterministicTenantSecurityClient(tspDomain, apiKey,
+        requestThreadSize, aesThreadSize, timeout);
 
     // Update the crypto policy to allow us to use 256 bit AES keys
     Security.setProperty("crypto.policy", "unlimited");
@@ -157,6 +160,10 @@ public final class TenantSecurityClient implements Closeable {
   public void close() throws IOException {
     this.encryptionService.close();
     this.encryptionExecutor.shutdown();
+  }
+
+  public DeterministicTenantSecurityClient getDeterministicClient() {
+    return deterministicClient;
   }
 
   /**

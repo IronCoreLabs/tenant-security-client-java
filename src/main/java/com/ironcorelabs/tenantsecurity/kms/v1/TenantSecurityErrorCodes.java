@@ -32,7 +32,17 @@ public enum TenantSecurityErrorCodes {
   KMS_THROTTLED(209, "Request to KMS failed because KMS throttled the Tenant Security Proxy."),
 
   // map to SecurityEventException
-  SECURITY_EVENT_REJECTED(301, "Tenant Security Proxy could not accept the security event");
+  SECURITY_EVENT_REJECTED(301, "Tenant Security Proxy could not accept the security event"),
+
+  // map to TscException
+  INVALID_ENCRYPTED_DOCUMENT(900, "Invalid encrypted document provided."),
+  DOCUMENT_ENCRYPT_FAILED(901, "Failed document encryption."),
+  DOCUMENT_DECRYPT_FAILED(902, "Failed document decryption."),
+  DETERMINISTIC_FIELD_ENCRYPT_FAILED(903, "Failed deterministic field encryption."),
+  DETERMINISTIC_FIELD_DECRYPT_FAILED(904, "Failed deterministic field decryption."),
+  DETERMINISTIC_HEADER_ERROR(905, "Failed to parse deterministic field header."),
+  DETERMINISTIC_ROTATE_FAILED(906, "Failed deterministic field rotation."),
+  DETERMINISTIC_GENERATE_SEARCH_TERMS_FAILED(907, "Failed to generate deterministic search terms.");
 
   // @formatter:on
 
@@ -54,8 +64,7 @@ public enum TenantSecurityErrorCodes {
 
   static {
     // Create a map from the numerical code value to the ErrorCode instance so we can perform
-    // lookups when we
-    // get a numerical value back from the Tenant Security Proxy API.
+    // lookups when we get a numerical value back from the Tenant Security Proxy API.
     for (TenantSecurityErrorCodes errorCodes : TenantSecurityErrorCodes.values()) {
       intCodeToError.put(errorCodes.code, errorCodes);
     }

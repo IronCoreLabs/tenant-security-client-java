@@ -68,7 +68,7 @@ public class LocalBatch {
         client.encryptBatch(getBatchMap(batchSize), context).thenCompose(encryptedResults -> {
           System.out.println("Run 1");
           logFailures(encryptedResults.getFailures());
-          return client.decryptBatch(encryptedResults.getDocuments(), context);
+          return client.decryptBatch(encryptedResults.getSuccesses(), context);
         });
 
     for (int i = 2; i <= batchRepetitions; i++) {
@@ -78,7 +78,7 @@ public class LocalBatch {
               .thenCompose(encryptedResults -> {
                 System.out.println(run);
                 logFailures(encryptedResults.getFailures());
-                return client.decryptBatch(encryptedResults.getDocuments(), context);
+                return client.decryptBatch(encryptedResults.getSuccesses(), context);
               });
     }
 

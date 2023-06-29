@@ -10,6 +10,10 @@ import java.util.Objects;
  * classification, as well as optional fields for other arbitrary key/value pairs and a request ID
  * to send to the Tenant Security Proxy.
  */
+// TODO: is it worth making another one of these (exact same) called FieldMetadata for
+// deterministic functions?
+// In TSC-nodejs we just use a type alias, but we don't have that here.
+// I could do extendy stuff to avoid code duplication.
 public class DocumentMetadata {
   private final String tenantId;
   private final String requestingUserOrServiceId;

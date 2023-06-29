@@ -7,7 +7,7 @@ import com.ironcorelabs.tenantsecurity.kms.v1.TenantSecurityErrorCodes;
  * Proxy Docker container. Exposes error codes to better communicate the type of error that occurred
  * when trying to wrap or unwrap a key from the tenants KMS.
  *
- * This is intended to be a superclass, but not to be constructed directely
+ * This is intended to be a superclass, but not to be constructed directly
  */
 public class TenantSecurityException extends Exception {
   // ID for serialization. Should be incremented whenever we make
