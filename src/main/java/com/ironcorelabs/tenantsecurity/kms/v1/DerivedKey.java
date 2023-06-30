@@ -3,7 +3,7 @@ package com.ironcorelabs.tenantsecurity.kms.v1;
 import java.util.Base64;
 import com.google.api.client.util.Key;
 
-public class DerivedKey {
+public final class DerivedKey {
   @Key
   private String derivedKey;
   @Key

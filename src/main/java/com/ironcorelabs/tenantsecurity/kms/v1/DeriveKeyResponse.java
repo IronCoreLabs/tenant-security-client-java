@@ -5,7 +5,7 @@ import java.util.concurrent.CompletableFuture;
 import com.google.api.client.util.Key;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TspServiceException;
 
-public class DeriveKeyResponse {
+public final class DeriveKeyResponse {
   @Key
   private boolean hasPrimaryConfig;
   @Key

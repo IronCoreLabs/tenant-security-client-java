@@ -98,7 +98,7 @@ class DeterministicCryptoUtils {
           }
           if (key == null) {
             throw new TscException(TenantSecurityErrorCodes.DETERMINISTIC_FIELD_DECRYPT_FAILED,
-                "Failed deterministic decryption.");
+                "Tenant secret not found.");
           }
           return key;
         }).thenCompose(key -> decryptBytes(parts.getEncryptedBytes(), key.getDerivedKeyBytes())))
@@ -156,7 +156,7 @@ class DeterministicCryptoUtils {
   static CompletableFuture<Boolean> checkRotationFieldNoOp(
       DeterministicEncryptedField encryptedField, DerivedKey[] derivedKeys) {
     return decomposeField(encryptedField.getEncryptedField()).thenCompose(parts -> {
-      long currentKeyId = 0;
+      long currentKeyId = 0; // 0 isn't a possible ID
       long previousKeyId = 0;
       for (DerivedKey derivedKey : derivedKeys) {
         if (derivedKey.isCurrent()) {
