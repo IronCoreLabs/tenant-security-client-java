@@ -20,7 +20,7 @@ public final class BatchResult<T> {
 
   /**
    * Get the Map from ID to successfully encrypted or decrypted data.
-   * 
+   *
    * @deprecated Use getSuccesses() instead
    */
   public ConcurrentMap<String, T> getDocuments() {
@@ -43,7 +43,7 @@ public final class BatchResult<T> {
 
   /**
    * Returns whether the batch result had any successful encrypted/decrypted data.
-   * 
+   *
    * @deprecated Use hasSuccesses() instead
    */
   public boolean hasDocuments() {

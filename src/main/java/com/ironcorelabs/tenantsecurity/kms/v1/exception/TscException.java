@@ -2,6 +2,9 @@ package com.ironcorelabs.tenantsecurity.kms.v1.exception;
 
 import com.ironcorelabs.tenantsecurity.kms.v1.TenantSecurityErrorCodes;
 
+/**
+ * Errors originating from internal TSC operations.
+ */
 public class TscException extends TenantSecurityException {
 
   // ID for serialization. Should be incremented whenever we make
@@ -11,73 +14,34 @@ public class TscException extends TenantSecurityException {
   private static final long serialVersionUID = 2L;
 
   /**
-   * Create a new TscException with the provided error code and HTTP status code.
+   * Create a new TscException with the provided error code and cause.
    *
-   * @param errorCode TSP generated code corresponding with this error.
-   * @param httpResponseCode The HTTP response code returned from the Tenant Security Proxy for this
-   *        error.
-   * @param errorMessage The readable error message returned from the Tenant Security Proxy for this
-   *        error.
+   * @param errorCode Error code corresponding with this error.
+   * @param errorMessage The readable error message.
    * @param cause The Throwable that caused this one.
    */
-  public TscException(TenantSecurityErrorCodes errorCode, int httpResponseCode, String errorMessage,
-      Throwable cause) {
-    super(errorCode, httpResponseCode, errorMessage, cause);
+  public TscException(TenantSecurityErrorCodes errorCode, String errorMessage, Throwable cause) {
+    super(errorCode, 0, errorMessage, cause);
   }
 
   /**
-   * Create a new TscException with the provided error code and HTTP status code.
+   * Create a new TscException with the provided error code.
    *
-   * @param errorCode TSP generated code corresponding with this error.
-   * @param httpResponseCode The HTTP response code returned from the Tenant Security Proxy for this
-   *        error.
-   * @param errorMessage The readable error message returned from the Tenant Security Proxy for this
-   *        error.
+   * @param errorCode Error code corresponding with this error.
+   * @param errorMessage The readable error message.
    */
-  public TscException(TenantSecurityErrorCodes errorCode, int httpResponseCode,
-      String errorMessage) {
-    this(errorCode, httpResponseCode, errorMessage, null);
+  public TscException(TenantSecurityErrorCodes errorCode, String errorMessage) {
+    this(errorCode, errorMessage, null);
   }
 
-  /**
-   * Create a new TscException with the provided error code and HTTP status code.
-   *
-   * @param errorCode TSP generated code corresponding with this error.
-   * @param httpResponseCode The HTTP response code returned from the Tenant Security Proxy for this
-   *        error.
-   * @param cause The Throwable that caused this one.
-   */
-  public TscException(TenantSecurityErrorCodes errorCode, int httpResponseCode, Throwable cause) {
-    this(errorCode, httpResponseCode, errorCode.getMessage(), cause);
-  }
 
   /**
-   * Create a new TscException with the provided error code and HTTP status code.
+   * Create a new TscException with the provided cause.
    *
-   * @param errorCode TSP generated code corresponding with this error.
-   * @param httpResponseCode The HTTP response code returned from the Tenant Security Proxy for this
-   *        error.
-   */
-  public TscException(TenantSecurityErrorCodes errorCode, int httpResponseCode) {
-    this(errorCode, httpResponseCode, errorCode.getMessage(), null);
-  }
-
-  /**
-   * Create a new TscException when the request to the API couldn't be made.
-   *
-   * @param errorCode TSP generated code corresponding with this error.
+   * @param errorCode Error code corresponding with this error.
    * @param cause The Throwable that caused this one.
    */
   public TscException(TenantSecurityErrorCodes errorCode, Throwable cause) {
-    this(errorCode, 0, errorCode.getMessage(), cause);
-  }
-
-  /**
-   * Create a new TscException when the request to the API couldn't be made.
-   *
-   * @param errorCode TSP generated code corresponding with this error.
-   */
-  public TscException(TenantSecurityErrorCodes errorCode) {
-    this(errorCode, 0);
+    this(errorCode, errorCode.getMessage(), cause);
   }
 }

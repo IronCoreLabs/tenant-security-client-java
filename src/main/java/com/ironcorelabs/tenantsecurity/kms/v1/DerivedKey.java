@@ -15,13 +15,13 @@ public class DerivedKey {
   public DerivedKey() {}
 
   // Needed for testing
-  protected DerivedKey(String derivedKey, long tenantSecretId, boolean current) {
+  DerivedKey(String derivedKey, long tenantSecretId, boolean current) {
     this.derivedKey = derivedKey;
     this.tenantSecretId = tenantSecretId;
     this.current = current;
   }
 
-  public byte[] getDerivedKeyBytes() {
+  byte[] getDerivedKeyBytes() {
     try {
       return Base64.getDecoder().decode(this.derivedKey);
     } catch (IllegalArgumentException e) {
@@ -30,11 +30,11 @@ public class DerivedKey {
     }
   }
 
-  public long getTenantSecretId() {
+  long getTenantSecretId() {
     return tenantSecretId;
   }
 
-  public boolean isCurrent() {
+  boolean isCurrent() {
     return current;
   }
 }

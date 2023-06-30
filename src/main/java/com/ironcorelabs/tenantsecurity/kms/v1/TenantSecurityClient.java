@@ -162,6 +162,10 @@ public final class TenantSecurityClient implements Closeable {
     this.encryptionExecutor.shutdown();
   }
 
+  /**
+   * Get a DeterministicTenantSecurityClient to deterministically encrypt and decrypt fields. The
+   * deterministic client inherits the configuration of this client.
+   */
   public DeterministicTenantSecurityClient getDeterministicClient() {
     return deterministicClient;
   }

@@ -1,15 +1,14 @@
 <!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
 
 <suite name="localDeterministicSuite">
-    <test name="localDeterministicTests">
-        <groups>
-            <run>
-                <include name="unit" />
-                <include name="local-deterministic" />
-            </run>
-        </groups>
-        <packages>
-            <package name=".*" />
-        </packages>
-    </test>
+  <test name="localDeterministicTests">
+    <groups>
+      <run>
+        <include name="local-deterministic" />
+      </run>
+    </groups>
+    <packages>
+      <package name=".*" />
+    </packages>
+  </test>
 </suite>

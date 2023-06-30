@@ -7,9 +7,9 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 import org.cryptomator.siv.SivMode;
-import com.ironcorelabs.tenantsecurity.kms.v1.exception.CryptoException;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TscException;
 import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
@@ -19,6 +19,9 @@ class DeterministicCryptoUtils {
 
   static final SivMode AES_SIV = new SivMode();
 
+  /**
+   * Deterministically encrypt the provided field with the current key from `derivedKeys`.
+   */
   static CompletableFuture<DeterministicEncryptedField> encryptField(
       DeterministicPlaintextField field, DerivedKey[] derivedKeys) {
     return CompletableFutures.tryCatchNonFatal(() -> {
@@ -29,7 +32,8 @@ class DeterministicCryptoUtils {
         }
       }
       if (current == null) {
-        throw new CryptoException("No current tenant secret for deterministic encryption.");
+        throw new TscException(TenantSecurityErrorCodes.DETERMINISTIC_FIELD_ENCRYPT_FAILED,
+            "No current tenant secret for deterministic encryption.");
       }
       return current;
     }).thenCompose(current -> {
@@ -44,10 +48,15 @@ class DeterministicCryptoUtils {
     });
   }
 
+  /**
+   * Encode the tenant secret ID as 4 bytes, then attach two bytes of 0s. Fails if the tenant secret
+   * ID can't fit into 4 bytes.
+   */
   static CompletableFuture<byte[]> generateEncryptedFieldHeader(long tenantSecretId) {
     return CompletableFutures.tryCatchNonFatal(() -> {
       if (tenantSecretId < 0 || tenantSecretId > MAX_TENANT_SECRET_ID) {
-        throw new CryptoException("Failed to generate header.");
+        throw new TscException(TenantSecurityErrorCodes.DETERMINISTIC_HEADER_ERROR,
+            "Failed to generate header");
       }
       // tenantSecretId is a long because an int would be signed and have a lower maximum
       // value than the TSP could return. But we still only pack it into 4 bytes.
@@ -60,6 +69,10 @@ class DeterministicCryptoUtils {
 
   }
 
+  /**
+   * Encrypt the provided bytes with the provided key using AES-256-SIV. associatedData is not used
+   * by our deterministic encryption, but is used in our unit tests of AES_SIV encryption.
+   */
   static CompletableFuture<byte[]> encryptBytes(byte[] plaintext, byte[] key,
       byte[]... associatedData) {
     return CompletableFutures.tryCatchNonFatal(() -> {
@@ -69,6 +82,10 @@ class DeterministicCryptoUtils {
     });
   }
 
+  /**
+   * Decrypt the deterministically encrypted field using the associated tenant secrets contained in
+   * `derivedKeys`.
+   */
   static CompletableFuture<DeterministicPlaintextField> decryptField(
       DeterministicEncryptedField encryptedField, DerivedKey[] derivedKeys) {
     return decomposeField(encryptedField.getEncryptedField())
@@ -80,7 +97,8 @@ class DeterministicCryptoUtils {
             }
           }
           if (key == null) {
-            throw new CryptoException("Failed deterministic decryption.");
+            throw new TscException(TenantSecurityErrorCodes.DETERMINISTIC_FIELD_DECRYPT_FAILED,
+                "Failed deterministic decryption.");
           }
           return key;
         }).thenCompose(key -> decryptBytes(parts.getEncryptedBytes(), key.getDerivedKeyBytes())))
@@ -88,11 +106,17 @@ class DeterministicCryptoUtils {
             encryptedField.getDerivationPath(), encryptedField.getSecretPath()));
   }
 
+
+  /**
+   * Deconstruct the provided encrypted field into its component parts. Separates the tenant secret
+   * ID, padding, and encrypted bytes.
+   */
   static CompletableFuture<DeterministicEncryptedFieldParts> decomposeField(
       byte[] encryptedBytesWithHeader) {
     return CompletableFutures.tryCatchNonFatal(() -> {
       if (encryptedBytesWithHeader.length < 6) {
-        throw new CryptoException("Failed to parse field header.");
+        throw new TscException(TenantSecurityErrorCodes.DETERMINISTIC_HEADER_ERROR,
+            "Failed to parse field header");
       }
       byte[] tenantSecretIdBytes = Arrays.copyOfRange(encryptedBytesWithHeader, 0, 4);
       byte[] padding = Arrays.copyOfRange(encryptedBytesWithHeader, 4, 6);
@@ -100,7 +124,8 @@ class DeterministicCryptoUtils {
           Arrays.copyOfRange(encryptedBytesWithHeader, 6, encryptedBytesWithHeader.length);
       byte[] expectedPadding = {0, 0};
       if (!Arrays.equals(padding, expectedPadding)) {
-        throw new CryptoException("Failed to parse field header.");
+        throw new TscException(TenantSecurityErrorCodes.DETERMINISTIC_HEADER_ERROR,
+            "Failed to parse field header");
       }
       // first 4 bytes represent an unsigned int of the tenantSecretId, but we need to use
       // a long because Java's int is signed.
@@ -110,6 +135,10 @@ class DeterministicCryptoUtils {
     });
   }
 
+  /**
+   * Attempt to AES-SIV decrypt the provided bytes using the provided key. associatedData is not
+   * used by our deterministic decryption, but is used in our unit tests of AES_SIV decryption.
+   */
   static CompletableFuture<byte[]> decryptBytes(byte[] encryptedBytes, byte[] key,
       byte[]... associatedData) {
     return CompletableFutures.tryCatchNonFatal(() -> {
@@ -119,6 +148,11 @@ class DeterministicCryptoUtils {
     });
   }
 
+  /**
+   * Check if the encrypted field was deterministically encrypted with the current primary. If it
+   * is, we can skip the decryption/encryption because it is guaranteed to be equal to its current
+   * value.
+   */
   static CompletableFuture<Boolean> checkRotationFieldNoOp(
       DeterministicEncryptedField encryptedField, DerivedKey[] derivedKeys) {
     return decomposeField(encryptedField.getEncryptedField()).thenCompose(parts -> {
@@ -134,13 +168,18 @@ class DeterministicCryptoUtils {
       }
       if (currentKeyId == 0 || previousKeyId == 0) {
         return CompletableFuture
-            .failedFuture(new CryptoException("Failed deterministic rotation of field."));
+            .failedFuture(new TscException(TenantSecurityErrorCodes.DETERMINISTIC_ROTATE_FAILED,
+                "Failed deterministic rotation of field."));
       } else {
         return CompletableFuture.completedFuture(previousKeyId == currentKeyId);
       }
     });
   }
 
+  /**
+   * Decrypt the provided deterministically encrypted field and re-encrypt it with the current
+   * tenant secret.
+   */
   static CompletableFuture<DeterministicEncryptedField> rotateField(
       DeterministicEncryptedField encryptedField, DerivedKey[] derivedKeys) {
     return checkRotationFieldNoOp(encryptedField, derivedKeys).thenCompose(noOp -> {
@@ -153,6 +192,9 @@ class DeterministicCryptoUtils {
     });
   }
 
+  /**
+   * Deterministically encrypt the provided field with all current and in-rotation tenant secrets.
+   */
   static CompletableFuture<DeterministicEncryptedField[]> generateSearchTerms(
       DeterministicPlaintextField field, DerivedKey[] derivedKeys) {
     List<CompletableFuture<byte[]>> futures = Arrays.asList(derivedKeys).parallelStream()
@@ -166,53 +208,87 @@ class DeterministicCryptoUtils {
     return combinedFuture.thenApply(entries -> entries.parallelStream()
         .map(encryptedBytes -> new DeterministicEncryptedField(encryptedBytes,
             field.getDerivationPath(), field.getSecretPath()))
-        .collect(Collectors.toList()).toArray(new DeterministicEncryptedField[entries.size()]));
+        .toArray(DeterministicEncryptedField[]::new));
   }
 
-  static BatchResult<DeterministicEncryptedField> encryptBatch(
-      Map<String, DeterministicPlaintextField> fields, DeriveKeyResponse derivedKeyResponse) {
-    ConcurrentMap<String, DeterministicEncryptedField> successes =
-        new ConcurrentHashMap<String, DeterministicEncryptedField>();
+  /**
+   * Helper function to collect a map of futures into a BatchResult.
+   */
+  private static <T> BatchResult<T> makeBatchResult(Map<String, CompletableFuture<T>> futures,
+      TenantSecurityErrorCodes errorCode) {
+    ConcurrentMap<String, T> successes = new ConcurrentHashMap<String, T>();
     ConcurrentMap<String, TenantSecurityException> failures =
         new ConcurrentHashMap<String, TenantSecurityException>();
-
-    fields.entrySet().parallelStream().forEach(entry -> {
-      DeterministicPlaintextField field = entry.getValue();
-      CompletableFuture<DeterministicEncryptedField> encryptedFuture = derivedKeyResponse
-          .getDerivedKeys(field.getSecretPath(), field.getDerivationPath())
-          .thenCompose(derivedKeys -> DeterministicCryptoUtils.encryptField(field, derivedKeys));
+    futures.entrySet().stream().forEach(entry -> {
       try {
-        successes.put(entry.getKey(), encryptedFuture.join());
+        successes.put(entry.getKey(), entry.getValue().join());
       } catch (Exception e) {
-        failures.put(entry.getKey(),
-            new TscException(TenantSecurityErrorCodes.DETERMINISTIC_FIELD_ENCRYPT_FAILED, e));
+        // `e` is likely a `CompletionException`, so we care about its cause
+        if (e.getCause() instanceof TenantSecurityException) {
+          failures.put(entry.getKey(), (TenantSecurityException) e.getCause());
+        } else {
+          failures.put(entry.getKey(), new TscException(errorCode, e));
+        }
       }
     });
-    return new BatchResult<DeterministicEncryptedField>(successes, failures);
+    return new BatchResult<T>(successes, failures);
   }
 
-
-  static BatchResult<DeterministicPlaintextField> decryptBatch(
-      Map<String, DeterministicEncryptedField> fields, DeriveKeyResponse derivedKeyResponse) {
-    ConcurrentMap<String, DeterministicPlaintextField> successes =
-        new ConcurrentHashMap<String, DeterministicPlaintextField>();
-    ConcurrentMap<String, TenantSecurityException> failures =
-        new ConcurrentHashMap<String, TenantSecurityException>();
-
-    fields.entrySet().parallelStream().forEach(entry -> {
-      DeterministicEncryptedField field = entry.getValue();
-      CompletableFuture<DeterministicPlaintextField> decryptedFuture = derivedKeyResponse
-          .getDerivedKeys(field.getSecretPath(), field.getDerivationPath())
-          .thenCompose(derivedKeys -> DeterministicCryptoUtils.decryptField(field, derivedKeys));
-      try {
-        successes.put(entry.getKey(), decryptedFuture.join());
-      } catch (Exception e) {
-        failures.put(entry.getKey(),
-            new TscException(TenantSecurityErrorCodes.DETERMINISTIC_FIELD_DECRYPT_FAILED, e));
-      }
-    });
-    return new BatchResult<DeterministicPlaintextField>(successes, failures);
+  static BatchResult<DeterministicEncryptedField> encryptFieldBatch(
+      Map<String, DeterministicPlaintextField> fields, DeriveKeyResponse derivedKeyResponse,
+      Executor encryptionExecutor) {
+    Map<String, CompletableFuture<DeterministicEncryptedField>> futures =
+        fields.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> {
+          DeterministicPlaintextField field = entry.getValue();
+          return CompletableFuture.supplyAsync(() -> derivedKeyResponse
+              .getDerivedKeys(field.getSecretPath(), field.getDerivationPath())
+              .thenCompose(derivedKeys -> DeterministicCryptoUtils.encryptField(field, derivedKeys))
+              .join(), encryptionExecutor);
+        }));
+    return makeBatchResult(futures, TenantSecurityErrorCodes.DETERMINISTIC_FIELD_ENCRYPT_FAILED);
   }
-  // TODO: make this function return CompletableFuture<DeterministicPlaintextField> and then outside
-  // do .supplyAsync on a separate function that does the .join?
+
+  static BatchResult<DeterministicPlaintextField> decryptFieldBatch(
+      Map<String, DeterministicEncryptedField> fields, DeriveKeyResponse derivedKeyResponse,
+      Executor encryptionExecutor) {
+    Map<String, CompletableFuture<DeterministicPlaintextField>> futures =
+        fields.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> {
+          DeterministicEncryptedField field = entry.getValue();
+          return CompletableFuture.supplyAsync(() -> derivedKeyResponse
+              .getDerivedKeys(field.getSecretPath(), field.getDerivationPath())
+              .thenCompose(derivedKeys -> DeterministicCryptoUtils.decryptField(field, derivedKeys))
+              .join(), encryptionExecutor);
+        }));
+    return makeBatchResult(futures, TenantSecurityErrorCodes.DETERMINISTIC_FIELD_DECRYPT_FAILED);
+  }
+
+  static BatchResult<DeterministicEncryptedField> rotateFieldBatch(
+      Map<String, DeterministicEncryptedField> fields, DeriveKeyResponse derivedKeyResponse,
+      Executor encryptionExecutor) {
+    Map<String, CompletableFuture<DeterministicEncryptedField>> futures =
+        fields.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> {
+          DeterministicEncryptedField field = entry.getValue();
+          return CompletableFuture.supplyAsync(() -> derivedKeyResponse
+              .getDerivedKeys(field.getSecretPath(), field.getDerivationPath())
+              .thenCompose(derivedKeys -> DeterministicCryptoUtils.rotateField(field, derivedKeys))
+              .join(), encryptionExecutor);
+        }));
+    return makeBatchResult(futures, TenantSecurityErrorCodes.DETERMINISTIC_ROTATE_FAILED);
+  }
+
+  static BatchResult<DeterministicEncryptedField[]> generateSearchTermsBatch(
+      Map<String, DeterministicPlaintextField> fields, DeriveKeyResponse derivedKeyResponse,
+      Executor encryptionExecutor) {
+    Map<String, CompletableFuture<DeterministicEncryptedField[]>> futures =
+        fields.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> {
+          DeterministicPlaintextField field = entry.getValue();
+          return CompletableFuture.supplyAsync(() -> derivedKeyResponse
+              .getDerivedKeys(field.getSecretPath(), field.getDerivationPath())
+              .thenCompose(
+                  derivedKeys -> DeterministicCryptoUtils.generateSearchTerms(field, derivedKeys))
+              .join(), encryptionExecutor);
+        }));
+    return makeBatchResult(futures,
+        TenantSecurityErrorCodes.DETERMINISTIC_GENERATE_SEARCH_TERMS_FAILED);
+  }
 }

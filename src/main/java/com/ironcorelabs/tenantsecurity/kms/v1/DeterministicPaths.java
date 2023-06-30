@@ -4,11 +4,11 @@ abstract class DeterministicPaths {
   private String derivationPath;
   private String secretPath;
 
-  public String getDerivationPath() {
+  String getDerivationPath() {
     return derivationPath;
   }
 
-  public String getSecretPath() {
+  String getSecretPath() {
     return secretPath;
   }
 }
