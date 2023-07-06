@@ -11,6 +11,9 @@ public final class DeriveKeyResponse {
   @Key
   private Map<String, Map<String, DerivedKey[]>> derivedKeys;
 
+  // This empty constructor needed for JSON deserialization
+  public DeriveKeyResponse() {}
+
   // Needed for testing
   DeriveKeyResponse(boolean hasPrimaryConfig, Map<String, Map<String, DerivedKey[]>> derivedKeys) {
     this.hasPrimaryConfig = hasPrimaryConfig;
