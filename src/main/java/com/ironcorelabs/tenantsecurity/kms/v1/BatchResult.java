@@ -23,6 +23,7 @@ public final class BatchResult<T> {
    *
    * @deprecated Use getSuccesses() instead
    */
+  @Deprecated
   public ConcurrentMap<String, T> getDocuments() {
     return this.successes;
   }
@@ -46,6 +47,7 @@ public final class BatchResult<T> {
    *
    * @deprecated Use hasSuccesses() instead
    */
+  @Deprecated
   public boolean hasDocuments() {
     return !this.successes.isEmpty();
   }

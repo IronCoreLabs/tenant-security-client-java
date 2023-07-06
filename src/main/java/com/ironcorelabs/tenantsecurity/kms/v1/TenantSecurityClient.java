@@ -476,28 +476,6 @@ public final class TenantSecurityClient implements Closeable {
   }
 
   /**
-   * Re-key an EncryptedDocument using a new KMS config without decrypting the document data.
-   * Decrypts the document's encrypted document key (EDEK) then re-encrypts it using the specified
-   * tenant's current primary KMS. The DEK is then discarded. The old tenant and new tenant can be
-   * the same in order to re-key the document to the tenant's latest primary config.
-   *
-   * @deprecated The `rekeyEdek` method is preferred over this method because the
-   *             EncryptedDocument's encrypted fields are not necessary for re-keying to take place.
-   *
-   * @param encryptedDocument Document to re-key which includes encrypted bytes as well as EDEK.
-   * @param metadata Metadata about the document being re-keyed.
-   * @param newTenantId Tenant ID the document should be re-keyed to.
-   * @return EncryptedDocument that contains the new EDEK and unaltered encrypted fields.
-   */
-  @Deprecated
-  public CompletableFuture<EncryptedDocument> rekeyDocument(EncryptedDocument encryptedDocument,
-      DocumentMetadata metadata, String newTenantId) {
-    return this.encryptionService.rekey(encryptedDocument.getEdek(), metadata, newTenantId)
-        .thenApply(newKey -> new EncryptedDocument(encryptedDocument.getEncryptedFields(),
-            newKey.getEdek()));
-  }
-
-  /**
    * Re-key a document's encrypted document key (EDEK) using a new KMS config. Decrypts the EDEK
    * then re-encrypts it using the specified tenant's current primary KMS config. The DEK is then
    * discarded.

@@ -192,7 +192,6 @@ public class DevIntegrationTest {
     assertEqualBytes(decryptedValuesMap.get("doc3"), documentMap.get("doc3"));
   }
 
-  @SuppressWarnings("deprecation")
   public void roundTripRekeyAWSToAzure() throws Exception {
     DocumentMetadata metadata = getRoundtripMetadata(this.AWS_TENANT_ID);
     Map<String, byte[]> documentMap = getRoundtripDataToEncrypt();
@@ -200,12 +199,12 @@ public class DevIntegrationTest {
     CompletableFuture<PlaintextDocument> roundtrip = getClient().thenCompose(client -> {
       try {
         return client.encrypt(documentMap, metadata).thenCompose(encryptedResults -> {
-          return client.rekeyDocument(encryptedResults, metadata, this.AZURE_TENANT_ID)
-              .thenCompose(rekeyResults -> {
-                assertEquals(rekeyResults.getEncryptedFields(),
-                    encryptedResults.getEncryptedFields());
+          return client.rekeyEdek(encryptedResults.getEdek(), metadata, this.AZURE_TENANT_ID)
+              .thenCompose(rekeyedEdek -> {
                 DocumentMetadata newMetadata = getRoundtripMetadata(this.AZURE_TENANT_ID);
-                return client.decrypt(rekeyResults, newMetadata);
+                EncryptedDocument newDocument =
+                    new EncryptedDocument(encryptedResults.getEncryptedFields(), rekeyedEdek);
+                return client.decrypt(newDocument, newMetadata);
               });
         });
       } catch (Exception e) {
