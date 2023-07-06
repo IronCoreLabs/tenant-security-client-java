@@ -259,7 +259,7 @@ final class TenantSecurityRequest implements Closeable {
   /**
    * Request derive key endpoint.
    */
-  CompletableFuture<DeriveKeyResponse> deriveKey(DocumentMetadata metadata,
+  CompletableFuture<DeriveKeyResponse> deriveKey(FieldMetadata metadata,
       Map<String, String[]> paths) {
     Map<String, Object> postData = metadata.getAsPostData();
     postData.put("derivationType", DerivationType.Sha512);

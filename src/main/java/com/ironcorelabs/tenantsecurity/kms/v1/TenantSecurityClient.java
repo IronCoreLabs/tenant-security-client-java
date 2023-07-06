@@ -36,7 +36,7 @@ public final class TenantSecurityClient implements Closeable {
   private DeterministicTenantSecurityClient deterministicClient;
 
   /**
-   * Default size of web request thread pool. Value value is 25.
+   * Default size of web request thread pool. Defaults to 25.
    */
   public static int DEFAULT_REQUEST_THREADPOOL_SIZE = 25;
 
@@ -45,6 +45,11 @@ public final class TenantSecurityClient implements Closeable {
    * cores on the machine being run on.
    */
   public static int DEFAULT_AES_THREADPOOL_SIZE = Runtime.getRuntime().availableProcessors();
+
+  /**
+   * Default timeout in ms for the connection to the TSP.
+   */
+  public static int DEFAULT_TIMEOUT_MS = 20000;
 
   /**
    * Constructor for TenantSecurityClient class that uses the SecureRandom NativePRNGNonBlocking
@@ -110,7 +115,7 @@ public final class TenantSecurityClient implements Closeable {
    */
   public TenantSecurityClient(String tspDomain, String apiKey, int requestThreadSize,
       int aesThreadSize, SecureRandom randomGen) throws Exception {
-    this(tspDomain, apiKey, requestThreadSize, aesThreadSize, randomGen, 20000);
+    this(tspDomain, apiKey, requestThreadSize, aesThreadSize, randomGen, DEFAULT_TIMEOUT_MS);
   }
 
   /**
@@ -145,12 +150,15 @@ public final class TenantSecurityClient implements Closeable {
       throw new IllegalArgumentException(
           "Value provided for AES threadpool size must be greater than 0!");
     }
+    if (timeout < 1) {
+      throw new IllegalArgumentException("Value provided for timeout must be greater than 0!");
+    }
 
     this.encryptionExecutor = Executors.newFixedThreadPool(aesThreadSize);
     this.encryptionService =
         new TenantSecurityRequest(tspDomain, apiKey, requestThreadSize, timeout);
-    this.deterministicClient = new DeterministicTenantSecurityClient(tspDomain, apiKey,
-        requestThreadSize, aesThreadSize, timeout);
+    this.deterministicClient =
+        new DeterministicTenantSecurityClient(this.encryptionExecutor, this.encryptionService);
 
     // Update the crypto policy to allow us to use 256 bit AES keys
     Security.setProperty("crypto.policy", "unlimited");
@@ -164,7 +172,9 @@ public final class TenantSecurityClient implements Closeable {
 
   /**
    * Get a DeterministicTenantSecurityClient to deterministically encrypt and decrypt fields. The
-   * deterministic client inherits the configuration of this client.
+   * deterministic client inherits the configuration of this client, using the same thread pools for
+   * requests and AES operations as this client. To use a different configuration or pools, you can
+   * construct a DeterministicTenantSecurityClient directly.
    */
   public DeterministicTenantSecurityClient getDeterministicClient() {
     return deterministicClient;

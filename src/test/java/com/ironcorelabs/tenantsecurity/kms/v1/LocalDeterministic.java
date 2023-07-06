@@ -6,10 +6,9 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
-import com.ironcorelabs.tenantsecurity.kms.v1.exception.CryptoException;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
+import com.ironcorelabs.tenantsecurity.kms.v1.exception.TscException;
 import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
 import org.testng.annotations.Test;
 
@@ -44,8 +43,8 @@ public class LocalDeterministic {
   public void roundtripTest() throws Exception {
     String tenant_id = System.getenv().getOrDefault("TENANT_ID", TENANT_ID);
 
-    DocumentMetadata context = new DocumentMetadata(tenant_id, "integrationTest", "sample",
-        new HashMap<>(), "customRayID");
+    FieldMetadata context =
+        new FieldMetadata(tenant_id, "integrationTest", "sample", new HashMap<>(), "customRayID");
     DeterministicPlaintextField data = getRoundtripDataToEncrypt();
 
     CompletableFuture<DeterministicPlaintextField> roundtrip =
@@ -79,8 +78,8 @@ public class LocalDeterministic {
 
   public void batchRoundtripTest() throws Exception {
     String tenant_id = System.getenv().getOrDefault("TENANT_ID", TENANT_ID);
-    DocumentMetadata context = new DocumentMetadata(tenant_id, "integrationTest", "sample",
-        new HashMap<>(), "customRayID");
+    FieldMetadata context =
+        new FieldMetadata(tenant_id, "integrationTest", "sample", new HashMap<>(), "customRayID");
     int batchSize = 100;
     Map<String, DeterministicPlaintextField> batchData = getBatchMap(batchSize);
 
@@ -100,8 +99,8 @@ public class LocalDeterministic {
 
   public void batchRoundtripTestPartialFailure() throws Exception {
     String tenant_id = System.getenv().getOrDefault("TENANT_ID", TENANT_ID);
-    DocumentMetadata context = new DocumentMetadata(tenant_id, "integrationTest", "sample",
-        new HashMap<>(), "customRayID");
+    FieldMetadata context =
+        new FieldMetadata(tenant_id, "integrationTest", "sample", new HashMap<>(), "customRayID");
     Map<String, DeterministicPlaintextField> batchData = getBatchMap(2);
 
     DeterministicTenantSecurityClient client = createClient().get();
@@ -127,11 +126,8 @@ public class LocalDeterministic {
     assertEqualBytes(decrypted.getSuccesses().get("good").getPlaintextField(),
         batchData.get("0").getPlaintextField());
     TenantSecurityException failure = decrypted.getFailures().get("bad");
-    assertTrue(failure instanceof TenantSecurityException);
-    assertEquals(failure.getErrorCode(),
-        TenantSecurityErrorCodes.DETERMINISTIC_FIELD_DECRYPT_FAILED);
-    assertTrue(failure.getCause() instanceof CompletionException);
-    assertTrue(failure.getCause().getCause() instanceof CryptoException);
-    assertEquals(failure.getCause().getCause().getMessage(), "Failed to parse field header.");
+    assertEquals(failure.getErrorCode(), TenantSecurityErrorCodes.DETERMINISTIC_HEADER_ERROR);
+    assertTrue(failure instanceof TscException);
+    assertEquals(failure.getMessage(), "Failed to parse field header");
   }
 }

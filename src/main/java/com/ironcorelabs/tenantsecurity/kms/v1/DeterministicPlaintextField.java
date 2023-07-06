@@ -1,5 +1,9 @@
 package com.ironcorelabs.tenantsecurity.kms.v1;
 
+/**
+ * Represents a plaintext (non-encrypted) field. Also contains the derivation and secret paths that
+ * will be used to deterministically encrypt the field.
+ */
 public final class DeterministicPlaintextField extends DeterministicPaths {
   private final byte[] plaintextField;
   private final String derivationPath;
@@ -12,14 +16,23 @@ public final class DeterministicPlaintextField extends DeterministicPaths {
     this.secretPath = secretPath;
   }
 
+  /**
+   * Get the plaintext field data.
+   */
   public byte[] getPlaintextField() {
     return plaintextField;
   }
 
+  /**
+   * Get the derivation path used for deterministic encryption operations.
+   */
   public String getDerivationPath() {
     return derivationPath;
   }
 
+  /**
+   * Get the secret path used for deterministic encryption operations.
+   */
   public String getSecretPath() {
     return secretPath;
   }

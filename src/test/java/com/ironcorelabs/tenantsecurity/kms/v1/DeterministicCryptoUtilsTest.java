@@ -82,6 +82,18 @@ public class DeterministicCryptoUtilsTest {
     assertEqualBytes(plaintextField.getPlaintextField(), decrypted.getPlaintextField());
   }
 
+  @Test(expectedExceptions = java.util.concurrent.ExecutionException.class,
+      expectedExceptionsMessageRegExp = ".*Empty key.*")
+  public void encryptBytesEmptyKey() throws Exception {
+    DeterministicCryptoUtils.encryptBytes("foo".getBytes(), new byte[0]).get();
+  }
+
+  @Test(expectedExceptions = java.util.concurrent.ExecutionException.class,
+      expectedExceptionsMessageRegExp = ".*Empty key.*")
+  public void decryptBytesEmptyKey() throws Exception {
+    DeterministicCryptoUtils.decryptBytes("BlahBlahBlahBlah".getBytes(), new byte[0]).get();
+  }
+
   public void encryptFieldBatchRoundtripWithRegular() throws Exception {
     Map<String, DeterministicPlaintextField> batch = getBatchMap(5);
     BatchResult<DeterministicEncryptedField> encrypted = DeterministicCryptoUtils
@@ -141,11 +153,17 @@ public class DeterministicCryptoUtilsTest {
     DeterministicCryptoUtils.encryptField(plaintextField, noCurrentDerivedKeys).get();
   }
 
+  public void encryptFieldNotBase64() {
+    DerivedKey[] badDerivedKeys = {new DerivedKey("!!!", 5, true)};
+    // We don't `.get()` here, showing that it doesn't throw an Exception
+    DeterministicCryptoUtils.encryptField(plaintextField, badDerivedKeys);
+  }
+
   @Test(expectedExceptions = java.util.concurrent.ExecutionException.class,
       expectedExceptionsMessageRegExp = ".*not valid base64.*")
-  public void encryptFailsWithInvalidBase64() throws Exception {
-    DerivedKey[] noCurrentDerivedKeys = {new DerivedKey("!!!!!!", 6, true)};
-    DeterministicCryptoUtils.encryptField(plaintextField, noCurrentDerivedKeys).get();
+  public void encryptFieldNotBase64Get() throws Exception {
+    DerivedKey[] badDerivedKeys = {new DerivedKey("!!!", 5, true)};
+    DeterministicCryptoUtils.encryptField(plaintextField, badDerivedKeys).get();
   }
 
   public void generateEncryptedFieldHeaderValid() throws Exception {
@@ -177,10 +195,10 @@ public class DeterministicCryptoUtilsTest {
     byte[] header = {0, 0, 0, 4, 0, 0, 1, 1};
     DeterministicEncryptedFieldParts parts = DeterministicCryptoUtils.decomposeField(header).get();
     long expectedTenantSecretId = 4;
-    byte[] expectEdencryptedBytes = {1, 1};
+    byte[] expectedEncryptedBytes = {1, 1};
 
     assertEquals(parts.getTenantSecretId(), expectedTenantSecretId);
-    assertEqualBytes(parts.getEncryptedBytes(), expectEdencryptedBytes);
+    assertEqualBytes(parts.getEncryptedBytes(), expectedEncryptedBytes);
   }
 
   @Test(expectedExceptions = java.util.concurrent.ExecutionException.class,

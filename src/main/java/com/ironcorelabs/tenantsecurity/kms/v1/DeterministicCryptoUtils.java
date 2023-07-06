@@ -29,6 +29,7 @@ class DeterministicCryptoUtils {
       for (DerivedKey key : derivedKeys) {
         if (key.isCurrent()) {
           current = key;
+          break;
         }
       }
       if (current == null) {
@@ -78,6 +79,7 @@ class DeterministicCryptoUtils {
     return CompletableFutures.tryCatchNonFatal(() -> {
       byte[] macKey = Arrays.copyOfRange(key, 0, key.length / 2);
       byte[] ctrKey = Arrays.copyOfRange(key, key.length / 2, key.length);
+      // If the key is empty, this will throw (and catch) an IllegalArgumentException
       return AES_SIV.encrypt(ctrKey, macKey, plaintext, associatedData);
     });
   }
@@ -94,6 +96,7 @@ class DeterministicCryptoUtils {
           for (DerivedKey derivedKey : derivedKeys) {
             if (derivedKey.getTenantSecretId() == parts.getTenantSecretId()) {
               key = derivedKey;
+              break;
             }
           }
           if (key == null) {
@@ -144,6 +147,7 @@ class DeterministicCryptoUtils {
     return CompletableFutures.tryCatchNonFatal(() -> {
       byte[] macKey = Arrays.copyOfRange(key, 0, key.length / 2);
       byte[] ctrKey = Arrays.copyOfRange(key, key.length / 2, key.length);
+      // If the key is empty, this will throw (and catch) an IllegalArgumentException
       return AES_SIV.decrypt(ctrKey, macKey, encryptedBytes, associatedData);
     });
   }
@@ -193,7 +197,8 @@ class DeterministicCryptoUtils {
   }
 
   /**
-   * Deterministically encrypt the provided field with all current and in-rotation tenant secrets.
+   * Deterministically encrypt the provided field with any current and in-rotation secrets for the
+   * tenant (max of 1 current and 1 in-rotation).
    */
   static CompletableFuture<DeterministicEncryptedField[]> generateSearchTerms(
       DeterministicPlaintextField field, DerivedKey[] derivedKeys) {

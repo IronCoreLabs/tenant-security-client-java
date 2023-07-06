@@ -16,7 +16,7 @@ import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
 
 /**
  * DeterministicTenantSecurityClient class that can be used to deterministically encrypt and decrypt
- * documents.
+ * fields.
  *
  * @author IronCore Labs
  */
@@ -28,7 +28,7 @@ public final class DeterministicTenantSecurityClient implements Closeable {
   private TenantSecurityRequest encryptionService;
 
   /**
-   * Default size of web request thread pool. Value value is 25.
+   * Default size of web request thread pool. Defaults to 25.
    */
   public static int DEFAULT_REQUEST_THREADPOOL_SIZE = 25;
 
@@ -37,6 +37,11 @@ public final class DeterministicTenantSecurityClient implements Closeable {
    * cores on the machine being run on.
    */
   public static int DEFAULT_AES_THREADPOOL_SIZE = Runtime.getRuntime().availableProcessors();
+
+  /**
+   * Default timeout in ms for the connection to the TSP.
+   */
+  public static int DEFAULT_TIMEOUT_MS = 20000;
 
   /**
    * Constructor for DeterministicTenantSecurityClient class with default values.
@@ -61,7 +66,7 @@ public final class DeterministicTenantSecurityClient implements Closeable {
    */
   public DeterministicTenantSecurityClient(String tspDomain, String apiKey, int requestThreadSize,
       int aesThreadSize) throws Exception {
-    this(tspDomain, apiKey, requestThreadSize, aesThreadSize, 20000);
+    this(tspDomain, apiKey, requestThreadSize, aesThreadSize, DEFAULT_TIMEOUT_MS);
   }
 
   /**
@@ -90,11 +95,20 @@ public final class DeterministicTenantSecurityClient implements Closeable {
       throw new IllegalArgumentException(
           "Value provided for AES threadpool size must be greater than 0!");
     }
+    if (timeout < 1) {
+      throw new IllegalArgumentException("Value provided for timeout must be greater than 0!");
+    }
 
     this.encryptionExecutor = Executors.newFixedThreadPool(aesThreadSize);
 
     this.encryptionService =
         new TenantSecurityRequest(tspDomain, apiKey, requestThreadSize, timeout);
+  }
+
+  DeterministicTenantSecurityClient(ExecutorService aesThreadExecutor,
+      TenantSecurityRequest tenantSecurityRequest) throws Exception {
+    this.encryptionExecutor = aesThreadExecutor;
+    this.encryptionService = tenantSecurityRequest;
   }
 
   public void close() throws IOException {
@@ -165,7 +179,7 @@ public final class DeterministicTenantSecurityClient implements Closeable {
    * @return DeterministicEncryptedField which contains the field's paths and encrypted data.
    */
   public CompletableFuture<DeterministicEncryptedField> encryptField(
-      DeterministicPlaintextField field, DocumentMetadata metadata) {
+      DeterministicPlaintextField field, FieldMetadata metadata) {
     Map<String, String[]> paths =
         Collections.singletonMap(field.getSecretPath(), new String[] {field.getDerivationPath()});
     return encryptionService.deriveKey(metadata, paths)
@@ -186,7 +200,7 @@ public final class DeterministicTenantSecurityClient implements Closeable {
    *         map returned will be the same keys provided in the original fields map.
    */
   public CompletableFuture<BatchResult<DeterministicEncryptedField>> encryptFieldBatch(
-      Map<String, DeterministicPlaintextField> fields, DocumentMetadata metadata) {
+      Map<String, DeterministicPlaintextField> fields, FieldMetadata metadata) {
     Map<String, String[]> paths = deterministicCollectionToPathMap(fields);
     return encryptionService.deriveKey(metadata, paths)
         .thenCompose(deriveKeyResponse -> verifyHasPrimaryConfig(deriveKeyResponse))
@@ -202,7 +216,7 @@ public final class DeterministicTenantSecurityClient implements Closeable {
    * @return DeterministicPlaintextField which contains the field's paths and decrypted data.
    */
   public CompletableFuture<DeterministicPlaintextField> decryptField(
-      DeterministicEncryptedField field, DocumentMetadata metadata) {
+      DeterministicEncryptedField field, FieldMetadata metadata) {
     Map<String, String[]> paths =
         Collections.singletonMap(field.getSecretPath(), new String[] {field.getDerivationPath()});
     return encryptionService.deriveKey(metadata, paths)
@@ -222,7 +236,7 @@ public final class DeterministicTenantSecurityClient implements Closeable {
    *         map returned will be the same keys provided in the original fields map.
    */
   public CompletableFuture<BatchResult<DeterministicPlaintextField>> decryptFieldBatch(
-      Map<String, DeterministicEncryptedField> fields, DocumentMetadata metadata) {
+      Map<String, DeterministicEncryptedField> fields, FieldMetadata metadata) {
     Map<String, String[]> paths = deterministicCollectionToPathMap(fields);
     return encryptionService.deriveKey(metadata, paths)
         .thenApply(deriveKeyResponse -> DeterministicCryptoUtils.decryptFieldBatch(fields,
@@ -238,7 +252,7 @@ public final class DeterministicTenantSecurityClient implements Closeable {
    * @return DeterministicEncryptedField encrypted using the tenant's current secret.
    */
   public CompletableFuture<DeterministicEncryptedField> rotateField(
-      DeterministicEncryptedField field, DocumentMetadata metadata) {
+      DeterministicEncryptedField field, FieldMetadata metadata) {
     Map<String, String[]> paths =
         Collections.singletonMap(field.getSecretPath(), new String[] {field.getDerivationPath()});
     return encryptionService.deriveKey(metadata, paths)
@@ -259,7 +273,7 @@ public final class DeterministicTenantSecurityClient implements Closeable {
    *         map returned will be the same keys provided in the original fields map.
    */
   public CompletableFuture<BatchResult<DeterministicEncryptedField>> rotateFieldBatch(
-      Map<String, DeterministicEncryptedField> fields, DocumentMetadata metadata) {
+      Map<String, DeterministicEncryptedField> fields, FieldMetadata metadata) {
     Map<String, String[]> paths = deterministicCollectionToPathMap(fields);
     return encryptionService.deriveKey(metadata, paths)
         .thenCompose(deriveKeyResponse -> verifyHasPrimaryConfig(deriveKeyResponse))
@@ -277,7 +291,7 @@ public final class DeterministicTenantSecurityClient implements Closeable {
    * @return An array of deterministically encrypted fields to use when searching.
    */
   public CompletableFuture<DeterministicEncryptedField[]> generateSearchTerms(
-      DeterministicPlaintextField field, DocumentMetadata metadata) {
+      DeterministicPlaintextField field, FieldMetadata metadata) {
     Map<String, String[]> paths =
         Collections.singletonMap(field.getSecretPath(), new String[] {field.getDerivationPath()});
     return encryptionService.deriveKey(metadata, paths)
@@ -298,7 +312,7 @@ public final class DeterministicTenantSecurityClient implements Closeable {
    *         map returned will be the same keys provided in the original fields map.
    */
   public CompletableFuture<BatchResult<DeterministicEncryptedField[]>> generateSearchTermsBatch(
-      Map<String, DeterministicPlaintextField> fields, DocumentMetadata metadata) {
+      Map<String, DeterministicPlaintextField> fields, FieldMetadata metadata) {
     Map<String, String[]> paths = deterministicCollectionToPathMap(fields);
     return encryptionService.deriveKey(metadata, paths)
         .thenApply(deriveKeyResponse -> DeterministicCryptoUtils.generateSearchTermsBatch(fields,
