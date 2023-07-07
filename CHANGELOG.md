@@ -1,5 +1,12 @@
 # Changelog
 
+## v5.0.0
+
+- Added `DeterministicTenantSecurityClient` supporting deterministic encryption/decryption operations.
+- Changed minimum supported Java version to 11.
+- Removed deprecated `TenantSecurityClient.rekeyDocument` method.
+- Added `TscException` for exceptions originating from the TSC.
+
 ## v4.2.0
 
 - Added `KmsException` for `KmsThrottled`.

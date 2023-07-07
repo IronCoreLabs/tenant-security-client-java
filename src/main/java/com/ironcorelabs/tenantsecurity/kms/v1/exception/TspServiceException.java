@@ -9,8 +9,6 @@ public class TspServiceException extends TenantSecurityException {
   // which is described in
   // https://docs.oracle.com/javase/6/docs/platform/serialization/spec/version.html#6678.
   private static final long serialVersionUID = 2L;
-  private TenantSecurityErrorCodes errorCode;
-  private int httpResponseCode;
 
   /**
    * Create a new TspServiceException with the provided error code and HTTP status code.

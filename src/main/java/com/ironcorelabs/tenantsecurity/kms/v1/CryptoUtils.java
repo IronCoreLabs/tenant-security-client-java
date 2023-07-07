@@ -31,7 +31,7 @@ class CryptoUtils {
 
   static final int HEADER_META_LENGTH_LENGTH = 2;
   // The number of fixed size bytes of header at the front of all CMK documents.
-  // After this length is the probobuf-encoded header bytes, which
+  // After this length is the protobuf-encoded header bytes, which
   // might be empty.
   static final int HEADER_FIXED_SIZE_CONTENT_LENGTH =
       1 + DOCUMENT_MAGIC.length + HEADER_META_LENGTH_LENGTH;
@@ -200,7 +200,7 @@ class CryptoUtils {
         throw new IllegalArgumentException(
             "Provided bytes were not an Ironcore encrypted document.");
       } else {
-        // This call is safe only because it's in the else of the cyphertext check.
+        // This call is safe only because it's in the else of the ciphertext check.
         int headerLength = getHeaderSize(fixedPreamble);
         byte[] headerBytes = readNBytes(inputStream, headerLength);
         InputStream headerStream = new ByteArrayInputStream(headerBytes);

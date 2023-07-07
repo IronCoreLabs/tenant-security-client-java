@@ -54,13 +54,13 @@ public class RekeyRoundTrip {
         TenantSecurityClient.create(tsp_address + tsp_port, api_key).thenCompose(client -> {
           try {
             return client.encrypt(documentMap, metadata).thenCompose(encryptedDocument -> {
-              return client.rekeyDocument(encryptedDocument, metadata, new_tenant_id)
-                  .thenCompose(encryptedDocumentRekeyed -> {
-                    assertEquals(encryptedDocumentRekeyed.getEncryptedFields(),
-                        encryptedDocument.getEncryptedFields());
+              return client.rekeyEdek(encryptedDocument.getEdek(), metadata, new_tenant_id)
+                  .thenCompose(rekeyedEdek -> {
                     DocumentMetadata newMetadata = new DocumentMetadata(new_tenant_id,
                         "integrationTest", "sample", customFields, "customRayID");
-                    return client.decrypt(encryptedDocumentRekeyed, newMetadata);
+                    EncryptedDocument newDocument =
+                        new EncryptedDocument(encryptedDocument.getEncryptedFields(), rekeyedEdek);
+                    return client.decrypt(newDocument, newMetadata);
                   });
             });
           } catch (Exception e) {

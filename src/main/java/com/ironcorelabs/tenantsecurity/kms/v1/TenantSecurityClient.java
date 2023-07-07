@@ -33,8 +33,10 @@ public final class TenantSecurityClient implements Closeable {
 
   private TenantSecurityRequest encryptionService;
 
+  private DeterministicTenantSecurityClient deterministicClient;
+
   /**
-   * Default size of web request thread pool. Value value is 25.
+   * Default size of web request thread pool. Defaults to 25.
    */
   public static int DEFAULT_REQUEST_THREADPOOL_SIZE = 25;
 
@@ -43,6 +45,11 @@ public final class TenantSecurityClient implements Closeable {
    * cores on the machine being run on.
    */
   public static int DEFAULT_AES_THREADPOOL_SIZE = Runtime.getRuntime().availableProcessors();
+
+  /**
+   * Default timeout in ms for the connection to the TSP.
+   */
+  public static int DEFAULT_TIMEOUT_MS = 20000;
 
   /**
    * Constructor for TenantSecurityClient class that uses the SecureRandom NativePRNGNonBlocking
@@ -108,7 +115,7 @@ public final class TenantSecurityClient implements Closeable {
    */
   public TenantSecurityClient(String tspDomain, String apiKey, int requestThreadSize,
       int aesThreadSize, SecureRandom randomGen) throws Exception {
-    this(tspDomain, apiKey, requestThreadSize, aesThreadSize, randomGen, 20000);
+    this(tspDomain, apiKey, requestThreadSize, aesThreadSize, randomGen, DEFAULT_TIMEOUT_MS);
   }
 
   /**
@@ -143,11 +150,15 @@ public final class TenantSecurityClient implements Closeable {
       throw new IllegalArgumentException(
           "Value provided for AES threadpool size must be greater than 0!");
     }
+    if (timeout < 1) {
+      throw new IllegalArgumentException("Value provided for timeout must be greater than 0!");
+    }
 
     this.encryptionExecutor = Executors.newFixedThreadPool(aesThreadSize);
-
     this.encryptionService =
         new TenantSecurityRequest(tspDomain, apiKey, requestThreadSize, timeout);
+    this.deterministicClient =
+        new DeterministicTenantSecurityClient(this.encryptionExecutor, this.encryptionService);
 
     // Update the crypto policy to allow us to use 256 bit AES keys
     Security.setProperty("crypto.policy", "unlimited");
@@ -157,6 +168,16 @@ public final class TenantSecurityClient implements Closeable {
   public void close() throws IOException {
     this.encryptionService.close();
     this.encryptionExecutor.shutdown();
+  }
+
+  /**
+   * Get a DeterministicTenantSecurityClient to deterministically encrypt and decrypt fields. The
+   * deterministic client inherits the configuration of this client, using the same thread pools for
+   * requests and AES operations as this client. To use a different configuration or pools, you can
+   * construct a DeterministicTenantSecurityClient directly.
+   */
+  public DeterministicTenantSecurityClient getDeterministicClient() {
+    return deterministicClient;
   }
 
   /**
@@ -452,28 +473,6 @@ public final class TenantSecurityClient implements Closeable {
               decryptFields(encryptedDocument.getEncryptedFields(), decryptedDocumentAESKey);
           return new PlaintextDocument(decryptedFields, encryptedDocument.getEdek());
         });
-  }
-
-  /**
-   * Re-key an EncryptedDocument using a new KMS config without decrypting the document data.
-   * Decrypts the document's encrypted document key (EDEK) then re-encrypts it using the specified
-   * tenant's current primary KMS. The DEK is then discarded. The old tenant and new tenant can be
-   * the same in order to re-key the document to the tenant's latest primary config.
-   *
-   * @deprecated The `rekeyEdek` method is preferred over this method because the
-   *             EncryptedDocument's encrypted fields are not necessary for re-keying to take place.
-   *
-   * @param encryptedDocument Document to re-key which includes encrypted bytes as well as EDEK.
-   * @param metadata Metadata about the document being re-keyed.
-   * @param newTenantId Tenant ID the document should be re-keyed to.
-   * @return EncryptedDocument that contains the new EDEK and unaltered encrypted fields.
-   */
-  @Deprecated
-  public CompletableFuture<EncryptedDocument> rekeyDocument(EncryptedDocument encryptedDocument,
-      DocumentMetadata metadata, String newTenantId) {
-    return this.encryptionService.rekey(encryptedDocument.getEdek(), metadata, newTenantId)
-        .thenApply(newKey -> new EncryptedDocument(encryptedDocument.getEncryptedFields(),
-            newKey.getEdek()));
   }
 
   /**

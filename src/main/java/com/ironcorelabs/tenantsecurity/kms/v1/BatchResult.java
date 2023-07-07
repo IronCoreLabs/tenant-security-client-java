@@ -9,41 +9,60 @@ import java.util.concurrent.ConcurrentMap;
  * operations can have both successes and failures and this class holds both fields.
  */
 public final class BatchResult<T> {
-  private final ConcurrentMap<String, T> documents;
+  private final ConcurrentMap<String, T> successes;
   private final ConcurrentMap<String, TenantSecurityException> failures;
 
-  public BatchResult(ConcurrentMap<String, T> documents,
+  public BatchResult(ConcurrentMap<String, T> successes,
       ConcurrentMap<String, TenantSecurityException> failures) {
-    this.documents = documents;
+    this.successes = successes;
     this.failures = failures;
   }
 
   /**
-   * Get the Map from document ID to a successfully encrypted or decrypted document.
+   * Get the Map from ID to successfully encrypted or decrypted data.
+   *
+   * @deprecated Use getSuccesses() instead
    */
+  @Deprecated
   public ConcurrentMap<String, T> getDocuments() {
-    return this.documents;
+    return this.successes;
   }
 
   /**
-   * Get a Map from the document ID to an exception that occured when encrypting or decrypting the
-   * document
+   * Get the Map from ID to successfully encrypted or decrypted data.
+   */
+  public ConcurrentMap<String, T> getSuccesses() {
+    return this.successes;
+  }
+
+  /**
+   * Get a Map from the ID to an exception that occurred when encrypting or decrypting the data.
    */
   public ConcurrentMap<String, TenantSecurityException> getFailures() {
     return this.failures;
   }
 
   /**
-   * Returns whether the batch result had any successful encrypted/decrypted documents.
+   * Returns whether the batch result had any successful encrypted/decrypted data.
+   *
+   * @deprecated Use hasSuccesses() instead
    */
+  @Deprecated
   public boolean hasDocuments() {
-    return this.documents.size() > 0;
+    return !this.successes.isEmpty();
   }
 
   /**
-   * Returns whether the batch result had any failures when encrypting/decrypting documents.
+   * Returns whether the batch result had any successful encrypted/decrypted data.
+   */
+  public boolean hasSuccesses() {
+    return !this.successes.isEmpty();
+  }
+
+  /**
+   * Returns whether the batch result had any failures when encrypting/decrypting data.
    */
   public boolean hasFailures() {
-    return this.failures.size() > 0;
+    return !this.failures.isEmpty();
   }
 }
