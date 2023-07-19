@@ -7,6 +7,10 @@
 - Removed deprecated `TenantSecurityClient.rekeyDocument` method.
 - Added `TscException` for exceptions originating from the TSC.
 
+### Compatibility
+
+Deterministic encryption functionality requires TSP 4.11.1+.
+
 ## v4.2.0
 
 - Added `KmsException` for `KmsThrottled`.
