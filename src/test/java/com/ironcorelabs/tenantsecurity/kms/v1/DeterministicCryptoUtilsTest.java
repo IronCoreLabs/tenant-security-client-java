@@ -15,7 +15,7 @@ import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 @Test(groups = {"unit"})
 public class DeterministicCryptoUtilsTest {
   DeterministicPlaintextField plaintextField =
-      new DeterministicPlaintextField("aaaaaa".getBytes(), "deriv", "secret");
+      new DeterministicPlaintextField("aaaaaa".getBytes(), "secret", "deriv");
   DerivedKey[] derivedKeys = {new DerivedKey(
       "g2K8P7zoxO+yi4oDcR5Bk4grNuHFUBgqJ2Jgbh2bJzDk2Z/z8ji5WvF8aO2n/iUBl8tbKiaIs2n7R9vIBrXGmg==", 5,
       true),
@@ -121,8 +121,8 @@ public class DeterministicCryptoUtilsTest {
 
   public void encryptFieldBatchExceptionsTest() throws Exception {
     Map<String, DeterministicPlaintextField> batch = new HashMap<>();
-    batch.put("0", new DeterministicPlaintextField("aaaaaa".getBytes(), "deriv", "secret"));
-    batch.put("1", new DeterministicPlaintextField("aaaaaa".getBytes(), "badPath", "secret"));
+    batch.put("0", new DeterministicPlaintextField("aaaaaa".getBytes(), "secret", "deriv"));
+    batch.put("1", new DeterministicPlaintextField("aaaaaa".getBytes(), "secret", "badPath"));
 
     BatchResult<DeterministicEncryptedField> encrypted = DeterministicCryptoUtils
         .encryptFieldBatch(batch, getDeriveKeyResponse(), Executors.newWorkStealingPool());
@@ -281,12 +281,12 @@ public class DeterministicCryptoUtilsTest {
 
   public void deterministicCollectionToPathMapTest() {
     Map<String, DeterministicPlaintextField> paths = new HashMap<>();
-    paths.put("id1", new DeterministicPlaintextField(null, "deriv1", "secret1"));
-    paths.put("id2", new DeterministicPlaintextField(null, "deriv2", "secret1"));
-    paths.put("id3", new DeterministicPlaintextField(null, "deriv1", "secret2"));
-    paths.put("id4", new DeterministicPlaintextField(null, "deriv1", "secret2"));
-    paths.put("id5", new DeterministicPlaintextField(null, "deriv2", "secret2"));
-    paths.put("id6", new DeterministicPlaintextField(null, "deriv3", "secret3"));
+    paths.put("id1", new DeterministicPlaintextField(null, "secret1", "deriv1"));
+    paths.put("id2", new DeterministicPlaintextField(null, "secret1", "deriv2"));
+    paths.put("id3", new DeterministicPlaintextField(null, "secret2", "deriv1"));
+    paths.put("id4", new DeterministicPlaintextField(null, "secret2", "deriv1"));
+    paths.put("id5", new DeterministicPlaintextField(null, "secret2", "deriv2"));
+    paths.put("id6", new DeterministicPlaintextField(null, "secret3", "deriv3"));
 
     Map<String, String[]> result =
         DeterministicTenantSecurityClient.deterministicCollectionToPathMap(paths);
@@ -299,7 +299,7 @@ public class DeterministicCryptoUtilsTest {
     String encryptedString = "0000000500009f649525e6b382de28774e068822eb811e637309c579";
     byte[] encryptedData = CryptoUtilsTest.hexStringToByteArray(encryptedString);
     DeterministicEncryptedField encryptedField =
-        new DeterministicEncryptedField(encryptedData, "path1", "path2");
+        new DeterministicEncryptedField(encryptedData, "path2", "path1");
     DeterministicPlaintextField decrypted =
         DeterministicCryptoUtils.decryptField(encryptedField, derivedKeys).get();
     byte[] expected = "aaaaaa".getBytes();
