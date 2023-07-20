@@ -1,6 +1,6 @@
 # Changelog
 
-## v5.0.0
+## v6.0.0
 
 - Added `DeterministicTenantSecurityClient` supporting deterministic encryption/decryption operations.
 - Changed minimum supported Java version to 11.

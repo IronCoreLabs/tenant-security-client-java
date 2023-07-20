@@ -9,8 +9,8 @@ public final class DeterministicPlaintextField extends DeterministicPaths {
   private final String derivationPath;
   private final String secretPath;
 
-  public DeterministicPlaintextField(byte[] plaintextField, String derivationPath,
-      String secretPath) {
+  public DeterministicPlaintextField(byte[] plaintextField, String secretPath,
+      String derivationPath) {
     this.plaintextField = plaintextField;
     this.derivationPath = derivationPath;
     this.secretPath = secretPath;
