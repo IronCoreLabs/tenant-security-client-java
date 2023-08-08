@@ -344,7 +344,7 @@ public final class TenantSecurityClient implements Closeable {
 
   /**
    * Add a map of TSP failures to the provided BatchResult. The batch successes will be unchanged.
-   * 
+   *
    * @param <T> Success type for BatchResult. Should be EncryptedDocument or PlaintextDocument
    * @param batchResult Result from batch operation like `encryptBatchOfDocuments`
    * @param tspFailures Failures provided by the TSP when calling a batch endpoint
