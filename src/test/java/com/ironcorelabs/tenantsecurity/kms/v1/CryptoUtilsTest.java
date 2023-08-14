@@ -125,6 +125,18 @@ public class CryptoUtilsTest {
     assertEquals(decryptedStream.toByteArray(), plaintext);
   }
 
+  @Test(expectedExceptions = java.util.concurrent.ExecutionException.class,
+      expectedExceptionsMessageRegExp = ".*already IronCore encrypted.*")
+  public void doubleEncryptTest() throws Exception {
+    byte[] documentKey = new byte[32];
+    secureRandom.nextBytes(documentKey);
+    byte[] plaintext = new byte[244];
+    secureRandom.nextBytes(plaintext);
+    byte[] encryptedBytes =
+        CryptoUtils.encryptBytes(plaintext, metadata, documentKey, secureRandom).get();
+    CryptoUtils.encryptBytes(encryptedBytes, metadata, documentKey, secureRandom).get();
+  }
+
   public void streamingEncryptWithNormalDecrypt() throws Exception {
     byte[] documentKey = new byte[32];
     secureRandom.nextBytes(documentKey);
@@ -189,11 +201,11 @@ public class CryptoUtilsTest {
     CryptoUtils.encryptStreamInternal(documentKey, metadata, inputStream, encryptOutputStream,
         secureRandom).get();
     byte[] encryptedBytes = encryptOutputStream.toByteArray();
-    byte[] messedUpEncyptedBytes = Arrays.copyOf(encryptedBytes, length);
-    messedUpEncyptedBytes[length - 1] = 0;
-    messedUpEncyptedBytes[length - 2] = 0; // making the last 2 bytes 0 means the tag should be
-                                           // messed up so the decrypt should fail.
-    CryptoUtils.decryptDocument(messedUpEncyptedBytes, documentKey).get();
+    byte[] messedUpEncryptedBytes = Arrays.copyOf(encryptedBytes, length);
+    messedUpEncryptedBytes[length - 1] = 0;
+    messedUpEncryptedBytes[length - 2] = 0; // making the last 2 bytes 0 means the tag should be
+                                            // messed up so the decrypt should fail.
+    CryptoUtils.decryptDocument(messedUpEncryptedBytes, documentKey).get();
   }
 
   public void streamingEncryptWithNormalDecryptLargeDocument() throws Exception {

@@ -12,8 +12,8 @@ import org.testng.annotations.Test;
 
 @Test(groups = {"local-batch-integration"})
 public class LocalBatch {
-  private String TENANT_ID = "";
-  private String API_KEY = "";
+  private String TENANT_ID = System.getenv("TENANT_ID");
+  private String API_KEY = System.getenv("API_KEY");
 
   private Map<String, byte[]> getRoundtripDataToEncrypt() {
     Map<String, byte[]> documentMap = new HashMap<>();
@@ -79,6 +79,9 @@ public class LocalBatch {
                 System.out.println(run);
                 logFailures(encryptedResults.getFailures());
                 return client.decryptBatch(encryptedResults.getSuccesses(), context);
+              }).thenApply(decryptedResults -> {
+                logFailures(decryptedResults.getFailures());
+                return decryptedResults;
               });
     }
 

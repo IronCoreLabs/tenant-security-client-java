@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.EventMetadata;
@@ -172,6 +173,50 @@ public class DevIntegrationTest {
     assertEqualBytes(decryptedValuesMap.get("doc3"), documentMap.get("doc3"));
   }
 
+  @Test(expectedExceptions = java.util.concurrent.ExecutionException.class,
+      expectedExceptionsMessageRegExp = ".*already IronCore encrypted.*")
+  public void doubleEncryptTest() throws Exception {
+    DocumentMetadata metadata = getRoundtripMetadata(this.GCP_TENANT_ID);
+    Map<String, byte[]> documentMap = getRoundtripDataToEncrypt();
+    getClient()
+        .thenCompose(client -> client.encrypt(documentMap, metadata).thenCompose(
+            encryptedResults -> client.encrypt(encryptedResults.getEncryptedFields(), metadata)))
+        .get();
+  }
+
+  public void batchDoubleEncryptTest() throws Exception {
+    DocumentMetadata metadata = getRoundtripMetadata(this.GCP_TENANT_ID);
+    Map<String, byte[]> firstRow = getRoundtripDataToEncrypt();
+    Map<String, byte[]> secondRow = new HashMap<>();
+    secondRow.put("second1", "And a one!".getBytes("UTF-8"));
+    secondRow.put("second2", "And a two!".getBytes("UTF-8"));
+    secondRow.put("second3", "And a here we go!".getBytes("UTF-8"));
+    Map<String, byte[]> thirdRow = getRoundtripDataToEncrypt();
+
+    HashMap<String, Map<String, byte[]>> batchRows = new HashMap<>();
+    batchRows.put("firstRow", firstRow);
+    batchRows.put("secondRow", secondRow);
+    batchRows.put("thirdRow", thirdRow);
+
+    BatchResult<EncryptedDocument> doubleEncrypted =
+        getClient()
+            .thenCompose(
+                client -> client
+                    .encryptBatch(batchRows,
+                        metadata)
+                    .thenCompose(
+                        encryptedResults -> client
+                            .encryptBatch(
+                                encryptedResults.getSuccesses().entrySet().stream()
+                                    .collect(Collectors.toMap(Map.Entry::getKey,
+                                        entry -> entry.getValue().getEncryptedFields())),
+                                metadata)))
+            .join();
+    assertEquals(doubleEncrypted.getSuccesses().size(), 0);
+    // All failures because all the documents were double-encrypted
+    assertEquals(doubleEncrypted.getFailures().size(), 3);
+  }
+
   public void roundTripAzureKMSTest() throws Exception {
     DocumentMetadata metadata = getRoundtripMetadata(this.AZURE_TENANT_ID);
     Map<String, byte[]> documentMap = getRoundtripDataToEncrypt();
@@ -266,6 +311,53 @@ public class DevIntegrationTest {
     assertEqualBytes(row3.get("doc1"), thirdRow.get("doc1"));
     assertEqualBytes(row3.get("doc2"), thirdRow.get("doc2"));
     assertEqualBytes(row3.get("doc3"), thirdRow.get("doc3"));
+  }
+
+  public void batchPartialFailureTest() throws Exception {
+    DocumentMetadata metadata = getRoundtripMetadata(this.GCP_TENANT_ID);
+
+    Map<String, byte[]> firstRow = new HashMap<>();
+    firstRow.put("doc1", "And a one!".getBytes("UTF-8"));
+    Map<String, byte[]> secondRow = new HashMap<>();
+    secondRow.put("second1", "And a two!".getBytes("UTF-8"));
+
+    HashMap<String, Map<String, byte[]>> batchRows = new HashMap<>();
+    batchRows.put("firstRow", firstRow);
+    batchRows.put("secondRow", secondRow);
+
+    TenantSecurityClient client = getClient().get();
+
+    CompletableFuture<BatchResult<PlaintextDocument>> roundtrip =
+        client.encryptBatch(batchRows, metadata).thenCompose(batchResult -> {
+          assertEquals(0, batchResult.getFailures().size());
+          assertEquals(2, batchResult.getSuccesses().size());
+          ConcurrentMap<String, EncryptedDocument> successes = batchResult.getSuccesses();
+          EncryptedDocument doc = successes.get("firstRow");
+          Map<String, byte[]> fields = doc.getEncryptedFields();
+          byte[] fieldBytes = fields.get("doc1");
+          byte[] badBytes = Arrays.copyOfRange(fieldBytes, 0, fieldBytes.length - 2);
+          fields.put("doc1", badBytes);
+          successes.put("firstRow", new EncryptedDocument(fields, doc.getEdek()));
+          Map<String, EncryptedDocument> encryptedBatchRows = new HashMap<>();
+          encryptedBatchRows.put("firstRow", new EncryptedDocument(fields, doc.getEdek()));
+          encryptedBatchRows.put("secondRow", successes.get("secondRow"));
+          return client.decryptBatch(encryptedBatchRows, metadata);
+        });
+
+
+    BatchResult<PlaintextDocument> decryptedBatch = roundtrip.get();
+    assertEquals(1, decryptedBatch.getFailures().size());
+    assertEquals(1, decryptedBatch.getSuccesses().size());
+
+
+    // Also test combining BatchResults
+    Map<String, ErrorResponse> tspException = new HashMap<>();
+    tspException.put("foo", new ErrorResponse(123, "error"));
+    BatchResult<PlaintextDocument> combinedResult =
+        client.addTspFailuresToBatchResult(decryptedBatch, tspException);
+    // 1 extra failure, successes unchanged
+    assertEquals(combinedResult.getFailures().size(), 2);
+    assertEquals(combinedResult.getSuccesses().size(), 1);
   }
 
   public void batchRoundtripUpdateTest() throws Exception {

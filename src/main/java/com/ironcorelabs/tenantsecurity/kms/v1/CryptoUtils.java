@@ -15,6 +15,7 @@ import javax.crypto.spec.SecretKeySpec;
 
 import com.ironcorelabs.proto.DocumentHeader;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.CryptoException;
+import com.ironcorelabs.tenantsecurity.kms.v1.exception.TscException;
 import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
 
 class CryptoUtils {
@@ -127,6 +128,12 @@ class CryptoUtils {
    */
   public static CompletableFuture<byte[]> encryptBytes(byte[] document, DocumentMetadata metadata,
       byte[] documentKey, SecureRandom secureRandom) {
+    // Check if the provided document is already IronCore encrypted
+    if (isCiphertext(document)) {
+      return CompletableFuture
+          .failedFuture(new TscException(TenantSecurityErrorCodes.DOCUMENT_ENCRYPT_FAILED,
+              "The provided document is already IronCore encrypted."));
+    }
 
     // Create the output at a reasonable size. This means that the header can be up
     // to 512 bytes of content without growing. This is a very comfortable upper
