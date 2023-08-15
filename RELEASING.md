@@ -9,7 +9,7 @@ We deploy the SDK to [Maven Central](https://search.maven.org/artifact/com.ironc
 - Import the GPG signing key needed to sign the release. In Google Drive, navigate to the `IT_Info/pgp` folder, download `rsa-signing-subkey.asc.iron` and `ops-info.txt.iron`, and decrypt them using IronHide. Then do the following:
   1. Copy the master password from `ops-info.txt` to your clipboard so it can be provided in step 3 when importing the secret key.
   2. `gpg --keyserver keys.gnupg.net --receive-keys 62F57B1B87928CAC`
-  3. `gpg --import rsa-signing-subkey.asc`
+  3. `gpg --import rsa-signing-subkey.asc ops-info.txt`
 - Set the `JAVA_HOME` environment variable to point to your Java installation folder.
 - Run `mvn clean generate-resources source:jar javadoc:jar deploy -Dsuite=test-suites/test-unit` to deploy the release to Maven Central.
   **NOTE**: this command will need the master password associated with the GPG signing key.
