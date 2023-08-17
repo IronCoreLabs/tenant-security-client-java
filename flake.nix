@@ -11,7 +11,7 @@
         devShell = with pkgs; mkShell {
           buildInputs = [
             maven
-            openjdk11
+            openjdk17
           ];
         };
       }
