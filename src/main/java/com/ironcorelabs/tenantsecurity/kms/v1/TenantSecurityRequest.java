@@ -54,12 +54,17 @@ final class TenantSecurityRequest implements Closeable {
   private final HttpRequestFactory requestFactory;
   private final int timeout;
 
+  // TSC version that will be sent to the TSP.
+  static final String sdkVersion = "7.1.0";
+
   TenantSecurityRequest(String tspDomain, String apiKey, int requestThreadSize, int timeout) {
     HttpHeaders headers = new HttpHeaders();
     // Instead of calling `put` which causes issues with older versions of the google http library
     // call the set for each of these.
     headers.setContentType("application/json");
     headers.setAuthorization("cmk " + apiKey);
+    headers.put("TSC_LANGUAGE", "java");
+    headers.put("TSC_VERSION", sdkVersion);
 
     this.httpHeaders = headers;
 
