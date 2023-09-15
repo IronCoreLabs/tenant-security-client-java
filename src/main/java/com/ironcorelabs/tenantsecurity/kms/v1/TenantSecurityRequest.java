@@ -63,8 +63,8 @@ final class TenantSecurityRequest implements Closeable {
     // call the set for each of these.
     headers.setContentType("application/json");
     headers.setAuthorization("cmk " + apiKey);
-    headers.put("TSC_LANGUAGE", "java");
-    headers.put("TSC_VERSION", sdkVersion);
+    headers.put("x-icl-tsc-language", "java");
+    headers.put("x-icl-tsc-version", sdkVersion);
 
     this.httpHeaders = headers;
 
