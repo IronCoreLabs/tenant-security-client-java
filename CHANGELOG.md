@@ -1,5 +1,9 @@
 # Changelog
 
+## v7.1.0
+
+- Send TSC language/version as headers on requests to the TSP. This will allow the TSP to report TSC versions along with its [metrics](https://ironcorelabs.com/docs/saas-shield/tenant-security-proxy/deployment/#metrics).
+
 ## v7.0.0
 
 - Encryption now throws a `TscException` when trying to encrypt a document that has already been IronCore encrypted.

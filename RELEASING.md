@@ -3,6 +3,7 @@
 We deploy the SDK to [Maven Central](https://search.maven.org/artifact/com.ironcorelabs/tenant-security-java/).
 
 - Update the `<version>` in [pom.xml](./pom.xml).
+- Update the `sdkVersion` in [TenantSecurityRequest.java](./src/main/java/com/ironcorelabs/tenantsecurity/kms/v1/TenantSecurityRequest.java) to match the pom.xml.
 - Add an entry to [CHANGELOG.md](./CHANGELOG.md).
 - Commit the changes to the `main` branch. Wait until the release has succeeded to push the changes.
 - Put the username and password for the `icl-devops` Sonatype account into your `.m2/settings.xml` file. These credentials are stored on Drive in `IT_Info/sonatype-info.txt.iron`. A sample of this file is given below.
