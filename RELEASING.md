@@ -22,7 +22,7 @@ We deploy the SDK to [Maven Central](https://search.maven.org/artifact/com.ironc
     release process complete successfully.
 - When the artifacts have been deployed, go to https://oss.sonatype.org, log in using the `icl-devops` username and
   password from `sonatype-info.txt`, and find the new release in the _Staging Repositories_. Close that repository and then release it in order to actually push the package out to the public repo.
-- Push your new version and CHANGELOG entry to GitHub. Create a release in github and label it as latest.
+- Push your new version and CHANGELOG entry to GitHub. Create a release in github and label it as latest if it isn't already.
 
 ### Sample .m2/settings.xml
 
