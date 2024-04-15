@@ -30,7 +30,7 @@ public enum TenantSecurityErrorCodes {
       "Request to KMS failed because the key configuration was invalid or the necessary permissions for the operation were missing/revoked."),
   KMS_UNREACHABLE(208, "Request to KMS failed because KMS was unreachable."),
   KMS_THROTTLED(209, "Request to KMS failed because KMS throttled the Tenant Security Proxy."),
-
+  KMS_ACCOUNT_ISSUE(210, "Request to KMS failed because of an issue with the KMS account."),
   // map to SecurityEventException
   SECURITY_EVENT_REJECTED(301, "Tenant Security Proxy could not accept the security event"),
 
