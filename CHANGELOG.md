@@ -6,7 +6,7 @@
 
 ### Compatibility
 
-KMS_ACCOUNT_ISSUE requires TSP 4.13.0+. If using TSP >=4.13.0, these errors will come through as UNKNOWN_ERROR.
+KMS_ACCOUNT_ISSUE requires TSP 4.13.0+. If using TSC < 7.2.0 and TSP >= 4.13.0, these errors will come through as UNKNOWN_ERROR.
 
 ## v7.1.0
 
