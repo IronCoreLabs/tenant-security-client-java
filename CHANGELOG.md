@@ -1,5 +1,13 @@
 # Changelog
 
+## v7.2.0
+
+- Support TSP error code for KMS_ACCOUNT_ISSUE.
+
+### Compatibility
+
+KMS_ACCOUNT_ISSUE requires TSP 4.13.0+. If using TSC < 7.2.0 and TSP >= 4.13.0, these errors will come through as UNKNOWN_ERROR.
+
 ## v7.1.0
 
 - Send TSC language/version as headers on requests to the TSP. This will allow the TSP to report TSC versions along with its [metrics](https://ironcorelabs.com/docs/saas-shield/tenant-security-proxy/deployment/#metrics).
