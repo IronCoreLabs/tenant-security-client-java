@@ -4,12 +4,14 @@ This directory contains a benchmark suite for the Java version of the Tenant Sec
 To build and run the benchmark, just execute the following commands in this directory:
 
 To show single threaded latency of a roundtrip (encrypt/decrypt):
+
 ```
 mvn clean install
 java -Xms1024m -Xmx1024m -jar target/benchmarks.jar -f0 -wi 1
 ```
 
 A variation that will show throughput using key leasing:
+
 ```
 mvn clean install
 TENANT_ID=tenant-gcp-l java -Xms1024m -Xmx1024m -jar target/benchmarks.jar -f 0 -wi 1 -bm thrpt -tu s
@@ -18,16 +20,12 @@ TENANT_ID=tenant-gcp-l java -Xms1024m -Xmx1024m -jar target/benchmarks.jar -f 0 
 You have to benchmark an actual version of the TSC, though this can be a `SNAPSHOT` version published locally.
 Update the `pom.xml` to whatever version you'd like to test.
 
-
 ## Tenant Security Proxy
 
 In order to run the benchmarks, the TSC needs to connect to a _Tenant Security Proxy (TSP)_.
 This service is provided as a Docker container, so it is easy to run the proxy on any computer that has Docker
 installed. IronCore Labs hosts the Docker container on a publicly accessible container registry, so you can pull
 the image from there and run it locally.
-
-The TSP has a companion Docker container, the _Tenant Security Logdriver_ (LD) that runs alongside it in your environment. It is also hosted on the same publicly accessible container registry.
-
 
 In addition to the Docker containers, you need a configuration file that specifies how the TSP should communicate
 with the IronCore Labs Configuration Broker and Data Control Platform, which work together to enable the end-to-end
@@ -40,9 +38,11 @@ have included this configuration in the repository as a convenience. Also note t
 created in IronCore's staging infrastructure.
 
 The following `docker-compose` command will get a TSP+LD running on your computer with the provided configuration:
+
 ```
 docker-compose -f docker-compose.yml up
 ```
+
 This starts the TSP locally listening on port 32804. The benchmark expects to connect to the TSP at that address.
 
 To connect with and use the TSP, you need to supply a couple more configuration values:
@@ -78,6 +78,6 @@ before running the benchmark.
 
 Since TSC-java is a library that interacts with a back-end service (TSP), the benchmark results are not always straightforward to interpret. Most API calls in the TSC make a round-trip to the TSP, and the TSP also does some computation. If testing on a single machine, it is good to monitor the CPU/RAM usage of the TSP processes in addition to the Java benchmark process to make sure you aren't resource constrained.
 
-In general, operation latency is a function of latency to the TSP + latency to the tenant's KMS (if key-leasing is disabled). 
+In general, operation latency is a function of latency to the TSP + latency to the tenant's KMS (if key-leasing is disabled).
 
 The TSP's tenant logging mechanism has some tunable limits. By default, a TSP should be able to sustain 500 ops/sec/tenant, with the ability to burst higher for a limited time. The benchmark is using a single tenant, and (depending on your machine and benchmark config) can easily be executing a few thousand ops/sec. If you run a benchmark long enough you will overwhelm the TSP. In a real application, you would scale-out the TSP at this point. See [the TSP documentation](https://ironcorelabs.com/docs/saas-shield/tenant-security-proxy/overview/) for more details.
