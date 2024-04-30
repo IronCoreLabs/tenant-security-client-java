@@ -35,7 +35,7 @@ public class IntegrationBenchmark {
   // These match up to the Demo TSP whose config we ship with the repo.
   private static String TSP_ADDRESS = "http://localhost";
   private static String TSP_PORT = "32804";
-  private static String TENANT_ID = "tenant-gcp";
+  private static String TENANT_ID = "tenant-gcp-l";
   private static String API_KEY = "0WUaXesNgbTAuLwn";
   private static DocumentMetadata metadata;
 
