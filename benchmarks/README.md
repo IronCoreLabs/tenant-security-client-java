@@ -89,3 +89,20 @@ Since TSC-java is a library that interacts with a back-end service (TSP), the be
 In general, operation latency is a function of latency to the TSP + latency to the tenant's KMS (if key-leasing is disabled).
 
 The TSP's tenant logging mechanism has some tunable limits. By default, a TSP should be able to sustain 500 ops/sec/tenant, with the ability to burst higher for a limited time. The benchmark is using a single tenant, and (depending on your machine and benchmark config) can easily be executing a few thousand ops/sec. If you run a benchmark long enough you will overwhelm the TSP. In a real application, you would scale-out the TSP at this point. See [the TSP documentation](https://ironcorelabs.com/docs/saas-shield/tenant-security-proxy/deployment/) for more details.
+
+## Results
+
+The following benchmarking run was done on May 7, 2024 on a MacBook Pro (2023) with an Apple M2 Max chip. It uses a locally-built TSP running with the configuration from `demo-tsp.conf`.
+
+```
+Benchmark                                      Mode  Cnt      Score     Error  Units
+IntegrationBenchmark.batchEncrypt10DocsOf100B  avgt    5    844.824 ±   3.801  us/op
+IntegrationBenchmark.decrypt100B               avgt    5    103.031 ±   1.749  us/op
+IntegrationBenchmark.decrypt10KB               avgt    5    286.778 ±   1.356  us/op
+IntegrationBenchmark.decrypt1B                 avgt    5    101.443 ±   0.560  us/op
+IntegrationBenchmark.decrypt1MB                avgt    5  15066.330 ± 295.535  us/op
+IntegrationBenchmark.encrypt100B               avgt    5    103.365 ±   0.600  us/op
+IntegrationBenchmark.encrypt10KB               avgt    5    287.138 ±   2.928  us/op
+IntegrationBenchmark.encrypt1B                 avgt    5    102.163 ±   0.403  us/op
+IntegrationBenchmark.encrypt1MB                avgt    5  15193.096 ± 280.676  us/op
+```
