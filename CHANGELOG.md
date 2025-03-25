@@ -1,5 +1,9 @@
 # Changelog
 
+## v7.2.1
+
+- Update dependencies to fix CVEs.
+
 ## v7.2.0
 
 - Support TSP error code for KMS_ACCOUNT_ISSUE.
