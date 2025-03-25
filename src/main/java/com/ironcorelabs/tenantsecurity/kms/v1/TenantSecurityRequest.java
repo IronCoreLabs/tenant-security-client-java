@@ -55,7 +55,7 @@ final class TenantSecurityRequest implements Closeable {
   private final int timeout;
 
   // TSC version that will be sent to the TSP.
-  static final String sdkVersion = "7.2.0";
+  static final String sdkVersion = "7.2.1";
 
   TenantSecurityRequest(String tspDomain, String apiKey, int requestThreadSize, int timeout) {
     HttpHeaders headers = new HttpHeaders();
