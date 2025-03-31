@@ -202,6 +202,7 @@
                   <include>com.google.guava:listenablefuture</include>
                   <include>io.opencensus:opencensus-api</include>
                   <include>io.grpc:grpc-context</include>
+                  <include>io.grpc:grpc-api</include>
                   <include>io.opencensus:opencensus-contrib-http-util</include>
                   <include>com.fasterxml.jackson.core:jackson-core</include>
                 </includes>
