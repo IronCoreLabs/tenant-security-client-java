@@ -23,9 +23,9 @@ We deploy the SDK to [Maven Central](https://search.maven.org/artifact/com.ironc
     release process complete successfully.
 - Push your new version and CHANGELOG entry to GitHub. Create a release in github and label it as latest if it isn't already.
 
-### Sample .m2/settings.xml
+## Sample .m2/settings.xml
 
-```
+```xml
 <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
   <localRepository>${user.home}/.m2/repository</localRepository>
