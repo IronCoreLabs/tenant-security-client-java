@@ -6,7 +6,7 @@ We deploy the SDK to [Maven Central](https://search.maven.org/artifact/com.ironc
 - Update the `sdkVersion` in [TenantSecurityRequest.java](./src/main/java/com/ironcorelabs/tenantsecurity/kms/v1/TenantSecurityRequest.java) to match the pom.xml.
 - Add an entry to [CHANGELOG.md](./CHANGELOG.md).
 - Commit the changes to the `main` branch and add a git tag with the `version` in it. Wait until the release has succeeded to push the changes.
-- Login to https://central.sonatype.org/ with the username `icl-devops` and the password which is stored in `IT_Info/sonatype-info.txt.iron`.
+- Login to [sonatype central](https://central.sonatype.com/) with the username `icl-devops` and the password which is stored in `IT_Info/sonatype-info.txt.iron`.
 - In the corner with the username click the down arrow and go to profile. Then click the `Access User Token` button. Copy the username and password into your `.m2/settings.xml`. A sample of this file is given below.
 - Import the GPG signing key needed to sign the release. In Google Drive, navigate to the `IT_Info/pgp` folder, download `rsa-signing-subkey.asc.iron` and `ops-info.txt.iron`, and decrypt them using IronHide. Then do the following:
   1. Copy the master password from `ops-info.txt` to your clipboard so it can be provided in step 3 when importing the secret key.
@@ -23,9 +23,9 @@ We deploy the SDK to [Maven Central](https://search.maven.org/artifact/com.ironc
     release process complete successfully.
 - Push your new version and CHANGELOG entry to GitHub. Create a release in github and label it as latest if it isn't already.
 
-### Sample .m2/settings.xml
+## Sample .m2/settings.xml
 
-```
+```xml
 <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
   <localRepository>${user.home}/.m2/repository</localRepository>
