@@ -8,7 +8,7 @@
   <groupId>com.ironcorelabs</groupId>
   <artifactId>tenant-security-java</artifactId>
   <packaging>jar</packaging>
-  <version>7.2.2</version>
+  <version>7.2.3</version>
   <name>tenant-security-java</name>
   <url>https://ironcorelabs.com/docs</url>
   <description>Java client library for the IronCore Labs Tenant Security Proxy.</description>
@@ -35,18 +35,6 @@
       <url>http://github.com/ironcorelabs</url>
     </developer>
   </developers>
-
-  <distributionManagement>
-    <snapshotRepository>
-      <id>sonatype-nexus-snapshots</id>
-      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-    </snapshotRepository>
-    <repository>
-      <id>sonatype-nexus</id>
-      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-    </repository>
-  </distributionManagement>
-
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
@@ -251,6 +239,16 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.sonatype.central</groupId>
+        <artifactId>central-publishing-maven-plugin</artifactId>
+        <version>0.7.0</version>
+        <extensions>true</extensions>
+        <configuration>
+          <publishingServerId>central</publishingServerId>
+          <autoPublish>true</autoPublish>
+        </configuration>
       </plugin>
     </plugins>
   </build>
