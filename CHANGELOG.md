@@ -1,5 +1,13 @@
 # Changelog
 
+## v7.2.3
+
+- No code change, changed publishing to new sonatype.
+
+## v7.2.2
+
+- Fix issues with shaded jar.
+
 ## v7.2.1
 
 - Update dependencies to fix CVEs.
