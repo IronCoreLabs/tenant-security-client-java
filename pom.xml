@@ -18,6 +18,11 @@
       <url>https://opensource.org/licenses/AGPL-3.0</url>
       <distribution>repo</distribution>
     </license>
+    <license>
+      <name>LicenseRef-ironcore-labs-commercial-license</name>
+      <url>https://ironcorelabs.com</url>
+      <distribution>repo</distribution>
+    </license>
   </licenses>
 
   <organization>

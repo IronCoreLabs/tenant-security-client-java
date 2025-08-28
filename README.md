@@ -9,4 +9,9 @@ The [examples](examples/README.md) and [benchmarks](benchmarks/README.md) are a 
 
 More extensive documentation about usage is available on our [docs site](https://ironcorelabs.com/docs/customer-managed-keys/tenant-security-client/overview).
 
+## License
+
+`tenant-security-client-java` is licensed under the [GNU Affero General Public License](LICENSE). We also offer commercial licenses - [email](mailto:info@ironcorelabs.com) for more information or check pricing on our [website](https://ironcorelabs.com/)
+
+
 Copyright (c) 2021 IronCore Labs, Inc. All rights reserved.
