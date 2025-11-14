@@ -20,7 +20,7 @@ import com.google.api.client.http.apache.v2.ApacheHttpTransport;
 import com.google.api.client.http.json.JsonHttpContent;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.JsonObjectParser;
-import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.client.util.Value;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TspServiceException;
@@ -35,7 +35,11 @@ import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
  * works to parse out error codes on wrap/unwrap failures.
  */
 final class TenantSecurityRequest implements Closeable {
-  private static final JsonFactory JSON_FACTORY = new JacksonFactory();
+  private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
+
+  private static String stripTrailingSlash(String s) {
+    return (s == null) ? null : s.replaceAll("/+$", "");
+  }
 
   // Fixed sized thread pool for web requests. Limit the amount of parallel web
   // requests that we let go out at any given time. We don't want to DoS our
@@ -67,8 +71,7 @@ final class TenantSecurityRequest implements Closeable {
     headers.put("x-icl-tsc-version", sdkVersion);
 
     this.httpHeaders = headers;
-
-    String tspApiPrefix = tspDomain + "/api/1/";
+    String tspApiPrefix = stripTrailingSlash(tspDomain) + "/api/1/";
     this.wrapEndpoint = new GenericUrl(tspApiPrefix + "document/wrap");
     this.batchWrapEndpoint = new GenericUrl(tspApiPrefix + "document/batch-wrap");
     this.unwrapEndpoint = new GenericUrl(tspApiPrefix + "document/unwrap");
