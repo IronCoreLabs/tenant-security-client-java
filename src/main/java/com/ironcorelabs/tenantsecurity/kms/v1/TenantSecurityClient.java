@@ -203,52 +203,6 @@ public final class TenantSecurityClient implements Closeable {
     }
   }
 
-  /**
-   * Constructor for TenantSecurityClient class that allows for modifying the random number
-   * generator used for encryption.
-   *
-   * @param tspDomain Domain where the Tenant Security Proxy is running.
-   * @param apiKey Key to use for requests to the Tenant Security Proxy.
-   * @param requestThreadSize Number of threads to use for fixed-size web request thread pool
-   * @param aesThreadSize Number of threads to use for fixed-size AES operations threadpool
-   * @param randomGen Instance of SecureRandom to use for PRNG when performing encryption
-   *        operations.
-   * @param timeout Request to TSP read and connect timeout in ms.
-   * @throws Exception If the provided domain is invalid or the provided SecureRandom instance is
-   *         not set.
-   */
-  public TenantSecurityClient(String tspDomain, String apiKey, int requestThreadSize,
-      int aesThreadSize, SecureRandom randomGen, int timeout, boolean allowInsecureHttp)
-      throws Exception {
-    // Use the URL class to validate the form of the provided TSP domain URL
-    new URL(tspDomain);
-    if (apiKey == null || apiKey.isEmpty()) {
-      throw new IllegalArgumentException("No value provided for apiKey!");
-    }
-    if (randomGen == null) {
-      throw new IllegalArgumentException("No value provided for random number generator!");
-    }
-    if (requestThreadSize < 1) {
-      throw new IllegalArgumentException(
-          "Value provided for request threadpool size must be greater than 0!");
-    }
-    if (aesThreadSize < 1) {
-      throw new IllegalArgumentException(
-          "Value provided for AES threadpool size must be greater than 0!");
-    }
-    if (timeout < 1) {
-      throw new IllegalArgumentException("Value provided for timeout must be greater than 0!");
-    }
-
-    this.encryptionExecutor = Executors.newFixedThreadPool(aesThreadSize);
-    this.encryptionService =
-        new TenantSecurityRequest(tspDomain, apiKey, requestThreadSize, timeout);
-    this.deterministicClient =
-        new DeterministicTenantSecurityClient(this.encryptionExecutor, this.encryptionService);
-
-    this.secureRandom = randomGen;
-  }
-
   public void close() throws IOException {
     this.encryptionService.close();
     this.encryptionExecutor.shutdown();
