@@ -75,7 +75,7 @@ public final class TenantSecurityClient implements Closeable {
    * Will throw if the URL isn't valid or if https is enforced and not provided.
    *
    * @param url The Url to check
-   * @param allowInsecureHttp If normal http should be allowed..
+   * @param allowInsecureHttp If normal http should be allowed.
    */
   private static void checkUrlForm(String url, boolean allowInsecureHttp) {
     try {
