@@ -9,6 +9,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
+import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
 import org.testng.annotations.Test;
 
 @Test(groups = {"dev-integration"})
@@ -61,8 +62,9 @@ public class NotPrimaryAndDisabledConfigs {
   }
 
   private CompletableFuture<TenantSecurityClient> getClient() {
-    return TenantSecurityClient.create(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT,
-        NotPrimaryAndDisabledConfigs.INTEGRATION_API_KEY);
+    return CompletableFutures.tryCatchNonFatal(
+        () -> new TenantSecurityClient.Builder(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT,
+            NotPrimaryAndDisabledConfigs.INTEGRATION_API_KEY).allowInsecureHttp(true).build());
   }
 
   private DocumentMetadata getRoundtripMetadata() {
