@@ -4,6 +4,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.SecureRandom;
 import java.security.Security;
@@ -37,134 +38,169 @@ public final class TenantSecurityClient implements Closeable {
 
   private DeterministicTenantSecurityClient deterministicClient;
 
-  /**
-   * Default size of web request thread pool. Defaults to 25.
-   */
-  public static int DEFAULT_REQUEST_THREADPOOL_SIZE = 25;
+  private TenantSecurityClient(Builder builder) throws Exception {
+    // Validate domain
+    TenantSecurityClient.checkUrlForm(builder.tspDomain, builder.allowInsecureHttp);
 
-  /**
-   * Default size of the threadpool used for AES encryptions/decryptions. Defaults to the number of
-   * cores on the machine being run on.
-   */
-  public static int DEFAULT_AES_THREADPOOL_SIZE = Runtime.getRuntime().availableProcessors();
-
-  /**
-   * Default timeout in ms for the connection to the TSP.
-   */
-  public static int DEFAULT_TIMEOUT_MS = 20000;
-
-  /**
-   * Constructor for TenantSecurityClient class that uses the SecureRandom NativePRNGNonBlocking
-   * instance for random number generation.
-   *
-   * @param tspDomain Domain where the Tenant Security Proxy is running.
-   * @param apiKey Key to use for requests to the Tenant Security Proxy.
-   * @throws Exception If the provided domain is invalid.
-   */
-  public TenantSecurityClient(String tspDomain, String apiKey) throws Exception {
-    this(tspDomain, apiKey, DEFAULT_REQUEST_THREADPOOL_SIZE, DEFAULT_AES_THREADPOOL_SIZE,
-        SecureRandom.getInstance("NativePRNGNonBlocking"));
-  }
-
-  /**
-   * Constructor for TenantSecurityClient class that allows call to provide web request and AES
-   * operation thread pool sizes. Uses the SecureRandom NativePRNGNonBlocking instance for random
-   * number generation.
-   *
-   * @param tspDomain Domain where the Tenant Security Proxy is running.
-   * @param apiKey Key to use for requests to the Tenant Security Proxy.
-   * @param requestThreadSize Number of threads to use for fixed-size web request thread pool
-   * @param aesThreadSize Number of threads to use for fixed-size AES operations threadpool
-   * @throws Exception If the provided domain is invalid.
-   */
-  public TenantSecurityClient(String tspDomain, String apiKey, int requestThreadSize,
-      int aesThreadSize) throws Exception {
-    this(tspDomain, apiKey, requestThreadSize, aesThreadSize,
-        SecureRandom.getInstance("NativePRNGNonBlocking"));
-  }
-
-  /**
-   * Constructor for TenantSecurityClient class that allows call to provide web request and AES
-   * operation thread pool sizes. Uses the SecureRandom NativePRNGNonBlocking instance for random
-   * number generation.
-   *
-   * @param tspDomain Domain where the Tenant Security Proxy is running.
-   * @param apiKey Key to use for requests to the Tenant Security Proxy.
-   * @param requestThreadSize Number of threads to use for fixed-size web request thread pool
-   * @param aesThreadSize Number of threads to use for fixed-size AES operations threadpool
-   * @param timeout Request to TSP read and connect timeout in ms.
-   *
-   * @throws Exception If the provided domain is invalid.
-   */
-  public TenantSecurityClient(String tspDomain, String apiKey, int requestThreadSize,
-      int aesThreadSize, int timeout) throws Exception {
-    this(tspDomain, apiKey, requestThreadSize, aesThreadSize,
-        SecureRandom.getInstance("NativePRNGNonBlocking"), timeout);
-  }
-
-  /**
-   * Constructor for TenantSecurityClient class that allows for modifying the random number
-   * generator used for encryption. Sets a default connect and read timeout of 20s.
-   *
-   * @param tspDomain Domain where the Tenant Security Proxy is running.
-   * @param apiKey Key to use for requests to the Tenant Security Proxy.
-   * @param requestThreadSize Number of threads to use for fixed-size web request thread pool
-   * @param aesThreadSize Number of threads to use for fixed-size AES operations threadpool
-   * @param randomGen Instance of SecureRandom to use for PRNG when performing encryption
-   *        operations.
-   * @throws Exception If the provided domain is invalid or the provided SecureRandom instance is
-   *         not set.
-   */
-  public TenantSecurityClient(String tspDomain, String apiKey, int requestThreadSize,
-      int aesThreadSize, SecureRandom randomGen) throws Exception {
-    this(tspDomain, apiKey, requestThreadSize, aesThreadSize, randomGen, DEFAULT_TIMEOUT_MS);
-  }
-
-  /**
-   * Constructor for TenantSecurityClient class that allows for modifying the random number
-   * generator used for encryption.
-   *
-   * @param tspDomain Domain where the Tenant Security Proxy is running.
-   * @param apiKey Key to use for requests to the Tenant Security Proxy.
-   * @param requestThreadSize Number of threads to use for fixed-size web request thread pool
-   * @param aesThreadSize Number of threads to use for fixed-size AES operations threadpool
-   * @param randomGen Instance of SecureRandom to use for PRNG when performing encryption
-   *        operations.
-   * @param timeout Request to TSP read and connect timeout in ms.
-   * @throws Exception If the provided domain is invalid or the provided SecureRandom instance is
-   *         not set.
-   */
-  public TenantSecurityClient(String tspDomain, String apiKey, int requestThreadSize,
-      int aesThreadSize, SecureRandom randomGen, int timeout) throws Exception {
-    // Use the URL class to validate the form of the provided TSP domain URL
-    new URL(tspDomain);
-    if (apiKey == null || apiKey.isEmpty()) {
+    if (builder.apiKey == null || builder.apiKey.isEmpty()) {
       throw new IllegalArgumentException("No value provided for apiKey!");
     }
-    if (randomGen == null) {
+    if (builder.randomGen == null) {
       throw new IllegalArgumentException("No value provided for random number generator!");
     }
-    if (requestThreadSize < 1) {
+    if (builder.requestThreadSize < 1) {
       throw new IllegalArgumentException(
           "Value provided for request threadpool size must be greater than 0!");
     }
-    if (aesThreadSize < 1) {
+    if (builder.aesThreadSize < 1) {
       throw new IllegalArgumentException(
           "Value provided for AES threadpool size must be greater than 0!");
     }
-    if (timeout < 1) {
+    if (builder.timeout < 1) {
       throw new IllegalArgumentException("Value provided for timeout must be greater than 0!");
     }
 
-    this.encryptionExecutor = Executors.newFixedThreadPool(aesThreadSize);
-    this.encryptionService =
-        new TenantSecurityRequest(tspDomain, apiKey, requestThreadSize, timeout);
+    this.encryptionExecutor = Executors.newFixedThreadPool(builder.aesThreadSize);
+    this.encryptionService = new TenantSecurityRequest(builder.tspDomain, builder.apiKey,
+        builder.requestThreadSize, builder.timeout);
     this.deterministicClient =
         new DeterministicTenantSecurityClient(this.encryptionExecutor, this.encryptionService);
 
-    // Update the crypto policy to allow us to use 256 bit AES keys
     Security.setProperty("crypto.policy", "unlimited");
-    this.secureRandom = randomGen;
+    this.secureRandom = builder.randomGen;
+  }
+
+  /**
+   * Ensures that the url is valid and if allowInsecureHttp is false that the tsp url must be https.
+   * Will throw if the URL isn't valid or if https is enforced and not provided.
+   *
+   * @param url The Url to check
+   * @param allowInsecureHttp If normal http should be allowed.
+   */
+  private static void checkUrlForm(String url, boolean allowInsecureHttp) {
+    try {
+      URL parsed = new URL(url);
+      String protocol = parsed.getProtocol();
+      if (!allowInsecureHttp && !"https".equalsIgnoreCase(protocol)) {
+        throw new IllegalArgumentException("Insecure HTTP URL not allowed: " + url);
+      }
+    } catch (MalformedURLException e) {
+      throw new IllegalArgumentException("Invalid URL: " + url, e);
+    }
+  }
+
+  public static class Builder {
+
+    /**
+     * Default size of web request thread pool. Defaults to 25.
+     */
+    public static int DEFAULT_REQUEST_THREADPOOL_SIZE = 25;
+
+    /**
+     * Default size of the threadpool used for AES encryptions/decryptions. Defaults to the number
+     * of cores on the machine being run on.
+     */
+    public static int DEFAULT_AES_THREADPOOL_SIZE = Runtime.getRuntime().availableProcessors();
+
+    /**
+     * Default timeout in ms for the connection to the TSP.
+     */
+    public static int DEFAULT_TIMEOUT_MS = 20000;
+
+    private final String tspDomain;
+    private final String apiKey;
+
+    private int requestThreadSize = DEFAULT_REQUEST_THREADPOOL_SIZE;
+    private int aesThreadSize = DEFAULT_AES_THREADPOOL_SIZE;
+    private int timeout = DEFAULT_TIMEOUT_MS;
+    private boolean allowInsecureHttp = false;
+    // If this is null when build is called we set it to the default. Don't set it here
+    // in case the default isn't available on their OS.
+    private SecureRandom randomGen = null;
+
+    /**
+     * Builder for TenantSecurityClient class.
+     *
+     * @param tspDomain Domain where the Tenant Security Proxy is running.
+     * @param apiKey Key to use for requests to the Tenant Security Proxy.
+     * @param tspDomain
+     * @param apiKey
+     */
+    public Builder(String tspDomain, String apiKey) {
+      this.tspDomain = tspDomain;
+      this.apiKey = apiKey;
+    }
+
+    /**
+     * Sets the web request pool size. Defaults to DEFAULT_REQUEST_THREADPOOL_SIZE.
+     *
+     * @param size Number of threads to use for fixed-size web request thread pool.
+     * @return The builder
+     */
+    public Builder requestThreadSize(int size) {
+      this.requestThreadSize = size;
+      return this;
+    }
+
+    /**
+     * Sets the number of threads to use for fixed-size AES operations threadpool. Defaults to
+     * DEFAULT_AES_THREADPOOL_SIZE
+     *
+     * @param size The size of the aes thread pool.
+     * @return The builder
+     */
+    public Builder aesThreadSize(int size) {
+      this.aesThreadSize = size;
+      return this;
+    }
+
+    /**
+     * Sets the timeout in milliseconds for communicating with the TSP.
+     *
+     * @param timeout Timeout in milliseconds for the TSP requests.
+     * @return The builder
+     */
+    public Builder timeoutMs(int timeout) {
+      this.timeout = timeout;
+      return this;
+    }
+
+    /**
+     * Sets the random number generator. This should be set with care as the generator must be
+     * cryptographically secure. Defaults to "NativePRNGNonBlocking"
+     *
+     * @param random A new random number generator to use.
+     * @return The builder
+     */
+    public Builder random(SecureRandom random) {
+      this.randomGen = random;
+      return this;
+    }
+
+    /**
+     * Sets allowInsecureHttp. Defaults to false.
+     *
+     * @param allow If the TSP is allowed to be reachable via http.
+     * @return The builder
+     */
+    public Builder allowInsecureHttp(boolean allow) {
+      this.allowInsecureHttp = allow;
+      return this;
+    }
+
+    /**
+     * Construct the TenantSecurityClient fron the builder.
+     *
+     * @return The newly constructed TenantSecurityClient.
+     * @throws Exception If the tsp url isn't valid or if HTTPS is required and not provided.
+     */
+    public TenantSecurityClient build() throws Exception {
+      // Check this here in case they don't have support for NativePRNGNonBlocking.
+      if (this.randomGen == null) {
+        this.randomGen = SecureRandom.getInstance("NativePRNGNonBlocking");
+      }
+      return new TenantSecurityClient(this);
+    }
   }
 
   public void close() throws IOException {
@@ -191,7 +227,8 @@ public final class TenantSecurityClient implements Closeable {
    * @return CompletableFuture that resolves in a instance of the TenantSecurityClient class.
    */
   public static CompletableFuture<TenantSecurityClient> create(String tspDomain, String apiKey) {
-    return CompletableFutures.tryCatchNonFatal(() -> new TenantSecurityClient(tspDomain, apiKey));
+    return CompletableFutures
+        .tryCatchNonFatal(() -> new TenantSecurityClient.Builder(tspDomain, apiKey).build());
   }
 
   /**

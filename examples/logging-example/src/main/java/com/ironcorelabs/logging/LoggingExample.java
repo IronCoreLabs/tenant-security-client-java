@@ -28,7 +28,9 @@ public class LoggingExample {
 
     // Initialize the client with a Tenant Security Proxy domain and API key.
     // Typically this would be done once when the application or service initializes
-    TenantSecurityClient client = TenantSecurityClient.create("http://localhost:32804", API_KEY).get();
+    TenantSecurityClient client =
+        new TenantSecurityClient.Builder("http://localhost:32804", API_KEY).allowInsecureHttp(true)
+            .build();
 
     // Example 1: logging a user-related event
     //
@@ -38,8 +40,8 @@ public class LoggingExample {
     Map<String, String> otherData = new HashMap<>();
     otherData.put("field1", "gumby");
     otherData.put("field2", "gumby");
-    EventMetadata metadata1 = new EventMetadata(TENANT_ID, "userId1", "PII", otherData, "Rq8675309", "127.0.0.1",
-        "userId1", System.currentTimeMillis());
+    EventMetadata metadata1 = new EventMetadata(TENANT_ID, "userId1", "PII", otherData, "Rq8675309",
+        "127.0.0.1", "userId1", System.currentTimeMillis());
     try {
       client.logSecurityEvent(UserEvent.LOGIN, metadata1).get();
       System.out.println("Successfully logged user login event.");

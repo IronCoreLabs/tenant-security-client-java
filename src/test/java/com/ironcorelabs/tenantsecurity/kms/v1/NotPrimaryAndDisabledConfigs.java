@@ -7,8 +7,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-
+import com.ironcorelabs.tenantsecurity.TestUtils;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
+import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
 import org.testng.annotations.Test;
 
 @Test(groups = {"dev-integration"})
@@ -61,7 +62,7 @@ public class NotPrimaryAndDisabledConfigs {
   }
 
   private CompletableFuture<TenantSecurityClient> getClient() {
-    return TenantSecurityClient.create(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT,
+    return TestUtils.createTscWithAllowInsecure(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT,
         NotPrimaryAndDisabledConfigs.INTEGRATION_API_KEY);
   }
 

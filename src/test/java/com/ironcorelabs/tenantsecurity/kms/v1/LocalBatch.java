@@ -59,7 +59,8 @@ public class LocalBatch {
     DocumentMetadata context = new DocumentMetadata(this.TENANT_ID, "integrationTest", "sample");
 
     TenantSecurityClient client =
-        new TenantSecurityClient(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT, this.API_KEY);
+        new TenantSecurityClient.Builder(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT,
+            this.API_KEY).build();
 
     int batchSize = 25;
     int batchRepetitions = 50;

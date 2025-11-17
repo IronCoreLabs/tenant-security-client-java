@@ -1,5 +1,14 @@
 # Changelog
 
+## v8.0.1
+
+- We’ve removed the direct constructors for `TenantSecurityClient` and replaced them with a builder-based API. The static TenantSecurityClient.create method is still provided for convenience.
+- TenantSecurityClient now enforces HTTPS connections to the TSP by default. You can opt out of this restriction using the new `TenantSecurityClient.Builder`, using `allowInsecureHttp(true)`. This should only be done in the case of testing.
+
+## v8.0.0
+
+- Accidental release. Incomplete. Use 8.0.1 instead.
+
 ## v7.2.3
 
 - No code change, changed publishing to new sonatype.

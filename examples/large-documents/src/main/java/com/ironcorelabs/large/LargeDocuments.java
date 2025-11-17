@@ -40,7 +40,9 @@ public class LargeDocuments {
 
         // Initialize the client with a Tenant Security Proxy domain and API key.
         // Typically this would be done once when the application or service initializes
-        TenantSecurityClient client = TenantSecurityClient.create("http://localhost:32804", API_KEY).get();
+        TenantSecurityClient client =
+                new TenantSecurityClient.Builder("http://localhost:32804", API_KEY)
+                        .allowInsecureHttp(true).build();
 
         // Create metadata used to associate this document to a tenant, name the
         // document, and identify the service or user making the call
@@ -64,7 +66,8 @@ public class LargeDocuments {
         System.out.println("Writing encrypted files to: " + tmpFileDir);
 
         ObjectMapper objectMapper = new ObjectMapper();
-        BigDoc sourceObj = objectMapper.readValue(new File("./resources/" + filename), BigDoc.class);
+        BigDoc sourceObj =
+                objectMapper.readValue(new File("./resources/" + filename), BigDoc.class);
 
         // Reduce the document to a map of all the sub documents to be encrypted with
         // the same key
@@ -115,14 +118,17 @@ public class LargeDocuments {
         String subDocId2 = "4e57e8bd-d88a-4083-9fac-05a635110e2a";
 
         // Read the two files out first
-        byte[] encryptedFile1 = Files.readAllBytes(Paths.get(tmpFileDir.toString(), subDocId1 + ".enc"));
-        byte[] encryptedFile2 = Files.readAllBytes(Paths.get(tmpFileDir.toString(), subDocId2 + ".enc"));
+        byte[] encryptedFile1 =
+                Files.readAllBytes(Paths.get(tmpFileDir.toString(), subDocId1 + ".enc"));
+        byte[] encryptedFile2 =
+                Files.readAllBytes(Paths.get(tmpFileDir.toString(), subDocId2 + ".enc"));
 
         // In a DB situation this edek could be stored with the large doc (if sub docs
         // are only decrypted in that context) or it could be stored alongside each
         // sub-document. In the latter case you make it harder to accidentally
         // cryptoshred data by de-syncing edeks at the cost of row size
-        String edek = new String(Files.readAllBytes(Paths.get(tmpFileDir.toString(), filename + ".edek")));
+        String edek = new String(
+                Files.readAllBytes(Paths.get(tmpFileDir.toString(), filename + ".edek")));
 
         // each of the documents could be individually decrypted with their own calls,
         // but by combining them into one structure we ensure we only make one call to
@@ -133,15 +139,18 @@ public class LargeDocuments {
         EncryptedDocument encryptedPartialBigDoc = new EncryptedDocument(encryptedPartDocMap, edek);
 
         // Decrypt the two subdocuments
-        PlaintextDocument decryptedPartialBigDoc = client.decrypt(encryptedPartialBigDoc, metadata).get();
+        PlaintextDocument decryptedPartialBigDoc =
+                client.decrypt(encryptedPartialBigDoc, metadata).get();
 
         // Turn the decrypted bytes back into objects
-        SubDoc reSubDoc1 = objectMapper
-                .readValue(new String(decryptedPartialBigDoc.getDecryptedFields().get(subDocId1)), SubDoc.class);
-        SubDoc reSubDoc2 = objectMapper
-                .readValue(new String(decryptedPartialBigDoc.getDecryptedFields().get(subDocId2)), SubDoc.class);
+        SubDoc reSubDoc1 = objectMapper.readValue(
+                new String(decryptedPartialBigDoc.getDecryptedFields().get(subDocId1)),
+                SubDoc.class);
+        SubDoc reSubDoc2 = objectMapper.readValue(
+                new String(decryptedPartialBigDoc.getDecryptedFields().get(subDocId2)),
+                SubDoc.class);
         // just so we can write it out nicely
-        BigDoc rePartialBigDoc = new BigDoc("x", "x", "x", new SubDoc[] { reSubDoc1, reSubDoc2 });
+        BigDoc rePartialBigDoc = new BigDoc("x", "x", "x", new SubDoc[] {reSubDoc1, reSubDoc2});
 
         // Write out the rehydrated docs as proof that things round tripped fine
         Files.write(Paths.get(tmpFileDir.toString(), "partial-large-document.json"),
