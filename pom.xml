@@ -8,7 +8,7 @@
   <groupId>com.ironcorelabs</groupId>
   <artifactId>tenant-security-java</artifactId>
   <packaging>jar</packaging>
-  <version>8.0.0</version>
+  <version>8.0.1</version>
   <name>tenant-security-java</name>
   <url>https://ironcorelabs.com/docs</url>
   <description>Java client library for the IronCore Labs Tenant Security Proxy.</description>
@@ -197,7 +197,7 @@
                   <include>io.grpc:grpc-context</include>
                   <include>io.grpc:grpc-api</include>
                   <include>io.opencensus:opencensus-contrib-http-util</include>
-                  <include>com.fasterxml.jackson.core:jackson-core</include>
+                  <include>com.google.code.gson:gson</include>
                 </includes>
               </artifactSet>
               <relocations>

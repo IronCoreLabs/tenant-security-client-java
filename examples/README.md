@@ -20,11 +20,11 @@ have included this configuration in the repository as a convenience. Also note t
 created in IronCore's staging infrastructure.
 
 The following command will get a TSP and LD running together on your computer with the provided configuration.
-The `docker-compose` command will pull both container images, then start them up together on a subnetwork, so they can
+The `docker compose` command will pull both container images, then start them up together on a subnetwork, so they can
 communicate with each other.
 
 ```bash
-docker-compose -f docker-compose.yml up
+docker compose -f docker-compose.yml up
 ```
 
 The TSP will be listening locally on port 32804.
