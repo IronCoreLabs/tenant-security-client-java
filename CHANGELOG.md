@@ -2,8 +2,8 @@
 
 ## v8.0.1
 
-- TenantSecurityClient now enforces HTTPS connections to the TSP by default. You can opt out of this restriction using the new `TenantSecurityClient.Builder`, using `allowInsecureHttp(true)`. This should only be done in the case of testing.
 - We’ve removed the direct constructors for `TenantSecurityClient` and replaced them with a builder-based API. The static TenantSecurityClient.create method is still provided for convenience.
+- TenantSecurityClient now enforces HTTPS connections to the TSP by default. You can opt out of this restriction using the new `TenantSecurityClient.Builder`, using `allowInsecureHttp(true)`. This should only be done in the case of testing.
 
 ## v8.0.0
 
