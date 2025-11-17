@@ -11,10 +11,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
+import com.ironcorelabs.tenantsecurity.TestUtils;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.EventMetadata;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.UserEvent;
-import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
 import org.testng.annotations.Test;
 
 @Test(groups = {"dev-integration"})
@@ -29,9 +29,8 @@ public class DevIntegrationTest {
   }
 
   private CompletableFuture<TenantSecurityClient> getClient() {
-    return CompletableFutures.tryCatchNonFatal(
-        () -> new TenantSecurityClient.Builder(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT,
-            this.INTEGRATION_API_KEY).allowInsecureHttp(true).build());
+    return TestUtils.createTscWithAllowInsecure(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT,
+        this.INTEGRATION_API_KEY);
   }
 
   private Map<String, byte[]> getRoundtripDataToEncrypt() throws Exception {

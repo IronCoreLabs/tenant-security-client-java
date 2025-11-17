@@ -63,39 +63,55 @@ public class SimpleRoundtrip {
         CompletableFuture<PlaintextDocument> roundtrip =
                 // Initialize the client with a Tenant Security Proxy domain and API key.
                 // Typically this would be done once when the application or service initializes
-                TenantSecurityClient.create(TSP_ADDR, API_KEY).thenCompose(client -> {
+                CompletableFutures
+                        .tryCatchNonFatal(() -> new TenantSecurityClient.Builder(TSP_ADDR, API_KEY)
+                                .allowInsecureHttp(true).build())
+                        .thenCompose(client -> {
+                            try {
+                                return client.encrypt(custRecord, metadata)
+                                        .thenCompose(encryptedResults -> {
+                                            // persist the EDEK and encryptedDocument to your
+                                            // persistence layer
+                                            String edek = encryptedResults.getEdek();
+                                            Map<String, byte[]> encryptedDocument =
+                                                    encryptedResults.getEncryptedFields();
 
-                    try {
-                        return client.encrypt(custRecord, metadata)
-                                .thenCompose(encryptedResults -> {
-                                    // persist the EDEK and encryptedDocument to your persistence layer
-                                    String edek = encryptedResults.getEdek();
-                                    Map<String, byte[]> encryptedDocument = encryptedResults.getEncryptedFields();
+                                            // un-comment if you want to print out the encrypted
+                                            // data
+                                            // System.out.println("Encrypted SSN: " + new
+                                            // String(encryptedDocument.get("ssn"),
+                                            // StandardCharsets.UTF_8));
+                                            // System.out.println("Encrypted address: " + new
+                                            // String(encryptedDocument.get("address"),
+                                            // StandardCharsets.UTF_8));
+                                            // System.out.println("Encrypted name: " + new
+                                            // String(encryptedDocument.get("name"),
+                                            // StandardCharsets.UTF_8));
 
-                                    // un-comment if you want to print out the encrypted data
-                                    //System.out.println("Encrypted SSN: " + new String(encryptedDocument.get("ssn"), StandardCharsets.UTF_8));
-                                    //System.out.println("Encrypted address: " + new String(encryptedDocument.get("address"), StandardCharsets.UTF_8));
-                                    //System.out.println("Encrypted name: " + new String(encryptedDocument.get("name"), StandardCharsets.UTF_8));
 
+                                            // retrieve the EDEK and encryptedDocument from your
+                                            // persistence layer
+                                            EncryptedDocument retrievedEncryptedDocument =
+                                                    new EncryptedDocument(encryptedDocument, edek);
 
-                                    // retrieve the EDEK and encryptedDocument from your persistence layer
-                                    EncryptedDocument retrievedEncryptedDocument = new EncryptedDocument(encryptedDocument, edek);
-
-                                    // decrypt back into plaintext
-                                    return client.decrypt(encryptedResults, metadata);
-                                });
-                    } catch (Exception e) {
-                        throw new CompletionException(e);
-                    }
-                });
+                                            // decrypt back into plaintext
+                                            return client.decrypt(encryptedResults, metadata);
+                                        });
+                            } catch (Exception e) {
+                                throw new CompletionException(e);
+                            }
+                        });
 
         try {
-            // access decrypted fields 
+            // access decrypted fields
             Map<String, byte[]> decryptedValuesMap = roundtrip.get().getDecryptedFields();
 
-            System.out.println("Decrypted SSN: " + new String(decryptedValuesMap.get("ssn"), StandardCharsets.UTF_8));
-            System.out.println("Decrypted address: " + new String(decryptedValuesMap.get("address"), StandardCharsets.UTF_8));
-            System.out.println("Decrypted name: " + new String(decryptedValuesMap.get("name"), StandardCharsets.UTF_8));
+            System.out.println("Decrypted SSN: "
+                    + new String(decryptedValuesMap.get("ssn"), StandardCharsets.UTF_8));
+            System.out.println("Decrypted address: "
+                    + new String(decryptedValuesMap.get("address"), StandardCharsets.UTF_8));
+            System.out.println("Decrypted name: "
+                    + new String(decryptedValuesMap.get("name"), StandardCharsets.UTF_8));
         } catch (ExecutionException e) {
             if (e.getCause() instanceof TenantSecurityException) {
                 TenantSecurityException kmsError = (TenantSecurityException) e.getCause();
@@ -121,41 +137,57 @@ public class SimpleRoundtrip {
         CompletableFuture<PlaintextDocument> roundtripFile =
                 // Initialize the client with a Tenant Security Proxy domain and API key.
                 // Typically this would be done once when the application or service initializes
-                TenantSecurityClient.create(TSP_ADDR, API_KEY).thenCompose(client -> {
+                CompletableFutures
+                        .tryCatchNonFatal(() -> new TenantSecurityClient.Builder(TSP_ADDR, API_KEY)
+                                .allowInsecureHttp(true).build())
+                        .thenCompose(client -> {
 
-                    try {
-                        return client.encrypt(toEncrypt, metadata)
-                                .thenCompose(encryptedResults -> {
-                                    // write the encrypted file and the encrypted key to the filesystem
-                                    try {
-                                        Files.write(Paths.get(sourceFile + ".enc"), encryptedResults.getEncryptedFields().get("file"));
-                                        Files.write(Paths.get(sourceFile + ".edek"), encryptedResults.getEdek().getBytes(StandardCharsets.UTF_8));
-                                    } catch (IOException e) {
-                                        throw new CompletionException(e);
-                                    }
+                            try {
+                                return client.encrypt(toEncrypt, metadata)
+                                        .thenCompose(encryptedResults -> {
+                                            // write the encrypted file and the encrypted key to the
+                                            // filesystem
+                                            try {
+                                                Files.write(Paths.get(sourceFile + ".enc"),
+                                                        encryptedResults.getEncryptedFields()
+                                                                .get("file"));
+                                                Files.write(Paths.get(sourceFile + ".edek"),
+                                                        encryptedResults.getEdek()
+                                                                .getBytes(StandardCharsets.UTF_8));
+                                            } catch (IOException e) {
+                                                throw new CompletionException(e);
+                                            }
 
-                                    // some time later... read the file from the disk
-                                    try {
-                                        byte[] encryptedBytes = Files.readAllBytes(Paths.get(sourceFile + ".enc"));
-                                        byte[] encryptedDek = Files.readAllBytes(Paths.get(sourceFile + ".edek"));
+                                            // some time later... read the file from the disk
+                                            try {
+                                                byte[] encryptedBytes = Files.readAllBytes(
+                                                        Paths.get(sourceFile + ".enc"));
+                                                byte[] encryptedDek = Files.readAllBytes(
+                                                        Paths.get(sourceFile + ".edek"));
 
-                                        EncryptedDocument fileAndEdek = new EncryptedDocument(Collections.singletonMap("file", encryptedBytes), new String(encryptedDek, StandardCharsets.UTF_8));
+                                                EncryptedDocument fileAndEdek =
+                                                        new EncryptedDocument(
+                                                                Collections.singletonMap("file",
+                                                                        encryptedBytes),
+                                                                new String(encryptedDek,
+                                                                        StandardCharsets.UTF_8));
 
-                                        // decrypt
-                                        return client.decrypt(fileAndEdek, metadata);
+                                                // decrypt
+                                                return client.decrypt(fileAndEdek, metadata);
 
-                                    } catch (IOException e) {
-                                        throw new CompletionException(e);
-                                    }
-                                });
-                    } catch (Exception e) {
-                        throw new CompletionException(e);
-                    }
-                });
+                                            } catch (IOException e) {
+                                                throw new CompletionException(e);
+                                            }
+                                        });
+                            } catch (Exception e) {
+                                throw new CompletionException(e);
+                            }
+                        });
 
         try {
             // write the decrypted file back to the filesystem
-            Files.write(Paths.get("decrypted.jpg"), roundtripFile.get().getDecryptedFields().get("file"));
+            Files.write(Paths.get("decrypted.jpg"),
+                    roundtripFile.get().getDecryptedFields().get("file"));
         } catch (ExecutionException e) {
             if (e.getCause() instanceof TenantSecurityException) {
                 TenantSecurityException kmsError = (TenantSecurityException) e.getCause();

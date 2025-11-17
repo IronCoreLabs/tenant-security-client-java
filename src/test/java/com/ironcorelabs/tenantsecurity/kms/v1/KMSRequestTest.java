@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import com.ironcorelabs.tenantsecurity.TestUtils;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 import org.testng.annotations.Test;
 
@@ -32,7 +33,7 @@ public class KMSRequestTest {
 
   public void errorCodeWhenServiceNotReachable() throws Exception {
     CompletableFuture<EncryptedDocument> encrypt =
-        TenantSecurityClient.create("http://thisdomaindoesnotexist.eta", "apiKey")
+        TenantSecurityClient.create("https://thisdomaindoesnotexist.eta", "apiKey")
             .thenCompose(client -> client.encrypt(getDocument(), getMetadata()));
 
     try {
@@ -47,9 +48,9 @@ public class KMSRequestTest {
   }
 
   public void errorCodeWhenApiKeyIsWrong() throws Exception {
-    CompletableFuture<EncryptedDocument> encrypt =
-        TenantSecurityClient.create(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT, "wrongKey")
-            .thenCompose(client -> client.encrypt(getDocument(), getMetadata()));
+    CompletableFuture<EncryptedDocument> encrypt = TestUtils
+        .createTscWithAllowInsecure(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT, "wrongKey")
+        .thenCompose(client -> client.encrypt(getDocument(), getMetadata()));
 
     try {
       encrypt.get();
@@ -66,8 +67,8 @@ public class KMSRequestTest {
     documentMap.put("doc", new byte[] {3, 73, 82, 79, 78});
     EncryptedDocument eDoc = new EncryptedDocument(documentMap, "d2hhdCBhIHdhc3RlIG9mIHRpbWUK");
 
-    CompletableFuture<PlaintextDocument> decrypt = TenantSecurityClient
-        .create(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT,
+    CompletableFuture<PlaintextDocument> decrypt = TestUtils
+        .createTscWithAllowInsecure(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT,
             NotPrimaryAndDisabledConfigs.INTEGRATION_API_KEY)
         .thenCompose(client -> client.decrypt(eDoc, getMetadata()));
 
