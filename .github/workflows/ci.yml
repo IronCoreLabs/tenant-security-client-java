@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-22.04
     needs: get_refs
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: set up jdk 17
         uses: actions/setup-java@v5
         with:
@@ -30,7 +30,7 @@ jobs:
       - name: local install
         run: mvn install -DskipTests=true -Dgpg.skip=true -Dmaven.javadoc.skip=true -B -V
       - name: clone the tsp
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: IronCoreLabs/tenant-security-proxy
           ref: ${{ needs.get_refs.outputs.tenant-security-proxy }}
@@ -140,7 +140,7 @@ jobs:
         example-dir:
           [large-documents, logging-example, rekey-example, simple-roundtrip]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: set up jdk 17
         uses: actions/setup-java@v5
         with:
@@ -160,7 +160,7 @@ jobs:
   formatter:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: set up jdk 17
         uses: actions/setup-java@v5
         with:
