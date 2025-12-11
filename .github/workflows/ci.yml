@@ -47,7 +47,7 @@ jobs:
           gcloud-auth: ${{ secrets.GCLOUD_AUTH }}
           env-file-path: .env.integration
       - name: integration test
-        run: env $(cat .env.integration) ../test-suites/integrationTest.sh
+        run: env $(cat .env.integration) ./test-suites/integrationTest.sh
 
   build_examples:
     runs-on: ubuntu-22.04
