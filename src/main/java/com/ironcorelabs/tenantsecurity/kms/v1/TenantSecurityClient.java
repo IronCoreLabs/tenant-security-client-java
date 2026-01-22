@@ -14,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
@@ -27,7 +28,7 @@ import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
  *
  * @author IronCore Labs
  */
-public final class TenantSecurityClient implements Closeable {
+public final class TenantSecurityClient implements Closeable, DocumentDecryptor {
   private final SecureRandom secureRandom;
 
   // Use fixed size thread pool for CPU bound operations (crypto ops). Defaults to
@@ -434,6 +435,7 @@ public final class TenantSecurityClient implements Closeable {
    * @param metadata Metadata about the document being encrypted.
    * @return Future which will complete when input has been decrypted.
    */
+  @Override
   public CompletableFuture<Void> decryptStream(String edek, InputStream input, OutputStream output,
       DocumentMetadata metadata) {
     return this.encryptionService.unwrapKey(edek, metadata).thenApplyAsync(
@@ -546,11 +548,95 @@ public final class TenantSecurityClient implements Closeable {
    * @param metadata Metadata about the document being decrypted.
    * @return PlaintextDocument which contains each documents decrypted field bytes.
    */
+  @Override
   public CompletableFuture<PlaintextDocument> decrypt(EncryptedDocument encryptedDocument,
       DocumentMetadata metadata) {
     return this.encryptionService.unwrapKey(encryptedDocument.getEdek(), metadata).thenComposeAsync(
         decryptedDocumentAESKey -> decryptFields(encryptedDocument.getEncryptedFields(),
             decryptedDocumentAESKey, encryptedDocument.getEdek()));
+  }
+
+  /**
+   * Create a CachedKeyDecryptor for repeated decrypt operations using the same DEK. This unwraps
+   * the EDEK once and caches the resulting DEK for subsequent decrypts.
+   *
+   * <p>
+   * Use this when you need to decrypt multiple documents that share the same EDEK, to avoid
+   * repeated TSP unwrap calls.
+   *
+   * <p>
+   * The returned decryptor implements AutoCloseable and should be used with try-with-resources to
+   * ensure the DEK is securely zeroed when done:
+   *
+   * <pre>
+   * try (CachedKeyDecryptor decryptor = client.createCachedDecryptor(edek, metadata).get()) {
+   *   PlaintextDocument doc1 = decryptor.decrypt(encDoc1, metadata).get();
+   *   PlaintextDocument doc2 = decryptor.decrypt(encDoc2, metadata).get();
+   * }
+   * </pre>
+   *
+   * @param edek The encrypted document encryption key to unwrap
+   * @param metadata Metadata for the unwrap operation
+   * @return CompletableFuture resolving to a CachedKeyDecryptor
+   */
+  public CompletableFuture<CachedKeyDecryptor> createCachedDecryptor(String edek,
+      DocumentMetadata metadata) {
+    return this.encryptionService.unwrapKey(edek, metadata)
+        .thenApply(dekBytes -> new CachedKeyDecryptor(dekBytes, edek, this.encryptionExecutor));
+  }
+
+  /**
+   * Create a CachedKeyDecryptor from an existing EncryptedDocument. Convenience method that
+   * extracts the EDEK from the document.
+   *
+   * @param encryptedDocument The encrypted document whose EDEK should be unwrapped
+   * @param metadata Metadata for the unwrap operation
+   * @return CompletableFuture resolving to a CachedKeyDecryptor
+   */
+  public CompletableFuture<CachedKeyDecryptor> createCachedDecryptor(
+      EncryptedDocument encryptedDocument, DocumentMetadata metadata) {
+    return createCachedDecryptor(encryptedDocument.getEdek(), metadata);
+  }
+
+  /**
+   * Execute an operation using a CachedKeyDecryptor with automatic lifecycle management. The
+   * decryptor is automatically closed (and DEK zeroed) when the operation completes, whether
+   * successfully or with an error.
+   *
+   * <p>
+   * This is the recommended pattern for using cached decryptors with CompletableFuture composition:
+   *
+   * <pre>
+   * client.withCachedDecryptor(edek, metadata, decryptor -&gt;
+   *     decryptor.decrypt(encDoc1, metadata)
+   *         .thenCompose(doc1 -&gt; decryptor.decrypt(encDoc2, metadata)))
+   * </pre>
+   *
+   * @param <T> The type returned by the operation
+   * @param edek The encrypted document encryption key to unwrap
+   * @param metadata Metadata for the unwrap operation
+   * @param operation Function that takes the decryptor and returns a CompletableFuture
+   * @return CompletableFuture resolving to the operation's result
+   */
+  public <T> CompletableFuture<T> withCachedDecryptor(String edek, DocumentMetadata metadata,
+      Function<CachedKeyDecryptor, CompletableFuture<T>> operation) {
+    return createCachedDecryptor(edek, metadata).thenCompose(
+        decryptor -> operation.apply(decryptor).whenComplete((result, error) -> decryptor.close()));
+  }
+
+  /**
+   * Execute an operation using a CachedKeyDecryptor with automatic lifecycle management.
+   * Convenience method that extracts the EDEK from the document.
+   *
+   * @param <T> The type returned by the operation
+   * @param encryptedDocument The encrypted document whose EDEK should be unwrapped
+   * @param metadata Metadata for the unwrap operation
+   * @param operation Function that takes the decryptor and returns a CompletableFuture
+   * @return CompletableFuture resolving to the operation's result
+   */
+  public <T> CompletableFuture<T> withCachedDecryptor(EncryptedDocument encryptedDocument,
+      DocumentMetadata metadata, Function<CachedKeyDecryptor, CompletableFuture<T>> operation) {
+    return withCachedDecryptor(encryptedDocument.getEdek(), metadata, operation);
   }
 
   /**
