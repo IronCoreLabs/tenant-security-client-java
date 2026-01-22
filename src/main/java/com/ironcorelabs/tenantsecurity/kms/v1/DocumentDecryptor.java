@@ -8,8 +8,6 @@ import java.util.concurrent.CompletableFuture;
  * Interface for document decryption capabilities. Implemented by both TenantSecurityClient (for
  * standard decrypt operations that unwrap the EDEK each time) and CachedKeyDecryptor (for repeated
  * decrypts using a cached DEK).
- *
- * @author IronCore Labs
  */
 public interface DocumentDecryptor {
 

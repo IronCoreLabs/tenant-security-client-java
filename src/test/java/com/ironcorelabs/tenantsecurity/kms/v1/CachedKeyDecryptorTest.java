@@ -7,6 +7,7 @@ import static org.testng.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
@@ -194,17 +195,23 @@ public class CachedKeyDecryptorTest {
 
   // DEK copying test
 
-  public void constructorCopiesDekToPreventExternalModification() {
+  public void constructorCopiesDekToPreventExternalModification() throws Exception {
     byte[] originalDek = createValidDek();
     CachedKeyDecryptor decryptor = new CachedKeyDecryptor(originalDek, TEST_EDEK, executor);
 
     // Modify the original array
     Arrays.fill(originalDek, (byte) 0x00);
 
-    // The decryptor should still have the original values (0x42)
-    // We can't directly test this without reflection, but we verify the constructor
-    // doesn't throw when we create the decryptor, showing it made a copy
-    assertFalse(decryptor.isClosed());
+    // Use reflection to verify internal DEK still has original values
+    Field dekField = CachedKeyDecryptor.class.getDeclaredField("dek");
+    dekField.setAccessible(true);
+    byte[] internalDek = (byte[]) dekField.get(decryptor);
+
+    // Internal DEK should still be 0x42, not 0x00
+    for (byte b : internalDek) {
+      assertEquals(b, (byte) 0x42, "Internal DEK should not be affected by external modification");
+    }
+
     decryptor.close();
   }
 }

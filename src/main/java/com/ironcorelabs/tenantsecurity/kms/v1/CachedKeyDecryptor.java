@@ -30,25 +30,13 @@ import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
  * status.
  *
  * <p>
- * Usage with loan pattern (recommended):
- *
- * <pre>
- * client.withCachedDecryptor(edek, metadata, decryptor -&gt;
- *     decryptor.decrypt(encDoc1, metadata)
- *         .thenCompose(doc1 -&gt; decryptor.decrypt(encDoc2, metadata)))
- * </pre>
- *
- * <p>
- * Usage with try-with-resources:
- *
- * <pre>
- * try (CachedKeyDecryptor decryptor = client.createCachedDecryptor(edek, metadata).get()) {
- *   PlaintextDocument doc1 = decryptor.decrypt(encDoc1, metadata).get();
- *   PlaintextDocument doc2 = decryptor.decrypt(encDoc2, metadata).get();
- * } // DEK is automatically zeroed
- * </pre>
+ * Instances are created via {@link TenantSecurityClient#createCachedDecryptor} or
+ * {@link TenantSecurityClient#withCachedDecryptor}. See those methods for usage examples.
  *
  * @author IronCore Labs
+ * @see TenantSecurityClient#createCachedDecryptor(String, DocumentMetadata)
+ * @see TenantSecurityClient#withCachedDecryptor(String, DocumentMetadata,
+ *      java.util.function.Function)
  */
 public final class CachedKeyDecryptor implements DocumentDecryptor, Closeable {
 
