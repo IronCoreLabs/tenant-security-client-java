@@ -33,7 +33,6 @@ import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
  * Instances are created via {@link TenantSecurityClient#createCachedDecryptor} or
  * {@link TenantSecurityClient#withCachedDecryptor}. See those methods for usage examples.
  *
- * @author IronCore Labs
  * @see TenantSecurityClient#createCachedDecryptor(String, DocumentMetadata)
  * @see TenantSecurityClient#withCachedDecryptor(String, DocumentMetadata,
  *      java.util.function.Function)
