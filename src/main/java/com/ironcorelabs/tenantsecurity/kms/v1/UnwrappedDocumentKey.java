@@ -14,7 +14,7 @@ public class UnwrappedDocumentKey {
   public byte[] getDekBytes() {
     try {
       return Base64.getDecoder().decode(this.dek);
-    } catch (IllegalArgumentException e) {
+    } catch (Exception e) {
       throw new IllegalArgumentException(
           "Unwrap DEK response from the Tenant Security Proxy was not valid base64.");
     }

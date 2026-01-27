@@ -12,7 +12,6 @@ import com.ironcorelabs.tenantsecurity.TestUtils;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.EventMetadata;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.UserEvent;
-import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
 import org.testng.annotations.Test;
 
 @Test(groups = {"local-integration"})

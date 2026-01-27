@@ -17,7 +17,7 @@ public class WrappedDocumentKey {
   public byte[] getDekBytes() {
     try {
       return Base64.getDecoder().decode(this.dek);
-    } catch (IllegalArgumentException e) {
+    } catch (Exception e) {
       throw new IllegalArgumentException(
           "Wrapped document key response from the Tenant Security Proxy was not valid base64.");
     }

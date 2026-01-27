@@ -1,5 +1,6 @@
 package com.ironcorelabs.tenantsecurity.kms.v1;
 
+import java.util.Collections;
 import java.util.Map;
 
 import com.google.api.client.util.Key;
@@ -16,10 +17,16 @@ public class BatchDocumentKeys<T> {
   private Map<String, ErrorResponse> failures;
 
   public Map<String, T> getKeys() {
+    if (this.keys == null) {
+      return Collections.emptyMap();
+    }
     return this.keys;
   }
 
   public Map<String, ErrorResponse> getFailures() {
+    if (this.failures == null) {
+      return Collections.emptyMap();
+    }
     return this.failures;
   }
 }
