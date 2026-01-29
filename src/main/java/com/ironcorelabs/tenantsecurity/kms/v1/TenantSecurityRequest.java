@@ -153,13 +153,15 @@ final class TenantSecurityRequest implements Closeable {
    * Generic method for making a request to the provided URL with the provided post data. Returns an
    * instance of the provided generic JSON class or an error message with the provided error.
    */
-  private <T> CompletableFuture<T> makeRequestAndParseFailure(GenericUrl url,
-      Map<String, Object> postData, Class<T> jsonType, String errorMessage) {
+  private <T extends NullParsingValidator> CompletableFuture<T> makeRequestAndParseFailure(
+      GenericUrl url, Map<String, Object> postData, Class<T> jsonType, String errorMessage) {
     return CompletableFuture.supplyAsync(() -> {
       try {
         HttpResponse resp = this.getApiRequest(postData, url).execute();
         if (resp.isSuccessStatusCode()) {
-          return resp.parseAs(jsonType);
+          T parsed = resp.parseAs(jsonType);
+          parsed.ensureNoNullsOrThrow();
+          return parsed;
         }
         throw parseFailureFromRequest(resp);
       } catch (Exception cause) {
@@ -261,7 +263,12 @@ final class TenantSecurityRequest implements Closeable {
     String error = String.format(
         "Unable to make request to Tenant Security Proxy security event endpoint. Endpoint requested: %s",
         this.securityEventEndpoint);
-    return this.makeRequestAndParseFailure(this.securityEventEndpoint, postData, Void.class, error);
+    return this
+        .makeRequestAndParseFailure(this.securityEventEndpoint, postData,
+            VoidSecurityEventResponse.class, error)
+        // returns a Void
+        .thenRun(() -> {
+        });
   }
 
   /**

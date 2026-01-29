@@ -7,7 +7,7 @@ import com.google.api.client.util.Key;
 /**
  * A new DEK wrapped by the tenant's KMS and its encrypted form (EDEK), both in Base64 format.
  */
-public class WrappedDocumentKey {
+public class WrappedDocumentKey implements NullParsingValidator {
   @Key
   private String dek;
 
@@ -25,5 +25,12 @@ public class WrappedDocumentKey {
 
   public String getEdek() {
     return this.edek;
+  }
+
+  @Override
+  public void ensureNoNullsOrThrow() throws IllegalArgumentException {
+    if (edek == null || dek == null)
+      throw new IllegalArgumentException(
+          "Wrapped document key response from the Tenant Security Proxy was not valid base64.");
   }
 }
