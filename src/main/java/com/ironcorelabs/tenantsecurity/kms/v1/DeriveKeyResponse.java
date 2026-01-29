@@ -5,7 +5,7 @@ import java.util.concurrent.CompletableFuture;
 import com.google.api.client.util.Key;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TspServiceException;
 
-public final class DeriveKeyResponse implements NullParsingValidator {
+public final class DeriveKeyResponse extends NullParsingValidator {
   @Key
   private boolean hasPrimaryConfig;
   @Key
@@ -39,7 +39,7 @@ public final class DeriveKeyResponse implements NullParsingValidator {
   }
 
   @Override
-  public void ensureNoNullsOrThrow() throws IllegalArgumentException {
+  void ensureNoNullsOrThrow() throws IllegalArgumentException {
     if (derivedKeys == null)
       throw new IllegalArgumentException("TSP failed to derive keys.");
   }

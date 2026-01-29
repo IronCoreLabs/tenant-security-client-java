@@ -1,6 +1,6 @@
 package com.ironcorelabs.tenantsecurity.kms.v1;
 
-public class VoidSecurityEventResponse implements NullParsingValidator {
+public class VoidSecurityEventResponse extends NullParsingValidator {
   @Override
-  public void ensureNoNullsOrThrow() throws IllegalArgumentException {}
+  void ensureNoNullsOrThrow() throws IllegalArgumentException {}
 }
