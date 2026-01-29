@@ -17,7 +17,7 @@ public class WrappedDocumentKey extends NullParsingValidator {
   public byte[] getDekBytes() {
     try {
       return Base64.getDecoder().decode(this.dek);
-    } catch (Exception e) {
+    } catch (IllegalArgumentException e) {
       throw new IllegalArgumentException(
           "Wrapped document key response from the Tenant Security Proxy was not valid base64.");
     }

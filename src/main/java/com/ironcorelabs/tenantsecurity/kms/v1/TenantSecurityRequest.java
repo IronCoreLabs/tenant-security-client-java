@@ -165,6 +165,25 @@ final class TenantSecurityRequest implements Closeable {
         }
         throw parseFailureFromRequest(resp);
       } catch (Exception cause) {
+        if (cause instanceof TenantSecurityException || cause instanceof IllegalArgumentException) {
+          throw new CompletionException(cause);
+        }
+        throw new CompletionException(new TspServiceException(
+            TenantSecurityErrorCodes.UNABLE_TO_MAKE_REQUEST, 0, errorMessage, cause));
+      }
+    }, webRequestExecutor);
+  }
+
+  private CompletableFuture<Void> makeRequestAndParseFailure(GenericUrl url,
+      Map<String, Object> postData, String errorMessage) {
+    return CompletableFuture.supplyAsync(() -> {
+      try {
+        HttpResponse resp = this.getApiRequest(postData, url).execute();
+        if (resp.isSuccessStatusCode()) {
+          return null;
+        }
+        throw parseFailureFromRequest(resp);
+      } catch (Exception cause) {
         if (cause instanceof TenantSecurityException) {
           throw new CompletionException(cause);
         }
@@ -263,12 +282,7 @@ final class TenantSecurityRequest implements Closeable {
     String error = String.format(
         "Unable to make request to Tenant Security Proxy security event endpoint. Endpoint requested: %s",
         this.securityEventEndpoint);
-    return this
-        .makeRequestAndParseFailure(this.securityEventEndpoint, postData,
-            VoidSecurityEventResponse.class, error)
-        // returns a Void
-        .thenRun(() -> {
-        });
+    return this.makeRequestAndParseFailure(this.securityEventEndpoint, postData, error);
   }
 
   /**

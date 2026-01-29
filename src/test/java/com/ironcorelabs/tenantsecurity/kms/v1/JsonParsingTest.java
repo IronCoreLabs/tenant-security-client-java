@@ -10,7 +10,7 @@ public class JsonParsingTest {
   static JsonObjectParser parser = new JsonObjectParser(new GsonFactory());
 
   @Test(expectedExceptions = IllegalArgumentException.class)
-  void batchKeysAreEmpty() throws Exception {
+  void batchKeysErrors() throws Exception {
     String json = "{}";
     BatchWrappedDocumentKeys type = parser.<BatchWrappedDocumentKeys>parseAndClose(
         new StringReader(json), BatchWrappedDocumentKeys.class);
@@ -18,7 +18,7 @@ public class JsonParsingTest {
   }
 
   @Test(expectedExceptions = IllegalArgumentException.class)
-  void derivedKeyResponseIsEmpty() throws Exception {
+  void derivedKeyResponseErrors() throws Exception {
     String json = "{}";
     DeriveKeyResponse type =
         parser.<DeriveKeyResponse>parseAndClose(new StringReader(json), DeriveKeyResponse.class);
@@ -43,7 +43,7 @@ public class JsonParsingTest {
   }
 
   @Test(expectedExceptions = IllegalArgumentException.class)
-  void rekeyedDocumentKeyIsNull() throws Exception {
+  void rekeyedDocumentKeyErrors() throws Exception {
     String json = "{}";
     RekeyedDocumentKey type =
         parser.<RekeyedDocumentKey>parseAndClose(new StringReader(json), RekeyedDocumentKey.class);
