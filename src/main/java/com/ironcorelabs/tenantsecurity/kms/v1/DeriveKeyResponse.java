@@ -5,7 +5,7 @@ import java.util.concurrent.CompletableFuture;
 import com.google.api.client.util.Key;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TspServiceException;
 
-public final class DeriveKeyResponse {
+public final class DeriveKeyResponse extends NullParsingValidator {
   @Key
   private boolean hasPrimaryConfig;
   @Key
@@ -36,5 +36,11 @@ public final class DeriveKeyResponse {
           TenantSecurityErrorCodes.UNKNOWN_ERROR, 100, "TSP failed to derive keys."));
     }
     return CompletableFuture.completedFuture(derivedKeys);
+  }
+
+  @Override
+  void ensureNoNullsOrThrow() throws IllegalArgumentException {
+    if (derivedKeys == null)
+      throw new IllegalArgumentException("TSP failed to derive keys.");
   }
 }

@@ -189,7 +189,7 @@ public final class TenantSecurityClient implements Closeable {
     }
 
     /**
-     * Construct the TenantSecurityClient fron the builder.
+     * Construct the TenantSecurityClient from the builder.
      *
      * @return The newly constructed TenantSecurityClient.
      * @throws Exception If the tsp url isn't valid or if HTTPS is required and not provided.
