@@ -165,8 +165,11 @@ final class TenantSecurityRequest implements Closeable {
         }
         throw parseFailureFromRequest(resp);
       } catch (Exception cause) {
-        if (cause instanceof TenantSecurityException || cause instanceof IllegalArgumentException) {
+        if (cause instanceof TenantSecurityException) {
           throw new CompletionException(cause);
+        } else if (cause instanceof IllegalArgumentException) {
+          throw new CompletionException(new TspServiceException(
+              TenantSecurityErrorCodes.UNKNOWN_ERROR, 0, errorMessage, cause));
         }
         throw new CompletionException(new TspServiceException(
             TenantSecurityErrorCodes.UNABLE_TO_MAKE_REQUEST, 0, errorMessage, cause));
