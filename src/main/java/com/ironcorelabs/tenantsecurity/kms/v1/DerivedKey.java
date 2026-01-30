@@ -24,7 +24,7 @@ public final class DerivedKey {
   byte[] getDerivedKeyBytes() {
     try {
       return Base64.getDecoder().decode(this.derivedKey);
-    } catch (Exception e) {
+    } catch (IllegalArgumentException e) {
       throw new IllegalArgumentException(
           "Derive keys response from the Tenant Security Proxy was not valid base64.");
     }
