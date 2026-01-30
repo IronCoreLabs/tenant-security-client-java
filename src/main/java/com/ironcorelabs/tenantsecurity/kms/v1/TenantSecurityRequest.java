@@ -174,6 +174,11 @@ final class TenantSecurityRequest implements Closeable {
     }, webRequestExecutor);
   }
 
+  /**
+   * Overload for generic method for making a request to the provided URL with the provided post
+   * data. Returns a CompletableFuture<Void> because it does not try to parse a successful result.
+   * In the case of an error, it does try to parse the provided error.
+   */
   private CompletableFuture<Void> makeRequestAndParseFailure(GenericUrl url,
       Map<String, Object> postData, String errorMessage) {
     return CompletableFuture.supplyAsync(() -> {
