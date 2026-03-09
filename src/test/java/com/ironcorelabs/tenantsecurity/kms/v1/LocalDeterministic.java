@@ -22,8 +22,8 @@ public class LocalDeterministic {
   }
 
   private DeterministicPlaintextField getRoundtripDataToEncrypt() {
-    return new DeterministicPlaintextField("Encrypt these bytes!".getBytes(), "deriv_path",
-        "secret_path");
+    return new DeterministicPlaintextField("Encrypt these bytes!".getBytes(), "secret_path",
+        "deriv_path");
   }
 
   private CompletableFuture<DeterministicTenantSecurityClient> createClient() {

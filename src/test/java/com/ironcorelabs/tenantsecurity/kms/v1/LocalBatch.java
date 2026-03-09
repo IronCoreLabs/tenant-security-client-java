@@ -60,7 +60,7 @@ public class LocalBatch {
 
     TenantSecurityClient client =
         new TenantSecurityClient.Builder(TestSettings.TSP_ADDRESS + TestSettings.TSP_PORT,
-            this.API_KEY).build();
+            this.API_KEY).allowInsecureHttp(true).build();
 
     int batchSize = 25;
     int batchRepetitions = 50;

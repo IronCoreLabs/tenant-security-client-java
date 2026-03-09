@@ -4,7 +4,6 @@ import static org.testng.Assert.assertEquals;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 import org.testng.annotations.Test;
@@ -50,24 +49,21 @@ public class RekeyRoundTrip {
         new DocumentMetadata(tenant_id, "integrationTest", "sample", customFields, "customRayID");
     Map<String, byte[]> documentMap = getRoundtripDataToEncrypt();
 
-    CompletableFuture<PlaintextDocument> roundtrip =
-        TenantSecurityClient.create(tsp_address + tsp_port, api_key).thenCompose(client -> {
-          try {
-            return client.encrypt(documentMap, metadata).thenCompose(encryptedDocument -> {
-              return client.rekeyEdek(encryptedDocument.getEdek(), metadata, new_tenant_id)
-                  .thenCompose(rekeyedEdek -> {
-                    DocumentMetadata newMetadata = new DocumentMetadata(new_tenant_id,
-                        "integrationTest", "sample", customFields, "customRayID");
-                    EncryptedDocument newDocument =
-                        new EncryptedDocument(encryptedDocument.getEncryptedFields(), rekeyedEdek);
-                    return client.decrypt(newDocument, newMetadata);
-                  });
-            });
-          } catch (Exception e) {
-            throw new CompletionException(e);
-          }
-        });
     try {
+      TenantSecurityClient client =
+          new TenantSecurityClient.Builder(tsp_address + tsp_port, api_key).allowInsecureHttp(true)
+              .build();
+      CompletableFuture<PlaintextDocument> roundtrip =
+          client.encrypt(documentMap, metadata).thenCompose(encryptedDocument -> {
+            return client.rekeyEdek(encryptedDocument.getEdek(), metadata, new_tenant_id)
+                .thenCompose(rekeyedEdek -> {
+                  DocumentMetadata newMetadata = new DocumentMetadata(new_tenant_id,
+                      "integrationTest", "sample", customFields, "customRayID");
+                  EncryptedDocument newDocument =
+                      new EncryptedDocument(encryptedDocument.getEncryptedFields(), rekeyedEdek);
+                  return client.decrypt(newDocument, newMetadata);
+                });
+          });
       Map<String, byte[]> decryptedValuesMap = roundtrip.get().getDecryptedFields();
       assertEqualBytes(decryptedValuesMap.get("doc1"), documentMap.get("doc1"));
       assertEqualBytes(decryptedValuesMap.get("doc2"), documentMap.get("doc2"));

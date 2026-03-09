@@ -106,7 +106,7 @@ class DeterministicCryptoUtils {
           return key;
         }).thenCompose(key -> decryptBytes(parts.getEncryptedBytes(), key.getDerivedKeyBytes())))
         .thenApply(decrypted -> new DeterministicPlaintextField(decrypted,
-            encryptedField.getDerivationPath(), encryptedField.getSecretPath()));
+            encryptedField.getSecretPath(), encryptedField.getDerivationPath()));
   }
 
 
