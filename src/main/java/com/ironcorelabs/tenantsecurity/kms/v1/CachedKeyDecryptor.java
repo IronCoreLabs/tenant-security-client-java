@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TscException;
 import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
@@ -51,11 +52,18 @@ public final class CachedKeyDecryptor implements DocumentDecryptor, Closeable {
   // Executor for async field decryption operations
   private final ExecutorService encryptionExecutor;
 
+  // For reporting operations on close
+  private final TenantSecurityRequest requestService;
+  private final DocumentMetadata metadata;
+
   // Flag to track if close() has been called
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
   // When this decryptor was created - used for timeout enforcement
   private final Instant createdAt;
+
+  // Count of successful decrypt operations performed
+  private final AtomicInteger operationCount = new AtomicInteger(0);
 
   /**
    * Package-private constructor. Use TenantSecurityClient.createCachedDecryptor() to create
@@ -64,8 +72,11 @@ public final class CachedKeyDecryptor implements DocumentDecryptor, Closeable {
    * @param dek The unwrapped document encryption key bytes (will be copied)
    * @param edek The encrypted document encryption key string
    * @param encryptionExecutor Executor for async decryption operations
+   * @param requestService TSP request service for reporting operations on close
+   * @param metadata Document metadata for reporting operations on close
    */
-  CachedKeyDecryptor(byte[] dek, String edek, ExecutorService encryptionExecutor) {
+  CachedKeyDecryptor(byte[] dek, String edek, ExecutorService encryptionExecutor,
+      TenantSecurityRequest requestService, DocumentMetadata metadata) {
     if (dek == null || dek.length != 32) {
       throw new IllegalArgumentException("DEK must be exactly 32 bytes");
     }
@@ -75,10 +86,18 @@ public final class CachedKeyDecryptor implements DocumentDecryptor, Closeable {
     if (encryptionExecutor == null) {
       throw new IllegalArgumentException("encryptionExecutor must not be null");
     }
+    if (requestService == null) {
+      throw new IllegalArgumentException("requestService must not be null");
+    }
+    if (metadata == null) {
+      throw new IllegalArgumentException("metadata must not be null");
+    }
     // Copy DEK to prevent external modification
     this.dek = Arrays.copyOf(dek, dek.length);
     this.edek = edek;
     this.encryptionExecutor = encryptionExecutor;
+    this.requestService = requestService;
+    this.metadata = metadata;
     this.createdAt = Instant.now();
   }
 
@@ -111,6 +130,31 @@ public final class CachedKeyDecryptor implements DocumentDecryptor, Closeable {
   }
 
   /**
+   * Get the number of successful decrypt operations performed with this decryptor.
+   *
+   * @return The operation count
+   */
+  public int getOperationCount() {
+    return operationCount.get();
+  }
+
+  /**
+   * Check if this decryptor is usable (not closed and not expired). Returns a failed future if not,
+   * or a completed future if usable.
+   */
+  private CompletableFuture<Void> checkUsable() {
+    if (closed.get()) {
+      return CompletableFuture.failedFuture(new TscException(
+          TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED, "CachedKeyDecryptor has been closed"));
+    }
+    if (isExpired()) {
+      return CompletableFuture.failedFuture(new TscException(
+          TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED, "CachedKeyDecryptor has expired"));
+    }
+    return CompletableFuture.completedFuture(null);
+  }
+
+  /**
    * Decrypt the provided EncryptedDocument using the cached DEK.
    *
    * <p>
@@ -124,25 +168,21 @@ public final class CachedKeyDecryptor implements DocumentDecryptor, Closeable {
   @Override
   public CompletableFuture<PlaintextDocument> decrypt(EncryptedDocument encryptedDocument,
       DocumentMetadata metadata) {
-    // Check if closed or expired
-    if (closed.get()) {
-      return CompletableFuture.failedFuture(new TscException(
-          TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED, "CachedKeyDecryptor has been closed"));
-    }
-    if (isExpired()) {
-      return CompletableFuture.failedFuture(new TscException(
-          TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED, "CachedKeyDecryptor has expired"));
-    }
+    return checkUsable().thenCompose(unused -> {
+      // Validate EDEK matches
+      if (!edek.equals(encryptedDocument.getEdek())) {
+        return CompletableFuture
+            .<PlaintextDocument>failedFuture(new TscException(TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED,
+                "EncryptedDocument EDEK does not match the cached EDEK. "
+                    + "This decryptor can only decrypt documents with matching EDEKs."));
+      }
 
-    // Validate EDEK matches
-    if (!edek.equals(encryptedDocument.getEdek())) {
-      return CompletableFuture
-          .failedFuture(new TscException(TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED,
-              "EncryptedDocument EDEK does not match the cached EDEK. "
-                  + "This decryptor can only decrypt documents with matching EDEKs."));
-    }
-
-    return decryptFields(encryptedDocument.getEncryptedFields(), encryptedDocument.getEdek());
+      return decryptFields(encryptedDocument.getEncryptedFields(), encryptedDocument.getEdek())
+          .thenApply(result -> {
+            operationCount.incrementAndGet();
+            return result;
+          });
+    });
   }
 
   /**
@@ -161,44 +201,32 @@ public final class CachedKeyDecryptor implements DocumentDecryptor, Closeable {
   @Override
   public CompletableFuture<Void> decryptStream(String edek, InputStream input, OutputStream output,
       DocumentMetadata metadata) {
-    // Check if closed or expired
-    if (closed.get()) {
-      return CompletableFuture.failedFuture(new TscException(
-          TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED, "CachedKeyDecryptor has been closed"));
-    }
-    if (isExpired()) {
-      return CompletableFuture.failedFuture(new TscException(
-          TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED, "CachedKeyDecryptor has expired"));
-    }
+    return checkUsable().thenCompose(unused -> {
+      // Validate EDEK matches
+      if (!this.edek.equals(edek)) {
+        return CompletableFuture
+            .<Void>failedFuture(new TscException(TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED,
+                "Provided EDEK does not match the cached EDEK. "
+                    + "This decryptor can only decrypt documents with matching EDEKs."));
+      }
 
-    // Validate EDEK matches
-    if (!this.edek.equals(edek)) {
       return CompletableFuture
-          .failedFuture(new TscException(TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED,
-              "Provided EDEK does not match the cached EDEK. "
-                  + "This decryptor can only decrypt documents with matching EDEKs."));
-    }
-
-    return CompletableFuture.supplyAsync(
-        () -> CryptoUtils.decryptStreamInternal(dek, input, output).join(), encryptionExecutor);
+          .supplyAsync(() -> CryptoUtils.decryptStreamInternal(this.dek, input, output).join(),
+              encryptionExecutor)
+          .thenApply(result -> {
+            operationCount.incrementAndGet();
+            return result;
+          });
+    });
   }
 
   /**
    * Decrypt all fields in the document using the cached DEK. Pattern follows
    * TenantSecurityClient.decryptFields().
    */
+  // Caller must call checkUsable() before invoking this method.
   private CompletableFuture<PlaintextDocument> decryptFields(Map<String, byte[]> document,
       String documentEdek) {
-    // Check closed/expired state again before starting decryption
-    if (closed.get()) {
-      return CompletableFuture.failedFuture(new TscException(
-          TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED, "CachedKeyDecryptor has been closed"));
-    }
-    if (isExpired()) {
-      return CompletableFuture.failedFuture(new TscException(
-          TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED, "CachedKeyDecryptor has expired"));
-    }
-
     // Parallel decrypt each field
     Map<String, CompletableFuture<byte[]>> decryptOps = document.entrySet().stream()
         .collect(Collectors.toMap(Map.Entry::getKey,
@@ -215,8 +243,8 @@ public final class CachedKeyDecryptor implements DocumentDecryptor, Closeable {
   }
 
   /**
-   * Securely zero the DEK bytes and mark this decryptor as closed. After calling close(), all
-   * decrypt operations will fail.
+   * Securely zero the DEK bytes, report operations to the TSP, and mark this decryptor as closed.
+   * After calling close(), all decrypt operations will fail.
    *
    * <p>
    * This method is idempotent - calling it multiple times has no additional effect.
@@ -226,6 +254,11 @@ public final class CachedKeyDecryptor implements DocumentDecryptor, Closeable {
     if (closed.compareAndSet(false, true)) {
       // Zero out the DEK bytes for security
       Arrays.fill(dek, (byte) 0);
+      // Report operations to TSP
+      int count = operationCount.get();
+      if (count > 0) {
+        requestService.reportOperations(metadata, edek, 0, count);
+      }
     }
   }
 }

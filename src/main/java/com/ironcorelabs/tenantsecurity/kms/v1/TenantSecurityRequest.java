@@ -55,6 +55,7 @@ final class TenantSecurityRequest implements Closeable {
   private final GenericUrl rekeyEndpoint;
   private final GenericUrl securityEventEndpoint;
   private final GenericUrl deriveKeyEndpoint;
+  private final GenericUrl reportOperationsEndpoint;
   private final HttpRequestFactory requestFactory;
   private final int timeout;
 
@@ -79,6 +80,7 @@ final class TenantSecurityRequest implements Closeable {
     this.rekeyEndpoint = new GenericUrl(tspApiPrefix + "document/rekey");
     this.securityEventEndpoint = new GenericUrl(tspApiPrefix + "event/security-event");
     this.deriveKeyEndpoint = new GenericUrl(tspApiPrefix + "key/derive-with-secret-path");
+    this.reportOperationsEndpoint = new GenericUrl(tspApiPrefix + "document/report-operations");
 
     this.webRequestExecutor = Executors.newFixedThreadPool(requestThreadSize);
     this.requestFactory = provideHttpRequestFactory(requestThreadSize, requestThreadSize);
@@ -291,6 +293,31 @@ final class TenantSecurityRequest implements Closeable {
         "Unable to make request to Tenant Security Proxy security event endpoint. Endpoint requested: %s",
         this.securityEventEndpoint);
     return this.makeRequestAndParseFailure(this.securityEventEndpoint, postData, error);
+  }
+
+  /**
+   * Report cached DEK operations to the TSP. Fire-and-forget — callers should not block on the
+   * result.
+   *
+   * @param metadata Metadata associated with the operations.
+   * @param edek The EDEK that was cached.
+   * @param wraps Number of encrypt operations performed with the cached key.
+   * @param unwraps Number of decrypt operations performed with the cached key.
+   * @return Void on success. Failures come back as exceptions.
+   */
+  CompletableFuture<Void> reportOperations(DocumentMetadata metadata, String edek, int wraps,
+      int unwraps) {
+    Map<String, Object> postData = metadata.getAsPostData();
+    Map<String, Object> cachedOps = new HashMap<>();
+    cachedOps.put("wraps", wraps);
+    cachedOps.put("unwraps", unwraps);
+    Map<String, Object> operations = new HashMap<>();
+    operations.put(edek, cachedOps);
+    postData.put("operations", operations);
+    String error = String.format(
+        "Unable to make request to Tenant Security Proxy report-operations endpoint. Endpoint requested: %s",
+        this.reportOperationsEndpoint);
+    return this.makeRequestAndParseFailure(this.reportOperationsEndpoint, postData, error);
   }
 
   /**
