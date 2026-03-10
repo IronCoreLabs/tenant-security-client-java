@@ -171,8 +171,8 @@ public final class CachedKeyDecryptor implements DocumentDecryptor, Closeable {
     return checkUsable().thenCompose(unused -> {
       // Validate EDEK matches
       if (!edek.equals(encryptedDocument.getEdek())) {
-        return CompletableFuture
-            .<PlaintextDocument>failedFuture(new TscException(TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED,
+        return CompletableFuture.<PlaintextDocument>failedFuture(
+            new TscException(TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED,
                 "EncryptedDocument EDEK does not match the cached EDEK. "
                     + "This decryptor can only decrypt documents with matching EDEKs."));
       }

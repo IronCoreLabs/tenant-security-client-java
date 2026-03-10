@@ -585,8 +585,8 @@ public final class TenantSecurityClient implements Closeable, DocumentDecryptor,
   public CompletableFuture<CachedKeyDecryptor> createCachedDecryptor(String edek,
       DocumentMetadata metadata) {
     return this.encryptionService.unwrapKey(edek, metadata).thenApply(dekBytes -> {
-      CachedKeyDecryptor decryptor = new CachedKeyDecryptor(dekBytes, edek,
-          this.encryptionExecutor, this.encryptionService, metadata);
+      CachedKeyDecryptor decryptor = new CachedKeyDecryptor(dekBytes, edek, this.encryptionExecutor,
+          this.encryptionService, metadata);
       Arrays.fill(dekBytes, (byte) 0);
       return decryptor;
     });
