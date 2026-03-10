@@ -317,7 +317,27 @@ final class TenantSecurityRequest implements Closeable {
     String error = String.format(
         "Unable to make request to Tenant Security Proxy report-operations endpoint. Endpoint requested: %s",
         this.reportOperationsEndpoint);
-    return this.makeRequestAndParseFailure(this.reportOperationsEndpoint, postData, error);
+    return this.makeRequestAndParseFailure(this.reportOperationsEndpoint, postData, error)
+        .exceptionallyCompose(t -> {
+          if (isRetryable(t)) {
+            return this.makeRequestAndParseFailure(this.reportOperationsEndpoint, postData, error);
+          }
+          return CompletableFuture.failedFuture(t);
+        });
+  }
+
+  /**
+   * Check if a failure is retryable. Server errors (5xx) and connection failures (status 0) are
+   * retryable. Client errors (4xx) are not — the request itself is wrong and will fail identically
+   * on retry.
+   */
+  private static boolean isRetryable(Throwable t) {
+    Throwable cause = t instanceof CompletionException ? t.getCause() : t;
+    if (cause instanceof TspServiceException) {
+      int status = ((TspServiceException) cause).getHttpResponseCode();
+      return status == 0 || status >= 500;
+    }
+    return false;
   }
 
   /**
