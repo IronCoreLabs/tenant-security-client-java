@@ -488,20 +488,54 @@ public final class TenantSecurityClient implements Closeable, DocumentDecryptor,
             encryptedDocument.getEdek(), encryptionExecutor));
   }
 
+  // === Private helpers for creating CachedKey instances ===
+
+  private CompletableFuture<CachedKey> newCachedKeyFromUnwrap(String edek,
+      DocumentMetadata metadata) {
+    return this.encryptionService.unwrapKey(edek, metadata).thenApply(dekBytes -> {
+      CachedKey cachedKey = new CachedKey(dekBytes, edek, this.encryptionExecutor,
+          this.secureRandom, this.encryptionService, metadata);
+      Arrays.fill(dekBytes, (byte) 0);
+      return cachedKey;
+    });
+  }
+
+  private CompletableFuture<CachedKey> newCachedKeyFromWrap(DocumentMetadata metadata) {
+    return this.encryptionService.wrapKey(metadata).thenApply(wrappedKey -> {
+      byte[] dekBytes = wrappedKey.getDekBytes();
+      CachedKey cachedKey = new CachedKey(dekBytes, wrappedKey.getEdek(),
+          this.encryptionExecutor, this.secureRandom, this.encryptionService, metadata);
+      Arrays.fill(dekBytes, (byte) 0);
+      return cachedKey;
+    });
+  }
+
   /**
-   * Create a CachedKeyDecryptor for repeated decrypt operations using the same DEK. This unwraps
-   * the EDEK once and caches the resulting DEK for subsequent decrypts.
+   * Execute an operation on a cached resource with automatic lifecycle management. The resource is
+   * closed (and DEK zeroed) when the operation completes, whether successfully or with an error.
+   */
+  private <K extends CachedKeyLifecycle, T> CompletableFuture<T> withCachedResource(
+      CompletableFuture<K> resource, Function<K, CompletableFuture<T>> operation) {
+    return resource.thenCompose(
+        k -> operation.apply(k).whenComplete((result, error) -> k.close()));
+  }
+
+  // === Cached decryptor factory methods ===
+
+  /**
+   * Create a CachedDecryptor for repeated decrypt operations using the same DEK. This unwraps the
+   * EDEK once and caches the resulting DEK for subsequent decrypts.
    *
    * <p>
    * Use this when you need to decrypt multiple documents that share the same EDEK, to avoid
    * repeated TSP unwrap calls.
    *
    * <p>
-   * The returned decryptor implements AutoCloseable and should be used with try-with-resources to
+   * The returned CachedDecryptor implements Closeable and should be used with try-with-resources to
    * ensure the DEK is securely zeroed when done:
    *
    * <pre>
-   * try (CachedKeyDecryptor decryptor = client.createCachedDecryptor(edek, metadata).get()) {
+   * try (CachedDecryptor decryptor = client.createCachedDecryptor(edek, metadata).get()) {
    *   PlaintextDocument doc1 = decryptor.decrypt(encDoc1, metadata).get();
    *   PlaintextDocument doc2 = decryptor.decrypt(encDoc2, metadata).get();
    * }
@@ -509,35 +543,30 @@ public final class TenantSecurityClient implements Closeable, DocumentDecryptor,
    *
    * @param edek The encrypted document encryption key to unwrap
    * @param metadata Metadata for the unwrap operation
-   * @return CompletableFuture resolving to a CachedKeyDecryptor
+   * @return CompletableFuture resolving to a CachedDecryptor
    */
-  public CompletableFuture<CachedKeyDecryptor> createCachedDecryptor(String edek,
+  public CompletableFuture<CachedDecryptor> createCachedDecryptor(String edek,
       DocumentMetadata metadata) {
-    return this.encryptionService.unwrapKey(edek, metadata).thenApply(dekBytes -> {
-      CachedKeyDecryptor decryptor = new CachedKeyDecryptor(dekBytes, edek, this.encryptionExecutor,
-          this.encryptionService, metadata);
-      Arrays.fill(dekBytes, (byte) 0);
-      return decryptor;
-    });
+    return newCachedKeyFromUnwrap(edek, metadata).thenApply(k -> k);
   }
 
   /**
-   * Create a CachedKeyDecryptor from an existing EncryptedDocument. Convenience method that
-   * extracts the EDEK from the document.
+   * Create a CachedDecryptor from an existing EncryptedDocument. Convenience method that extracts
+   * the EDEK from the document.
    *
    * @param encryptedDocument The encrypted document whose EDEK should be unwrapped
    * @param metadata Metadata for the unwrap operation
-   * @return CompletableFuture resolving to a CachedKeyDecryptor
+   * @return CompletableFuture resolving to a CachedDecryptor
    */
-  public CompletableFuture<CachedKeyDecryptor> createCachedDecryptor(
+  public CompletableFuture<CachedDecryptor> createCachedDecryptor(
       EncryptedDocument encryptedDocument, DocumentMetadata metadata) {
     return createCachedDecryptor(encryptedDocument.getEdek(), metadata);
   }
 
   /**
-   * Execute an operation using a CachedKeyDecryptor with automatic lifecycle management. The
-   * decryptor is automatically closed (and DEK zeroed) when the operation completes, whether
-   * successfully or with an error.
+   * Execute an operation using a CachedDecryptor with automatic lifecycle management. The cached
+   * key is automatically closed (and DEK zeroed) when the operation completes, whether successfully
+   * or with an error.
    *
    * <p>
    * This is the recommended pattern for using cached decryptors with CompletableFuture composition:
@@ -550,33 +579,34 @@ public final class TenantSecurityClient implements Closeable, DocumentDecryptor,
    * @param <T> The type returned by the operation
    * @param edek The encrypted document encryption key to unwrap
    * @param metadata Metadata for the unwrap operation
-   * @param operation Function that takes the decryptor and returns a CompletableFuture
+   * @param operation Function that takes the CachedDecryptor and returns a CompletableFuture
    * @return CompletableFuture resolving to the operation's result
    */
   public <T> CompletableFuture<T> withCachedDecryptor(String edek, DocumentMetadata metadata,
-      Function<CachedKeyDecryptor, CompletableFuture<T>> operation) {
-    return createCachedDecryptor(edek, metadata).thenCompose(
-        decryptor -> operation.apply(decryptor).whenComplete((result, error) -> decryptor.close()));
+      Function<CachedDecryptor, CompletableFuture<T>> operation) {
+    return withCachedResource(createCachedDecryptor(edek, metadata), operation);
   }
 
   /**
-   * Execute an operation using a CachedKeyDecryptor with automatic lifecycle management.
-   * Convenience method that extracts the EDEK from the document.
+   * Execute an operation using a CachedDecryptor with automatic lifecycle management. Convenience
+   * method that extracts the EDEK from the document.
    *
    * @param <T> The type returned by the operation
    * @param encryptedDocument The encrypted document whose EDEK should be unwrapped
    * @param metadata Metadata for the unwrap operation
-   * @param operation Function that takes the decryptor and returns a CompletableFuture
+   * @param operation Function that takes the CachedDecryptor and returns a CompletableFuture
    * @return CompletableFuture resolving to the operation's result
    */
   public <T> CompletableFuture<T> withCachedDecryptor(EncryptedDocument encryptedDocument,
-      DocumentMetadata metadata, Function<CachedKeyDecryptor, CompletableFuture<T>> operation) {
+      DocumentMetadata metadata, Function<CachedDecryptor, CompletableFuture<T>> operation) {
     return withCachedDecryptor(encryptedDocument.getEdek(), metadata, operation);
   }
 
+  // === Cached encryptor factory methods ===
+
   /**
-   * Create a CachedKeyEncryptor for repeated encrypt operations using the same DEK. This wraps a
-   * new key once and caches the resulting DEK/EDEK pair for subsequent encrypts. All documents
+   * Create a CachedEncryptor for repeated encrypt operations using the same DEK. This wraps a new
+   * key once and caches the resulting DEK/EDEK pair for subsequent encrypts. All documents
    * encrypted with this instance will share the same DEK/EDEK pair.
    *
    * <p>
@@ -584,33 +614,27 @@ public final class TenantSecurityClient implements Closeable, DocumentDecryptor,
    * to avoid repeated TSP wrap calls.
    *
    * <p>
-   * The returned encryptor implements AutoCloseable and should be used with try-with-resources to
+   * The returned CachedEncryptor implements Closeable and should be used with try-with-resources to
    * ensure the DEK is securely zeroed when done:
    *
    * <pre>
-   * try (CachedKeyEncryptor encryptor = client.createCachedEncryptor(metadata).get()) {
+   * try (CachedEncryptor encryptor = client.createCachedEncryptor(metadata).get()) {
    *   EncryptedDocument enc1 = encryptor.encrypt(doc1, metadata).get();
    *   EncryptedDocument enc2 = encryptor.encrypt(doc2, metadata).get();
    * }
    * </pre>
    *
    * @param metadata Metadata for the wrap operation
-   * @return CompletableFuture resolving to a CachedKeyEncryptor
+   * @return CompletableFuture resolving to a CachedEncryptor
    */
-  public CompletableFuture<CachedKeyEncryptor> createCachedEncryptor(DocumentMetadata metadata) {
-    return this.encryptionService.wrapKey(metadata).thenApply(wrappedKey -> {
-      byte[] dekBytes = wrappedKey.getDekBytes();
-      CachedKeyEncryptor encryptor = new CachedKeyEncryptor(dekBytes, wrappedKey.getEdek(),
-          this.encryptionExecutor, this.secureRandom, this.encryptionService, metadata);
-      Arrays.fill(dekBytes, (byte) 0);
-      return encryptor;
-    });
+  public CompletableFuture<CachedEncryptor> createCachedEncryptor(DocumentMetadata metadata) {
+    return newCachedKeyFromWrap(metadata).thenApply(k -> k);
   }
 
   /**
-   * Execute an operation using a CachedKeyEncryptor with automatic lifecycle management. The
-   * encryptor is automatically closed (and DEK zeroed) when the operation completes, whether
-   * successfully or with an error.
+   * Execute an operation using a CachedEncryptor with automatic lifecycle management. The cached
+   * key is automatically closed (and DEK zeroed) when the operation completes, whether successfully
+   * or with an error.
    *
    * <p>
    * This is the recommended pattern for using cached encryptors with CompletableFuture composition:
@@ -622,13 +646,83 @@ public final class TenantSecurityClient implements Closeable, DocumentDecryptor,
    *
    * @param <T> The type returned by the operation
    * @param metadata Metadata for the wrap operation
-   * @param operation Function that takes the encryptor and returns a CompletableFuture
+   * @param operation Function that takes the CachedEncryptor and returns a CompletableFuture
    * @return CompletableFuture resolving to the operation's result
    */
   public <T> CompletableFuture<T> withCachedEncryptor(DocumentMetadata metadata,
-      Function<CachedKeyEncryptor, CompletableFuture<T>> operation) {
-    return createCachedEncryptor(metadata).thenCompose(
-        encryptor -> operation.apply(encryptor).whenComplete((result, error) -> encryptor.close()));
+      Function<CachedEncryptor, CompletableFuture<T>> operation) {
+    return withCachedResource(createCachedEncryptor(metadata), operation);
+  }
+
+  // === CachedKey factory methods (full encrypt + decrypt access) ===
+
+  /**
+   * Create a CachedKey for both encrypt and decrypt operations. Wraps a new key and caches the
+   * resulting DEK/EDEK pair.
+   *
+   * <p>
+   * Use this when you need both encrypt and decrypt capabilities with the same cached key. If you
+   * only need encrypt or decrypt, prefer {@link #createCachedEncryptor(DocumentMetadata)} or
+   * {@link #createCachedDecryptor(String, DocumentMetadata)} for narrower type safety.
+   *
+   * @param metadata Metadata for the wrap operation
+   * @return CompletableFuture resolving to a CachedKey
+   */
+  public CompletableFuture<CachedKey> createCachedKey(DocumentMetadata metadata) {
+    return newCachedKeyFromWrap(metadata);
+  }
+
+  /**
+   * Create a CachedKey for both encrypt and decrypt operations by unwrapping an existing EDEK.
+   *
+   * @param edek The encrypted document encryption key to unwrap
+   * @param metadata Metadata for the unwrap operation
+   * @return CompletableFuture resolving to a CachedKey
+   */
+  public CompletableFuture<CachedKey> createCachedKey(String edek, DocumentMetadata metadata) {
+    return newCachedKeyFromUnwrap(edek, metadata);
+  }
+
+  /**
+   * Create a CachedKey for both encrypt and decrypt operations from an existing EncryptedDocument.
+   * Convenience method that extracts the EDEK from the document.
+   *
+   * @param encryptedDocument The encrypted document whose EDEK should be unwrapped
+   * @param metadata Metadata for the unwrap operation
+   * @return CompletableFuture resolving to a CachedKey
+   */
+  public CompletableFuture<CachedKey> createCachedKey(EncryptedDocument encryptedDocument,
+      DocumentMetadata metadata) {
+    return createCachedKey(encryptedDocument.getEdek(), metadata);
+  }
+
+  /**
+   * Execute an operation using a CachedKey with automatic lifecycle management. Wraps a new key
+   * and provides full encrypt + decrypt access.
+   *
+   * @param <T> The type returned by the operation
+   * @param metadata Metadata for the wrap operation
+   * @param operation Function that takes the CachedKey and returns a CompletableFuture
+   * @return CompletableFuture resolving to the operation's result
+   */
+  public <T> CompletableFuture<T> withCachedKey(DocumentMetadata metadata,
+      Function<CachedKey, CompletableFuture<T>> operation) {
+    return withCachedResource(createCachedKey(metadata), operation);
+  }
+
+  /**
+   * Execute an operation using a CachedKey with automatic lifecycle management. Unwraps an
+   * existing EDEK and provides full encrypt + decrypt access.
+   *
+   * @param <T> The type returned by the operation
+   * @param edek The encrypted document encryption key to unwrap
+   * @param metadata Metadata for the unwrap operation
+   * @param operation Function that takes the CachedKey and returns a CompletableFuture
+   * @return CompletableFuture resolving to the operation's result
+   */
+  public <T> CompletableFuture<T> withCachedKey(String edek, DocumentMetadata metadata,
+      Function<CachedKey, CompletableFuture<T>> operation) {
+    return withCachedResource(createCachedKey(edek, metadata), operation);
   }
 
   /**

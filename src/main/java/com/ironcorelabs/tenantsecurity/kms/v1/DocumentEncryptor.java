@@ -7,8 +7,8 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * Interface for document encryption capabilities. Implemented by both TenantSecurityClient (for
- * standard encrypt operations that wrap a new DEK each time) and CachedKeyEncryptor (for repeated
- * encrypts using a cached DEK).
+ * standard encrypt operations that wrap a new DEK each time) and CachedKey (for repeated encrypts
+ * using a cached DEK).
  */
 public interface DocumentEncryptor {
 

@@ -44,7 +44,7 @@ public class CachedKeyOpsRoundTrip {
     return documentMap;
   }
 
-  // === CachedKeyEncryptor tests ===
+  // === CachedKey encrypt tests ===
 
   public void cachedEncryptorRoundTrip() throws Exception {
     DocumentMetadata metadata = getMetadata();
@@ -54,12 +54,12 @@ public class CachedKeyOpsRoundTrip {
 
     TenantSecurityClient client = getClient().get();
 
-    try (CachedKeyEncryptor encryptor = client.createCachedEncryptor(metadata).get()) {
+    try (CachedEncryptor encryptor = client.createCachedEncryptor(metadata).get()) {
       assertFalse(encryptor.isClosed());
       assertFalse(encryptor.isExpired());
       assertEquals(encryptor.getOperationCount(), 0);
 
-      // Encrypt two documents with the cached encryptor
+      // Encrypt two documents with the cached key
       EncryptedDocument enc1 = encryptor.encrypt(doc1, metadata).get();
       EncryptedDocument enc2 = encryptor.encrypt(doc2, metadata).get();
 
@@ -90,7 +90,7 @@ public class CachedKeyOpsRoundTrip {
 
     // Use the withCachedEncryptor pattern for automatic lifecycle management
     EncryptedDocument encrypted =
-        client.withCachedEncryptor(metadata, encryptor -> encryptor.encrypt(doc, metadata)).get();
+        client.withCachedEncryptor(metadata, cachedKey -> cachedKey.encrypt(doc, metadata)).get();
 
     // Verify the encrypted document can be decrypted
     PlaintextDocument decrypted = client.decrypt(encrypted, metadata).get();
@@ -101,7 +101,7 @@ public class CachedKeyOpsRoundTrip {
     client.close();
   }
 
-  // === CachedKeyDecryptor tests ===
+  // === CachedKey decrypt tests ===
 
   public void cachedDecryptorRoundTrip() throws Exception {
     DocumentMetadata metadata = getMetadata();
@@ -111,17 +111,16 @@ public class CachedKeyOpsRoundTrip {
 
     TenantSecurityClient client = getClient().get();
 
-    // Encrypt two documents with the same key (using cached encryptor)
+    // Encrypt two documents with the same key (using cached key)
     EncryptedDocument enc1;
     EncryptedDocument enc2;
-    try (CachedKeyEncryptor encryptor = client.createCachedEncryptor(metadata).get()) {
+    try (CachedEncryptor encryptor = client.createCachedEncryptor(metadata).get()) {
       enc1 = encryptor.encrypt(doc1, metadata).get();
       enc2 = encryptor.encrypt(doc2, metadata).get();
     }
 
     // Decrypt both using a cached decryptor (single unwrap call)
-    try (CachedKeyDecryptor decryptor =
-        client.createCachedDecryptor(enc1.getEdek(), metadata).get()) {
+    try (CachedDecryptor decryptor = client.createCachedDecryptor(enc1.getEdek(), metadata).get()) {
       assertFalse(decryptor.isClosed());
       assertFalse(decryptor.isExpired());
       assertEquals(decryptor.getOperationCount(), 0);
@@ -149,7 +148,7 @@ public class CachedKeyOpsRoundTrip {
     EncryptedDocument encrypted = client.encrypt(doc, metadata).get();
 
     // Create decryptor from EncryptedDocument directly
-    try (CachedKeyDecryptor decryptor = client.createCachedDecryptor(encrypted, metadata).get()) {
+    try (CachedDecryptor decryptor = client.createCachedDecryptor(encrypted, metadata).get()) {
       PlaintextDocument decrypted = decryptor.decrypt(encrypted, metadata).get();
       assertEqualBytes(decrypted.getDecryptedFields().get("field1"), doc.get("field1"));
       assertEqualBytes(decrypted.getDecryptedFields().get("field2"), doc.get("field2"));
@@ -169,7 +168,7 @@ public class CachedKeyOpsRoundTrip {
 
     // Use the withCachedDecryptor pattern for automatic lifecycle management
     PlaintextDocument decrypted = client.withCachedDecryptor(encrypted, metadata,
-        decryptor -> decryptor.decrypt(encrypted, metadata)).get();
+        cachedKey -> cachedKey.decrypt(encrypted, metadata)).get();
 
     assertEqualBytes(decrypted.getDecryptedFields().get("field1"), doc.get("field1"));
     assertEqualBytes(decrypted.getDecryptedFields().get("field2"), doc.get("field2"));
@@ -189,12 +188,12 @@ public class CachedKeyOpsRoundTrip {
     ByteArrayOutputStream encryptedOutput = new ByteArrayOutputStream();
     String edek;
 
-    try (CachedKeyEncryptor encryptor = client.createCachedEncryptor(metadata).get()) {
+    try (CachedEncryptor encryptor = client.createCachedEncryptor(metadata).get()) {
       ByteArrayInputStream input = new ByteArrayInputStream(plaintext);
       StreamingResponse response = encryptor.encryptStream(input, encryptedOutput, metadata).get();
       edek = response.getEdek();
       assertEquals(encryptor.getOperationCount(), 1);
-      // EDEK from streaming response should match the encryptor's EDEK
+      // EDEK from streaming response should match the cached key's EDEK
       assertEquals(edek, encryptor.getEdek());
     }
 
@@ -220,8 +219,8 @@ public class CachedKeyOpsRoundTrip {
     StreamingResponse encResponse = client.encryptStream(input, encryptedOutput, metadata).get();
     String edek = encResponse.getEdek();
 
-    // Decrypt with cached decryptor
-    try (CachedKeyDecryptor decryptor = client.createCachedDecryptor(edek, metadata).get()) {
+    // Decrypt with cached key
+    try (CachedDecryptor decryptor = client.createCachedDecryptor(edek, metadata).get()) {
       ByteArrayInputStream encryptedInput = new ByteArrayInputStream(encryptedOutput.toByteArray());
       ByteArrayOutputStream decryptedOutput = new ByteArrayOutputStream();
       decryptor.decryptStream(edek, encryptedInput, decryptedOutput, metadata).get();
@@ -243,17 +242,16 @@ public class CachedKeyOpsRoundTrip {
 
     TenantSecurityClient client = getClient().get();
 
-    // Encrypt multiple docs with cached encryptor
+    // Encrypt multiple docs with cached key
     EncryptedDocument enc1;
     EncryptedDocument enc2;
-    try (CachedKeyEncryptor encryptor = client.createCachedEncryptor(metadata).get()) {
+    try (CachedEncryptor encryptor = client.createCachedEncryptor(metadata).get()) {
       enc1 = encryptor.encrypt(doc1, metadata).get();
       enc2 = encryptor.encrypt(doc2, metadata).get();
     }
 
-    // Decrypt all with cached decryptor (one unwrap call for all)
-    try (CachedKeyDecryptor decryptor =
-        client.createCachedDecryptor(enc1.getEdek(), metadata).get()) {
+    // Decrypt all with cached key (one unwrap call for all)
+    try (CachedDecryptor decryptor = client.createCachedDecryptor(enc1.getEdek(), metadata).get()) {
       PlaintextDocument dec1 = decryptor.decrypt(enc1, metadata).get();
       PlaintextDocument dec2 = decryptor.decrypt(enc2, metadata).get();
 
@@ -272,17 +270,17 @@ public class CachedKeyOpsRoundTrip {
 
     TenantSecurityClient client = getClient().get();
 
-    // Encrypt stream with cached encryptor
+    // Encrypt stream with cached key
     ByteArrayOutputStream encryptedOutput = new ByteArrayOutputStream();
     String edek;
-    try (CachedKeyEncryptor encryptor = client.createCachedEncryptor(metadata).get()) {
+    try (CachedEncryptor encryptor = client.createCachedEncryptor(metadata).get()) {
       ByteArrayInputStream input = new ByteArrayInputStream(plaintext);
       StreamingResponse response = encryptor.encryptStream(input, encryptedOutput, metadata).get();
       edek = response.getEdek();
     }
 
-    // Decrypt stream with cached decryptor
-    try (CachedKeyDecryptor decryptor = client.createCachedDecryptor(edek, metadata).get()) {
+    // Decrypt stream with cached key
+    try (CachedDecryptor decryptor = client.createCachedDecryptor(edek, metadata).get()) {
       ByteArrayInputStream encryptedInput = new ByteArrayInputStream(encryptedOutput.toByteArray());
       ByteArrayOutputStream decryptedOutput = new ByteArrayOutputStream();
       decryptor.decryptStream(edek, encryptedInput, decryptedOutput, metadata).get();
@@ -292,7 +290,43 @@ public class CachedKeyOpsRoundTrip {
     client.close();
   }
 
-  // === Encryptor close behavior ===
+  // === Single CachedKey for both encrypt and decrypt ===
+
+  public void singleCachedKeyEncryptAndDecrypt() throws Exception {
+    DocumentMetadata metadata = getMetadata();
+    Map<String, byte[]> doc1 = getDocumentFields();
+    Map<String, byte[]> doc2 = new HashMap<>();
+    doc2.put("other", "Other document data".getBytes("UTF-8"));
+
+    TenantSecurityClient client = getClient().get();
+
+    // Use createCachedKey for full encrypt + decrypt access
+    try (CachedKey cachedKey = client.createCachedKey(metadata).get()) {
+      // Encrypt
+      EncryptedDocument enc1 = cachedKey.encrypt(doc1, metadata).get();
+      EncryptedDocument enc2 = cachedKey.encrypt(doc2, metadata).get();
+
+      assertEquals(cachedKey.getEncryptCount(), 2);
+      assertEquals(cachedKey.getDecryptCount(), 0);
+
+      // Decrypt with the same CachedKey
+      PlaintextDocument dec1 = cachedKey.decrypt(enc1, metadata).get();
+      PlaintextDocument dec2 = cachedKey.decrypt(enc2, metadata).get();
+
+      assertEquals(cachedKey.getEncryptCount(), 2);
+      assertEquals(cachedKey.getDecryptCount(), 2);
+      assertEquals(cachedKey.getOperationCount(), 4);
+
+      assertEqualBytes(dec1.getDecryptedFields().get("field1"), doc1.get("field1"));
+      assertEqualBytes(dec1.getDecryptedFields().get("field2"), doc1.get("field2"));
+      assertEqualBytes(dec1.getDecryptedFields().get("field3"), doc1.get("field3"));
+      assertEqualBytes(dec2.getDecryptedFields().get("other"), doc2.get("other"));
+    }
+
+    client.close();
+  }
+
+  // === Close behavior ===
 
   public void cachedEncryptorRejectsAfterClose() throws Exception {
     DocumentMetadata metadata = getMetadata();
@@ -300,7 +334,7 @@ public class CachedKeyOpsRoundTrip {
 
     TenantSecurityClient client = getClient().get();
 
-    CachedKeyEncryptor encryptor = client.createCachedEncryptor(metadata).get();
+    CachedEncryptor encryptor = client.createCachedEncryptor(metadata).get();
     // Encrypt once to verify it works
     encryptor.encrypt(doc, metadata).get();
     assertEquals(encryptor.getOperationCount(), 1);
@@ -327,8 +361,7 @@ public class CachedKeyOpsRoundTrip {
 
     EncryptedDocument encrypted = client.encrypt(doc, metadata).get();
 
-    CachedKeyDecryptor decryptor =
-        client.createCachedDecryptor(encrypted.getEdek(), metadata).get();
+    CachedDecryptor decryptor = client.createCachedDecryptor(encrypted.getEdek(), metadata).get();
     // Decrypt once to verify it works
     decryptor.decrypt(encrypted, metadata).get();
     assertEquals(decryptor.getOperationCount(), 1);
@@ -366,7 +399,7 @@ public class CachedKeyOpsRoundTrip {
     TenantSecurityClient client = getClient().get();
 
     BatchResult<EncryptedDocument> encResult;
-    try (CachedKeyEncryptor encryptor = client.createCachedEncryptor(metadata).get()) {
+    try (CachedEncryptor encryptor = client.createCachedEncryptor(metadata).get()) {
       encResult = encryptor.encryptBatch(docs, metadata).get();
       assertEquals(encryptor.getOperationCount(), 3);
     }
@@ -404,22 +437,21 @@ public class CachedKeyOpsRoundTrip {
 
     TenantSecurityClient client = getClient().get();
 
-    // Encrypt all 3 with cached encryptor (same key)
+    // Encrypt all 3 with cached key (same key)
     EncryptedDocument enc1, enc2, enc3;
-    try (CachedKeyEncryptor encryptor = client.createCachedEncryptor(metadata).get()) {
+    try (CachedEncryptor encryptor = client.createCachedEncryptor(metadata).get()) {
       enc1 = encryptor.encrypt(doc1, metadata).get();
       enc2 = encryptor.encrypt(doc2, metadata).get();
       enc3 = encryptor.encrypt(doc3, metadata).get();
     }
 
-    // Batch decrypt with cached decryptor
+    // Batch decrypt with cached key
     Map<String, EncryptedDocument> encDocs = new HashMap<>();
     encDocs.put("doc1", enc1);
     encDocs.put("doc2", enc2);
     encDocs.put("doc3", enc3);
 
-    try (CachedKeyDecryptor decryptor =
-        client.createCachedDecryptor(enc1.getEdek(), metadata).get()) {
+    try (CachedDecryptor decryptor = client.createCachedDecryptor(enc1.getEdek(), metadata).get()) {
       BatchResult<PlaintextDocument> result = decryptor.decryptBatch(encDocs, metadata).get();
       assertEquals(decryptor.getOperationCount(), 3);
 
@@ -451,9 +483,8 @@ public class CachedKeyOpsRoundTrip {
     encDocs.put("match", enc1);
     encDocs.put("mismatch", enc2);
 
-    // Create decryptor for enc1's key
-    try (CachedKeyDecryptor decryptor =
-        client.createCachedDecryptor(enc1.getEdek(), metadata).get()) {
+    // Create cached key for enc1's key
+    try (CachedDecryptor decryptor = client.createCachedDecryptor(enc1.getEdek(), metadata).get()) {
       BatchResult<PlaintextDocument> result = decryptor.decryptBatch(encDocs, metadata).get();
 
       // match should succeed
@@ -483,7 +514,7 @@ public class CachedKeyOpsRoundTrip {
 
     TenantSecurityClient client = getClient().get();
 
-    try (CachedKeyEncryptor encryptor = client.createCachedEncryptor(metadata).get()) {
+    try (CachedEncryptor encryptor = client.createCachedEncryptor(metadata).get()) {
       assertEquals(encryptor.getOperationCount(), 0);
       encryptor.encryptBatch(docs, metadata).get();
       assertEquals(encryptor.getOperationCount(), 2);
@@ -507,9 +538,8 @@ public class CachedKeyOpsRoundTrip {
     EncryptedDocument enc1 = client.encrypt(doc, metadata).get();
     EncryptedDocument enc2 = client.encrypt(doc, metadata).get();
 
-    // Create decryptor for enc1's EDEK
-    try (CachedKeyDecryptor decryptor =
-        client.createCachedDecryptor(enc1.getEdek(), metadata).get()) {
+    // Create cached key for enc1's EDEK
+    try (CachedDecryptor decryptor = client.createCachedDecryptor(enc1.getEdek(), metadata).get()) {
       // Decrypting enc1 should work
       decryptor.decrypt(enc1, metadata).get();
 
