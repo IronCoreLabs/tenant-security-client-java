@@ -10,6 +10,8 @@ import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Field;
 import java.security.SecureRandom;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -215,6 +217,24 @@ public class CachedKeyEncryptorTest {
 
     try {
       encryptor.encryptStream(input, output, metadata).join();
+      fail("Should have thrown CompletionException");
+    } catch (CompletionException e) {
+      assertTrue(e.getCause() instanceof TscException);
+      assertTrue(e.getCause().getMessage().contains("CachedKeyEncryptor has been closed"));
+    }
+  }
+
+  // encryptBatch validation tests
+
+  public void encryptBatchFailsWhenClosed() {
+    CachedKeyEncryptor encryptor = createEncryptor();
+    encryptor.close();
+
+    Map<String, Map<String, byte[]>> docs = new HashMap<>();
+    docs.put("doc1", java.util.Collections.singletonMap("field", new byte[] {1, 2, 3}));
+
+    try {
+      encryptor.encryptBatch(docs, metadata).join();
       fail("Should have thrown CompletionException");
     } catch (CompletionException e) {
       assertTrue(e.getCause() instanceof TscException);

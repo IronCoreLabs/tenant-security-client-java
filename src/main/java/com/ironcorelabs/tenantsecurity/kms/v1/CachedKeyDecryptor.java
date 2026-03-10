@@ -8,12 +8,15 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
+import java.util.function.Supplier;
+import java.util.function.ToIntFunction;
+import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TscException;
-import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
 
 /**
  * Holds a cached DEK (Document Encryption Key) for repeated decrypt operations without making
@@ -139,10 +142,14 @@ public final class CachedKeyDecryptor implements DocumentDecryptor, Closeable {
   }
 
   /**
-   * Check if this decryptor is usable (not closed and not expired). Returns a failed future if not,
-   * or a completed future if usable.
+   * Guard an operation with usability checks and operation counting. Verifies the decryptor is not
+   * closed or expired before running the operation, and increments the operation count on success.
+   *
+   * @param operation The operation to perform
+   * @param countOps Extracts the number of successful operations from the result
    */
-  private CompletableFuture<Void> checkUsable() {
+  private <T> CompletableFuture<T> executeAndIncrement(Supplier<CompletableFuture<T>> operation,
+      ToIntFunction<T> countOps) {
     if (closed.get()) {
       return CompletableFuture.failedFuture(new TscException(
           TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED, "CachedKeyDecryptor has been closed"));
@@ -151,95 +158,74 @@ public final class CachedKeyDecryptor implements DocumentDecryptor, Closeable {
       return CompletableFuture.failedFuture(new TscException(
           TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED, "CachedKeyDecryptor has expired"));
     }
-    return CompletableFuture.completedFuture(null);
-  }
-
-  /**
-   * Decrypt the provided EncryptedDocument using the cached DEK.
-   *
-   * <p>
-   * The document's EDEK must match the EDEK used to create this decryptor, otherwise an error is
-   * returned.
-   *
-   * @param encryptedDocument Document to decrypt
-   * @param metadata Metadata about the document being decrypted (used for audit/logging)
-   * @return CompletableFuture resolving to PlaintextDocument
-   */
-  @Override
-  public CompletableFuture<PlaintextDocument> decrypt(EncryptedDocument encryptedDocument,
-      DocumentMetadata metadata) {
-    return checkUsable().thenCompose(unused -> {
-      // Validate EDEK matches
-      if (!edek.equals(encryptedDocument.getEdek())) {
-        return CompletableFuture.<PlaintextDocument>failedFuture(
-            new TscException(TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED,
-                "EncryptedDocument EDEK does not match the cached EDEK. "
-                    + "This decryptor can only decrypt documents with matching EDEKs."));
-      }
-
-      return decryptFields(encryptedDocument.getEncryptedFields(), encryptedDocument.getEdek())
-          .thenApply(result -> {
-            operationCount.incrementAndGet();
-            return result;
-          });
+    return operation.get().thenApply(result -> {
+      operationCount.addAndGet(countOps.applyAsInt(result));
+      return result;
     });
   }
 
-  /**
-   * Decrypt a stream using the cached DEK.
-   *
-   * <p>
-   * The provided EDEK must match the EDEK used to create this decryptor, otherwise an error is
-   * returned.
-   *
-   * @param edek Encrypted document encryption key - must match this decryptor's EDEK
-   * @param input A stream representing the encrypted document
-   * @param output An output stream to write the decrypted document to
-   * @param metadata Metadata about the document being decrypted
-   * @return Future which will complete when input has been decrypted
-   */
+  private CompletableFuture<PlaintextDocument> validateEdekAndDecrypt(
+      EncryptedDocument encryptedDocument) {
+    if (!edek.equals(encryptedDocument.getEdek())) {
+      return CompletableFuture.failedFuture(
+          new TscException(TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED,
+              "EncryptedDocument EDEK does not match the cached EDEK. "
+                  + "This decryptor can only decrypt documents with matching EDEKs."));
+    }
+    return DocumentCryptoOps.decryptFields(encryptedDocument.getEncryptedFields(), dek,
+        encryptedDocument.getEdek(), encryptionExecutor);
+  }
+
+  @Override
+  public CompletableFuture<PlaintextDocument> decrypt(EncryptedDocument encryptedDocument,
+      DocumentMetadata metadata) {
+    return executeAndIncrement(() -> validateEdekAndDecrypt(encryptedDocument), result -> 1);
+  }
+
   @Override
   public CompletableFuture<Void> decryptStream(String edek, InputStream input, OutputStream output,
       DocumentMetadata metadata) {
-    return checkUsable().thenCompose(unused -> {
-      // Validate EDEK matches
+    return executeAndIncrement(() -> {
       if (!this.edek.equals(edek)) {
         return CompletableFuture
             .<Void>failedFuture(new TscException(TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED,
                 "Provided EDEK does not match the cached EDEK. "
                     + "This decryptor can only decrypt documents with matching EDEKs."));
       }
-
       return CompletableFuture
           .supplyAsync(() -> CryptoUtils.decryptStreamInternal(this.dek, input, output).join(),
-              encryptionExecutor)
-          .thenApply(result -> {
-            operationCount.incrementAndGet();
-            return result;
-          });
-    });
+              encryptionExecutor);
+    }, result -> 1);
   }
 
-  /**
-   * Decrypt all fields in the document using the cached DEK. Pattern follows
-   * TenantSecurityClient.decryptFields().
-   */
-  // Caller must call checkUsable() before invoking this method.
-  private CompletableFuture<PlaintextDocument> decryptFields(Map<String, byte[]> document,
-      String documentEdek) {
-    // Parallel decrypt each field
-    Map<String, CompletableFuture<byte[]>> decryptOps = document.entrySet().stream()
-        .collect(Collectors.toMap(Map.Entry::getKey,
-            entry -> CompletableFuture.supplyAsync(
-                () -> CryptoUtils.decryptDocument(entry.getValue(), dek).join(),
-                encryptionExecutor)));
+  @Override
+  public CompletableFuture<BatchResult<PlaintextDocument>> decryptBatch(
+      Map<String, EncryptedDocument> encryptedDocuments, DocumentMetadata metadata) {
+    return executeAndIncrement(() -> {
+      ConcurrentMap<String, CompletableFuture<PlaintextDocument>> ops = new ConcurrentHashMap<>();
+      ConcurrentMap<String, TenantSecurityException> edekMismatches = new ConcurrentHashMap<>();
 
-    // Join all futures and build result
-    return CompletableFutures.tryCatchNonFatal(() -> {
-      Map<String, byte[]> decryptedBytes = decryptOps.entrySet().stream()
-          .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().join()));
-      return new PlaintextDocument(decryptedBytes, documentEdek);
-    });
+      encryptedDocuments.forEach((id, encDoc) -> {
+        if (!edek.equals(encDoc.getEdek())) {
+          edekMismatches.put(id,
+              new TscException(TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED,
+                  "EncryptedDocument EDEK does not match the cached EDEK. "
+                      + "This decryptor can only decrypt documents with matching EDEKs."));
+        } else {
+          ops.put(id, DocumentCryptoOps.decryptFields(encDoc.getEncryptedFields(), dek,
+              encDoc.getEdek(), encryptionExecutor));
+        }
+      });
+
+      return CompletableFuture.supplyAsync(() -> {
+        BatchResult<PlaintextDocument> result = DocumentCryptoOps.cryptoOperationToBatchResult(ops,
+            TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED);
+        ConcurrentMap<String, TenantSecurityException> allFailures =
+            new ConcurrentHashMap<>(result.getFailures());
+        allFailures.putAll(edekMismatches);
+        return new BatchResult<>(result.getSuccesses(), allFailures);
+      });
+    }, result -> result.getSuccesses().size());
   }
 
   /**

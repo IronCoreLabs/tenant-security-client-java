@@ -2,6 +2,7 @@ package com.ironcorelabs.tenantsecurity.kms.v1;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -34,4 +35,14 @@ public interface DocumentDecryptor {
    */
   CompletableFuture<Void> decryptStream(String edek, InputStream input, OutputStream output,
       DocumentMetadata metadata);
+
+  /**
+   * Decrypt a batch of encrypted documents. Supports partial failure via {@link BatchResult}.
+   *
+   * @param encryptedDocuments Map of document ID to EncryptedDocument to decrypt.
+   * @param metadata Metadata about all of the documents being decrypted.
+   * @return Collection of successes and failures that occurred during operation.
+   */
+  CompletableFuture<BatchResult<PlaintextDocument>> decryptBatch(
+      Map<String, EncryptedDocument> encryptedDocuments, DocumentMetadata metadata);
 }

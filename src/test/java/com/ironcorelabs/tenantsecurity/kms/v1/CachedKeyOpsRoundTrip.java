@@ -349,6 +349,154 @@ public class CachedKeyOpsRoundTrip {
 
   // === EDEK mismatch ===
 
+  // === Batch encrypt/decrypt tests ===
+
+  public void cachedEncryptorBatchRoundTrip() throws Exception {
+    DocumentMetadata metadata = getMetadata();
+
+    Map<String, Map<String, byte[]>> docs = new HashMap<>();
+    docs.put("doc1", getDocumentFields());
+    Map<String, byte[]> doc2 = new HashMap<>();
+    doc2.put("other", "Other data".getBytes("UTF-8"));
+    docs.put("doc2", doc2);
+    Map<String, byte[]> doc3 = new HashMap<>();
+    doc3.put("solo", "Solo data".getBytes("UTF-8"));
+    docs.put("doc3", doc3);
+
+    TenantSecurityClient client = getClient().get();
+
+    BatchResult<EncryptedDocument> encResult;
+    try (CachedKeyEncryptor encryptor = client.createCachedEncryptor(metadata).get()) {
+      encResult = encryptor.encryptBatch(docs, metadata).get();
+      assertEquals(encryptor.getOperationCount(), 3);
+    }
+
+    assertFalse(encResult.hasFailures());
+    assertEquals(encResult.getSuccesses().size(), 3);
+
+    // All encrypted docs share the same EDEK
+    String commonEdek = encResult.getSuccesses().values().iterator().next().getEdek();
+    for (EncryptedDocument enc : encResult.getSuccesses().values()) {
+      assertEquals(enc.getEdek(), commonEdek);
+    }
+
+    // Decrypt each with standard client and verify roundtrip
+    PlaintextDocument dec1 = client.decrypt(encResult.getSuccesses().get("doc1"), metadata).get();
+    assertEqualBytes(dec1.getDecryptedFields().get("field1"), docs.get("doc1").get("field1"));
+
+    PlaintextDocument dec2 = client.decrypt(encResult.getSuccesses().get("doc2"), metadata).get();
+    assertEqualBytes(dec2.getDecryptedFields().get("other"), doc2.get("other"));
+
+    PlaintextDocument dec3 = client.decrypt(encResult.getSuccesses().get("doc3"), metadata).get();
+    assertEqualBytes(dec3.getDecryptedFields().get("solo"), doc3.get("solo"));
+
+    client.close();
+  }
+
+  public void cachedDecryptorBatchRoundTrip() throws Exception {
+    DocumentMetadata metadata = getMetadata();
+
+    Map<String, byte[]> doc1 = getDocumentFields();
+    Map<String, byte[]> doc2 = new HashMap<>();
+    doc2.put("other", "Other data".getBytes("UTF-8"));
+    Map<String, byte[]> doc3 = new HashMap<>();
+    doc3.put("solo", "Solo data".getBytes("UTF-8"));
+
+    TenantSecurityClient client = getClient().get();
+
+    // Encrypt all 3 with cached encryptor (same key)
+    EncryptedDocument enc1, enc2, enc3;
+    try (CachedKeyEncryptor encryptor = client.createCachedEncryptor(metadata).get()) {
+      enc1 = encryptor.encrypt(doc1, metadata).get();
+      enc2 = encryptor.encrypt(doc2, metadata).get();
+      enc3 = encryptor.encrypt(doc3, metadata).get();
+    }
+
+    // Batch decrypt with cached decryptor
+    Map<String, EncryptedDocument> encDocs = new HashMap<>();
+    encDocs.put("doc1", enc1);
+    encDocs.put("doc2", enc2);
+    encDocs.put("doc3", enc3);
+
+    try (CachedKeyDecryptor decryptor =
+        client.createCachedDecryptor(enc1.getEdek(), metadata).get()) {
+      BatchResult<PlaintextDocument> result = decryptor.decryptBatch(encDocs, metadata).get();
+      assertEquals(decryptor.getOperationCount(), 3);
+
+      assertFalse(result.hasFailures());
+      assertEquals(result.getSuccesses().size(), 3);
+
+      assertEqualBytes(result.getSuccesses().get("doc1").getDecryptedFields().get("field1"),
+          doc1.get("field1"));
+      assertEqualBytes(result.getSuccesses().get("doc2").getDecryptedFields().get("other"),
+          doc2.get("other"));
+      assertEqualBytes(result.getSuccesses().get("doc3").getDecryptedFields().get("solo"),
+          doc3.get("solo"));
+    }
+
+    client.close();
+  }
+
+  public void cachedDecryptorBatchEdekMismatchPartialFailure() throws Exception {
+    DocumentMetadata metadata = getMetadata();
+    Map<String, byte[]> doc = getDocumentFields();
+
+    TenantSecurityClient client = getClient().get();
+
+    // Encrypt two documents with different keys
+    EncryptedDocument enc1 = client.encrypt(doc, metadata).get();
+    EncryptedDocument enc2 = client.encrypt(doc, metadata).get();
+
+    Map<String, EncryptedDocument> encDocs = new HashMap<>();
+    encDocs.put("match", enc1);
+    encDocs.put("mismatch", enc2);
+
+    // Create decryptor for enc1's key
+    try (CachedKeyDecryptor decryptor =
+        client.createCachedDecryptor(enc1.getEdek(), metadata).get()) {
+      BatchResult<PlaintextDocument> result = decryptor.decryptBatch(encDocs, metadata).get();
+
+      // match should succeed
+      assertTrue(result.getSuccesses().containsKey("match"));
+      assertEqualBytes(result.getSuccesses().get("match").getDecryptedFields().get("field1"),
+          doc.get("field1"));
+
+      // mismatch should be in failures
+      assertTrue(result.getFailures().containsKey("mismatch"));
+      assertTrue(
+          result.getFailures().get("mismatch").getMessage().contains("EDEK does not match"));
+
+      assertEquals(decryptor.getOperationCount(), 1);
+    }
+
+    client.close();
+  }
+
+  public void cachedBatchOperationCount() throws Exception {
+    DocumentMetadata metadata = getMetadata();
+
+    Map<String, Map<String, byte[]>> docs = new HashMap<>();
+    docs.put("doc1", getDocumentFields());
+    Map<String, byte[]> doc2 = new HashMap<>();
+    doc2.put("field", "data".getBytes("UTF-8"));
+    docs.put("doc2", doc2);
+
+    TenantSecurityClient client = getClient().get();
+
+    try (CachedKeyEncryptor encryptor = client.createCachedEncryptor(metadata).get()) {
+      assertEquals(encryptor.getOperationCount(), 0);
+      encryptor.encryptBatch(docs, metadata).get();
+      assertEquals(encryptor.getOperationCount(), 2);
+      // Single encrypt should add 1 more
+      encryptor.encrypt(docs.get("doc1"), metadata).get();
+      assertEquals(encryptor.getOperationCount(), 3);
+    }
+
+    client.close();
+  }
+
+  // === EDEK mismatch ===
+
   public void cachedDecryptorRejectsEdekMismatch() throws Exception {
     DocumentMetadata metadata = getMetadata();
     Map<String, byte[]> doc = getDocumentFields();

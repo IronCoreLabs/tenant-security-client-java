@@ -9,6 +9,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -240,6 +242,45 @@ public class CachedKeyDecryptorTest {
     } finally {
       decryptor.close();
     }
+  }
+
+  // decryptBatch validation tests
+
+  public void decryptBatchFailsWhenClosed() {
+    CachedKeyDecryptor decryptor = createDecryptor();
+    decryptor.close();
+
+    Map<String, EncryptedDocument> docs = new HashMap<>();
+    docs.put("doc1", new EncryptedDocument(java.util.Collections.emptyMap(), TEST_EDEK));
+
+    try {
+      decryptor.decryptBatch(docs, metadata).join();
+      fail("Should have thrown CompletionException");
+    } catch (CompletionException e) {
+      assertTrue(e.getCause() instanceof TscException);
+      assertTrue(e.getCause().getMessage().contains("CachedKeyDecryptor has been closed"));
+    }
+  }
+
+  public void decryptBatchEdekMismatchGoesToFailures() {
+    CachedKeyDecryptor decryptor = createDecryptor();
+
+    Map<String, EncryptedDocument> docs = new HashMap<>();
+    docs.put("matching", new EncryptedDocument(java.util.Collections.emptyMap(), TEST_EDEK));
+    docs.put("mismatched", new EncryptedDocument(java.util.Collections.emptyMap(), DIFFERENT_EDEK));
+
+    BatchResult<PlaintextDocument> result = decryptor.decryptBatch(docs, metadata).join();
+
+    // The matching doc with empty fields should succeed (no fields to decrypt)
+    assertTrue(result.getSuccesses().containsKey("matching"));
+    // The mismatched doc should be in failures
+    assertTrue(result.getFailures().containsKey("mismatched"));
+    assertTrue(
+        result.getFailures().get("mismatched").getMessage().contains("EDEK does not match"));
+    // The matching doc should NOT be in failures
+    assertFalse(result.getFailures().containsKey("matching"));
+
+    decryptor.close();
   }
 
   // DEK copying test

@@ -32,4 +32,14 @@ public interface DocumentEncryptor {
    */
   CompletableFuture<StreamingResponse> encryptStream(InputStream input, OutputStream output,
       DocumentMetadata metadata);
+
+  /**
+   * Encrypt a batch of documents. Supports partial failure via {@link BatchResult}.
+   *
+   * @param plaintextDocuments Map of document ID to map of fields to encrypt.
+   * @param metadata Metadata about all of the documents being encrypted.
+   * @return Collection of successes and failures that occurred during operation.
+   */
+  CompletableFuture<BatchResult<EncryptedDocument>> encryptBatch(
+      Map<String, Map<String, byte[]>> plaintextDocuments, DocumentMetadata metadata);
 }

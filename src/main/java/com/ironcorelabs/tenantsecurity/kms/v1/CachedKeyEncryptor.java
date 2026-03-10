@@ -9,12 +9,14 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
+import java.util.function.Supplier;
+import java.util.function.ToIntFunction;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TscException;
-import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
 
 /**
  * Holds a cached DEK (Document Encryption Key) for repeated encrypt operations without making
@@ -147,10 +149,14 @@ public final class CachedKeyEncryptor implements DocumentEncryptor, Closeable {
   }
 
   /**
-   * Check if this encryptor is usable (not closed and not expired). Returns a failed future if not,
-   * or a completed future if usable.
+   * Guard an operation with usability checks and operation counting. Verifies the encryptor is not
+   * closed or expired before running the operation, and increments the operation count on success.
+   *
+   * @param operation The operation to perform
+   * @param countOps Extracts the number of successful operations from the result
    */
-  private CompletableFuture<Void> checkUsable() {
+  private <T> CompletableFuture<T> executeAndIncrement(Supplier<CompletableFuture<T>> operation,
+      ToIntFunction<T> countOps) {
     if (closed.get()) {
       return CompletableFuture.failedFuture(new TscException(
           TenantSecurityErrorCodes.DOCUMENT_ENCRYPT_FAILED, "CachedKeyEncryptor has been closed"));
@@ -159,60 +165,43 @@ public final class CachedKeyEncryptor implements DocumentEncryptor, Closeable {
       return CompletableFuture.failedFuture(new TscException(
           TenantSecurityErrorCodes.DOCUMENT_ENCRYPT_FAILED, "CachedKeyEncryptor has expired"));
     }
-    return CompletableFuture.completedFuture(null);
+    return operation.get().thenApply(result -> {
+      operationCount.addAndGet(countOps.applyAsInt(result));
+      return result;
+    });
   }
 
-  /**
-   * Encrypt the provided document fields using the cached DEK.
-   *
-   * @param document Map of field names to plaintext bytes to encrypt.
-   * @param metadata Metadata about the document being encrypted.
-   * @return CompletableFuture resolving to EncryptedDocument with encrypted field bytes and EDEK.
-   */
   @Override
   public CompletableFuture<EncryptedDocument> encrypt(Map<String, byte[]> document,
       DocumentMetadata metadata) {
-    return checkUsable()
-        .thenCompose(unused -> encryptFields(document, metadata).thenApply(result -> {
-          operationCount.incrementAndGet();
-          return result;
-        }));
+    return executeAndIncrement(
+        () -> DocumentCryptoOps.encryptFields(document, metadata, dek, edek, encryptionExecutor,
+            secureRandom),
+        result -> 1);
   }
 
-  /**
-   * Encrypt a stream of bytes using the cached DEK.
-   *
-   * @param input The input stream of plaintext bytes to encrypt.
-   * @param output The output stream to write encrypted bytes to.
-   * @param metadata Metadata about the document being encrypted.
-   * @return CompletableFuture resolving to StreamingResponse containing the EDEK.
-   */
   @Override
   public CompletableFuture<StreamingResponse> encryptStream(InputStream input, OutputStream output,
       DocumentMetadata metadata) {
-    return checkUsable().thenCompose(unused -> CompletableFuture.supplyAsync(
-        () -> CryptoUtils.encryptStreamInternal(dek, metadata, input, output, secureRandom).join(),
-        encryptionExecutor).thenApply(v -> {
-          operationCount.incrementAndGet();
-          return new StreamingResponse(edek);
-        }));
+    return executeAndIncrement(
+        () -> CompletableFuture.supplyAsync(
+            () -> CryptoUtils.encryptStreamInternal(dek, metadata, input, output, secureRandom)
+                .join(),
+            encryptionExecutor).thenApply(v -> new StreamingResponse(edek)),
+        result -> 1);
   }
 
-  // Caller must call checkUsable() before invoking this method.
-  private CompletableFuture<EncryptedDocument> encryptFields(Map<String, byte[]> document,
-      DocumentMetadata metadata) {
-    // Parallel encrypt each field
-    Map<String, CompletableFuture<byte[]>> encryptOps = document.entrySet().stream()
-        .collect(Collectors.toMap(Map.Entry::getKey, entry -> CompletableFuture.supplyAsync(
-            () -> CryptoUtils.encryptBytes(entry.getValue(), metadata, dek, secureRandom).join(),
-            encryptionExecutor)));
-
-    // Join all futures and build result
-    return CompletableFutures.tryCatchNonFatal(() -> {
-      Map<String, byte[]> encryptedBytes = encryptOps.entrySet().stream()
-          .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().join()));
-      return new EncryptedDocument(encryptedBytes, edek);
-    });
+  @Override
+  public CompletableFuture<BatchResult<EncryptedDocument>> encryptBatch(
+      Map<String, Map<String, byte[]>> plaintextDocuments, DocumentMetadata metadata) {
+    return executeAndIncrement(() -> {
+      ConcurrentMap<String, CompletableFuture<EncryptedDocument>> ops = new ConcurrentHashMap<>();
+      plaintextDocuments.forEach((id, doc) -> ops.put(id,
+          DocumentCryptoOps.encryptFields(doc, metadata, dek, edek, encryptionExecutor,
+              secureRandom)));
+      return CompletableFuture.supplyAsync(() -> DocumentCryptoOps.cryptoOperationToBatchResult(ops,
+          TenantSecurityErrorCodes.DOCUMENT_ENCRYPT_FAILED));
+    }, result -> result.getSuccesses().size());
   }
 
   /**
