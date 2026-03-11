@@ -5,6 +5,8 @@ import java.io.OutputStream;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -178,7 +180,6 @@ public final class CachedKey implements CachedEncryptor, CachedDecryptor {
   /**
    * Guard an operation with usability checks and operation counting. Verifies the cached key is not
    * closed or expired before running the operation, and increments the operation count on success.
-   *
    * @param operation The operation to perform
    * @param countOps Extracts the number of successful operations from the result
    * @param counter The counter to increment on success
@@ -312,14 +313,15 @@ public final class CachedKey implements CachedEncryptor, CachedDecryptor {
   }
 
   /**
-   * Zero a DEK byte array with a subsequent access to prevent the JIT from eliminating the fill as
-   * a dead store. The volatile write after the fill ensures the zeroing is not optimized away.
+   * Zero a DEK byte array using opaque stores to prevent the JIT from eliminating the writes as
+   * dead stores. VarHandle.setOpaque is the lightest memory ordering mode that guarantees the
+   * writes actually happen per the Java Memory Model spec.
    */
-  @SuppressWarnings("unused")
-  private static volatile byte ZERO_FENCE;
+  private static final VarHandle BYTE_ARRAY = MethodHandles.arrayElementVarHandle(byte[].class);
 
   static void zeroDek(byte[] dek) {
-    Arrays.fill(dek, (byte) 0);
-    ZERO_FENCE = dek[0];
+    for (int i = 0; i < dek.length; i++) {
+      BYTE_ARRAY.setOpaque(dek, i, (byte) 0);
+    }
   }
 }
