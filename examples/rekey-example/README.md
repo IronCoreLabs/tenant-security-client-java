@@ -15,7 +15,7 @@ to use the Tenant Security Client (TSC) SDK to rekey data. The example code cont
 - Rekeying the encrypted record to a new tenant
 - Decrypting the encrypted record with the new tenant
 
-To run the example, you will need to have a Java JRE 8+ and Maven installed on your computer.
+To run the example, you will need to have a Java JRE 17+ and Maven installed on your computer.
 
 ```bash
 export API_KEY='0WUaXesNgbTAuLwn'
