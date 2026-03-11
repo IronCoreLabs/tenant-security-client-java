@@ -11,8 +11,7 @@ package com.ironcorelabs.tenantsecurity.kms.v1;
  * securely zero the DEK.
  *
  * @see TenantSecurityClient#createCachedEncryptor(DocumentMetadata)
- * @see TenantSecurityClient#withCachedEncryptor(DocumentMetadata,
- *      java.util.function.Function)
+ * @see TenantSecurityClient#withCachedEncryptor(DocumentMetadata, java.util.function.Function)
  */
 public interface CachedEncryptor extends DocumentEncryptor, CachedKeyLifecycle {
 }

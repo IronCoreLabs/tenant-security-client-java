@@ -20,8 +20,8 @@ import com.ironcorelabs.tenantsecurity.kms.v1.exception.TscException;
 
 /**
  * Holds a cached DEK (Document Encryption Key) for repeated encrypt and decrypt operations without
- * making additional TSP wrap/unwrap calls. All documents encrypted with this instance will share the
- * same DEK/EDEK pair. The DEK is securely zeroed when close() is called.
+ * making additional TSP wrap/unwrap calls. All documents encrypted with this instance will share
+ * the same DEK/EDEK pair. The DEK is securely zeroed when close() is called.
  *
  * <p>
  * This class is thread-safe and can be used concurrently for multiple encrypt and decrypt
@@ -48,9 +48,8 @@ public final class CachedKey implements CachedEncryptor, CachedDecryptor {
   // Maximum time the cached key can be used before it expires
   private static final Duration TIMEOUT = Duration.ofMinutes(1);
 
-  private static final String EDEK_MISMATCH_MESSAGE =
-      "EDEK does not match the cached EDEK. "
-          + "This CachedKey can only decrypt documents with matching EDEKs.";
+  private static final String EDEK_MISMATCH_MESSAGE = "EDEK does not match the cached EDEK. "
+      + "This CachedKey can only decrypt documents with matching EDEKs.";
 
   // The cached DEK bytes - zeroed on close()
   private final byte[] dek;
@@ -186,15 +185,13 @@ public final class CachedKey implements CachedEncryptor, CachedDecryptor {
    * @param errorCode The error code to use for closed/expired failures
    */
   private <T> CompletableFuture<T> executeAndIncrement(Supplier<CompletableFuture<T>> operation,
-      ToIntFunction<T> countOps, AtomicInteger counter,
-      TenantSecurityErrorCodes errorCode) {
+      ToIntFunction<T> countOps, AtomicInteger counter, TenantSecurityErrorCodes errorCode) {
     if (closed.get()) {
       return CompletableFuture
           .failedFuture(new TscException(errorCode, "CachedKey has been closed"));
     }
     if (isExpired()) {
-      return CompletableFuture
-          .failedFuture(new TscException(errorCode, "CachedKey has expired"));
+      return CompletableFuture.failedFuture(new TscException(errorCode, "CachedKey has expired"));
     }
     return operation.get().thenApply(result -> {
       counter.addAndGet(countOps.applyAsInt(result));
@@ -217,9 +214,8 @@ public final class CachedKey implements CachedEncryptor, CachedDecryptor {
   public CompletableFuture<StreamingResponse> encryptStream(InputStream input, OutputStream output,
       DocumentMetadata metadata) {
     return executeAndIncrement(
-        () -> CompletableFuture.supplyAsync(
-            () -> CryptoUtils.encryptStreamInternal(dek, metadata, input, output, secureRandom)
-                .join(),
+        () -> CompletableFuture.supplyAsync(() -> CryptoUtils
+            .encryptStreamInternal(dek, metadata, input, output, secureRandom).join(),
             encryptionExecutor).thenApply(v -> new StreamingResponse(edek)),
         result -> 1, encryptCount, TenantSecurityErrorCodes.DOCUMENT_ENCRYPT_FAILED);
   }
@@ -229,9 +225,8 @@ public final class CachedKey implements CachedEncryptor, CachedDecryptor {
       Map<String, Map<String, byte[]>> plaintextDocuments, DocumentMetadata metadata) {
     return executeAndIncrement(() -> {
       ConcurrentMap<String, CompletableFuture<EncryptedDocument>> ops = new ConcurrentHashMap<>();
-      plaintextDocuments.forEach((id, doc) -> ops.put(id,
-          DocumentCryptoOps.encryptFields(doc, metadata, dek, edek, encryptionExecutor,
-              secureRandom)));
+      plaintextDocuments.forEach((id, doc) -> ops.put(id, DocumentCryptoOps.encryptFields(doc,
+          metadata, dek, edek, encryptionExecutor, secureRandom)));
       return CompletableFuture.supplyAsync(() -> DocumentCryptoOps.cryptoOperationToBatchResult(ops,
           TenantSecurityErrorCodes.DOCUMENT_ENCRYPT_FAILED));
     }, result -> result.getSuccesses().size(), encryptCount,
@@ -243,9 +238,8 @@ public final class CachedKey implements CachedEncryptor, CachedDecryptor {
   private CompletableFuture<PlaintextDocument> validateEdekAndDecrypt(
       EncryptedDocument encryptedDocument) {
     if (!edek.equals(encryptedDocument.getEdek())) {
-      return CompletableFuture.failedFuture(
-          new TscException(TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED,
-              EDEK_MISMATCH_MESSAGE));
+      return CompletableFuture.failedFuture(new TscException(
+          TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED, EDEK_MISMATCH_MESSAGE));
     }
     return DocumentCryptoOps.decryptFields(encryptedDocument.getEncryptedFields(), dek,
         encryptedDocument.getEdek(), encryptionExecutor);
@@ -263,13 +257,12 @@ public final class CachedKey implements CachedEncryptor, CachedDecryptor {
       DocumentMetadata metadata) {
     return executeAndIncrement(() -> {
       if (!this.edek.equals(edek)) {
-        return CompletableFuture
-            .<Void>failedFuture(new TscException(TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED,
-                EDEK_MISMATCH_MESSAGE));
+        return CompletableFuture.<Void>failedFuture(new TscException(
+            TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED, EDEK_MISMATCH_MESSAGE));
       }
-      return CompletableFuture
-          .supplyAsync(() -> CryptoUtils.decryptStreamInternal(this.dek, input, output).join(),
-              encryptionExecutor);
+      return CompletableFuture.supplyAsync(
+          () -> CryptoUtils.decryptStreamInternal(this.dek, input, output).join(),
+          encryptionExecutor);
     }, result -> 1, decryptCount, TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED);
   }
 
@@ -282,9 +275,8 @@ public final class CachedKey implements CachedEncryptor, CachedDecryptor {
 
       encryptedDocuments.forEach((id, encDoc) -> {
         if (!edek.equals(encDoc.getEdek())) {
-          edekMismatches.put(id,
-              new TscException(TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED,
-                  EDEK_MISMATCH_MESSAGE));
+          edekMismatches.put(id, new TscException(TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED,
+              EDEK_MISMATCH_MESSAGE));
         } else {
           ops.put(id, DocumentCryptoOps.decryptFields(encDoc.getEncryptedFields(), dek,
               encDoc.getEdek(), encryptionExecutor));

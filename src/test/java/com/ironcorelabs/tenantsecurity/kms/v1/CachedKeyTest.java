@@ -337,8 +337,7 @@ public class CachedKeyTest {
     assertTrue(result.getSuccesses().containsKey("matching"));
     // The mismatched doc should be in failures
     assertTrue(result.getFailures().containsKey("mismatched"));
-    assertTrue(
-        result.getFailures().get("mismatched").getMessage().contains("EDEK does not match"));
+    assertTrue(result.getFailures().get("mismatched").getMessage().contains("EDEK does not match"));
     // The matching doc should NOT be in failures
     assertFalse(result.getFailures().containsKey("matching"));
 
@@ -349,8 +348,8 @@ public class CachedKeyTest {
 
   public void constructorCopiesDekToPreventExternalModification() throws Exception {
     byte[] originalDek = createValidDek();
-    CachedKey cachedKey = new CachedKey(originalDek, TEST_EDEK, executor, secureRandom,
-        encryptionService, metadata);
+    CachedKey cachedKey =
+        new CachedKey(originalDek, TEST_EDEK, executor, secureRandom, encryptionService, metadata);
 
     // Modify the original array
     Arrays.fill(originalDek, (byte) 0x00);

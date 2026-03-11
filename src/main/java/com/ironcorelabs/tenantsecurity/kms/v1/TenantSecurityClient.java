@@ -408,10 +408,10 @@ public final class TenantSecurityClient implements Closeable, DocumentDecryptor,
    */
   public CompletableFuture<EncryptedDocument> encrypt(PlaintextDocument document,
       DocumentMetadata metadata) {
-    return this.encryptionService.unwrapKey(document.getEdek(), metadata).thenComposeAsync(
-        dek -> DocumentCryptoOps.encryptFields(document.getDecryptedFields(), metadata, dek,
-            document.getEdek(), encryptionExecutor, secureRandom),
-        encryptionExecutor);
+    return this.encryptionService.unwrapKey(document.getEdek(), metadata)
+        .thenComposeAsync(dek -> DocumentCryptoOps.encryptFields(document.getDecryptedFields(),
+            metadata, dek, document.getEdek(), encryptionExecutor, secureRandom),
+            encryptionExecutor);
   }
 
   /**
@@ -482,8 +482,8 @@ public final class TenantSecurityClient implements Closeable, DocumentDecryptor,
   @Override
   public CompletableFuture<PlaintextDocument> decrypt(EncryptedDocument encryptedDocument,
       DocumentMetadata metadata) {
-    return this.encryptionService.unwrapKey(encryptedDocument.getEdek(), metadata).thenComposeAsync(
-        decryptedDocumentAESKey -> DocumentCryptoOps.decryptFields(
+    return this.encryptionService.unwrapKey(encryptedDocument.getEdek(), metadata)
+        .thenComposeAsync(decryptedDocumentAESKey -> DocumentCryptoOps.decryptFields(
             encryptedDocument.getEncryptedFields(), decryptedDocumentAESKey,
             encryptedDocument.getEdek(), encryptionExecutor));
   }
@@ -503,8 +503,8 @@ public final class TenantSecurityClient implements Closeable, DocumentDecryptor,
   private CompletableFuture<CachedKey> newCachedKeyFromWrap(DocumentMetadata metadata) {
     return this.encryptionService.wrapKey(metadata).thenApply(wrappedKey -> {
       byte[] dekBytes = wrappedKey.getDekBytes();
-      CachedKey cachedKey = new CachedKey(dekBytes, wrappedKey.getEdek(),
-          this.encryptionExecutor, this.secureRandom, this.encryptionService, metadata);
+      CachedKey cachedKey = new CachedKey(dekBytes, wrappedKey.getEdek(), this.encryptionExecutor,
+          this.secureRandom, this.encryptionService, metadata);
       Arrays.fill(dekBytes, (byte) 0);
       return cachedKey;
     });
@@ -516,8 +516,7 @@ public final class TenantSecurityClient implements Closeable, DocumentDecryptor,
    */
   private <K extends CachedKeyLifecycle, T> CompletableFuture<T> withCachedResource(
       CompletableFuture<K> resource, Function<K, CompletableFuture<T>> operation) {
-    return resource.thenCompose(
-        k -> operation.apply(k).whenComplete((result, error) -> k.close()));
+    return resource.thenCompose(k -> operation.apply(k).whenComplete((result, error) -> k.close()));
   }
 
   // === Cached decryptor factory methods ===
@@ -697,8 +696,8 @@ public final class TenantSecurityClient implements Closeable, DocumentDecryptor,
   }
 
   /**
-   * Execute an operation using a CachedKey with automatic lifecycle management. Wraps a new key
-   * and provides full encrypt + decrypt access.
+   * Execute an operation using a CachedKey with automatic lifecycle management. Wraps a new key and
+   * provides full encrypt + decrypt access.
    *
    * @param <T> The type returned by the operation
    * @param metadata Metadata for the wrap operation
@@ -711,8 +710,8 @@ public final class TenantSecurityClient implements Closeable, DocumentDecryptor,
   }
 
   /**
-   * Execute an operation using a CachedKey with automatic lifecycle management. Unwraps an
-   * existing EDEK and provides full encrypt + decrypt access.
+   * Execute an operation using a CachedKey with automatic lifecycle management. Unwraps an existing
+   * EDEK and provides full encrypt + decrypt access.
    *
    * @param <T> The type returned by the operation
    * @param edek The encrypted document encryption key to unwrap

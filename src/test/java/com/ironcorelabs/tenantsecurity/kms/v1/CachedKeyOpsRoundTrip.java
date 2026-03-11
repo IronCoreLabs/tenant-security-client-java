@@ -494,8 +494,7 @@ public class CachedKeyOpsRoundTrip {
 
       // mismatch should be in failures
       assertTrue(result.getFailures().containsKey("mismatch"));
-      assertTrue(
-          result.getFailures().get("mismatch").getMessage().contains("EDEK does not match"));
+      assertTrue(result.getFailures().get("mismatch").getMessage().contains("EDEK does not match"));
 
       assertEquals(decryptor.getOperationCount(), 1);
     }
