@@ -301,8 +301,7 @@ public final class CachedKey implements CachedEncryptor, CachedDecryptor {
   @Override
   public void close() {
     if (closed.compareAndSet(false, true)) {
-      // Zero out the DEK bytes for security
-      Arrays.fill(dek, (byte) 0);
+      zeroDek(dek);
       // Report operations to TSP
       int encrypts = encryptCount.get();
       int decrypts = decryptCount.get();
@@ -310,5 +309,17 @@ public final class CachedKey implements CachedEncryptor, CachedDecryptor {
         requestService.reportOperations(metadata, edek, encrypts, decrypts);
       }
     }
+  }
+
+  /**
+   * Zero a DEK byte array with a subsequent access to prevent the JIT from eliminating the fill as
+   * a dead store. The volatile write after the fill ensures the zeroing is not optimized away.
+   */
+  @SuppressWarnings("unused")
+  private static volatile byte ZERO_FENCE;
+
+  static void zeroDek(byte[] dek) {
+    Arrays.fill(dek, (byte) 0);
+    ZERO_FENCE = dek[0];
   }
 }

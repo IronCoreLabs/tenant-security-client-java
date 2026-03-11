@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
@@ -493,7 +492,7 @@ public final class TenantSecurityClient implements Closeable, DocumentDecryptor,
     return this.encryptionService.unwrapKey(edek, metadata).thenApply(dekBytes -> {
       CachedKey cachedKey = new CachedKey(dekBytes, edek, this.encryptionExecutor,
           this.secureRandom, this.encryptionService, metadata);
-      Arrays.fill(dekBytes, (byte) 0);
+      CachedKey.zeroDek(dekBytes);
       return cachedKey;
     });
   }
@@ -503,7 +502,7 @@ public final class TenantSecurityClient implements Closeable, DocumentDecryptor,
       byte[] dekBytes = wrappedKey.getDekBytes();
       CachedKey cachedKey = new CachedKey(dekBytes, wrappedKey.getEdek(), this.encryptionExecutor,
           this.secureRandom, this.encryptionService, metadata);
-      Arrays.fill(dekBytes, (byte) 0);
+      CachedKey.zeroDek(dekBytes);
       return cachedKey;
     });
   }
