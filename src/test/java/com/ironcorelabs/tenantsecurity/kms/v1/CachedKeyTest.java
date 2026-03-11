@@ -65,9 +65,6 @@ public class CachedKeyTest {
         metadata);
   }
 
-  // Constructor validation tests
-
-  @SuppressWarnings("resource")
   public void constructorRejectNullDek() {
     try {
       new CachedKey(null, TEST_EDEK, executor, secureRandom, encryptionService, metadata);
@@ -77,7 +74,6 @@ public class CachedKeyTest {
     }
   }
 
-  @SuppressWarnings("resource")
   public void constructorRejectWrongSizeDek() {
     byte[] shortDek = new byte[16];
     try {
@@ -88,7 +84,6 @@ public class CachedKeyTest {
     }
   }
 
-  @SuppressWarnings("resource")
   public void constructorRejectNullEdek() {
     try {
       new CachedKey(createValidDek(), null, executor, secureRandom, encryptionService, metadata);
@@ -98,7 +93,6 @@ public class CachedKeyTest {
     }
   }
 
-  @SuppressWarnings("resource")
   public void constructorRejectEmptyEdek() {
     try {
       new CachedKey(createValidDek(), "", executor, secureRandom, encryptionService, metadata);
@@ -108,7 +102,6 @@ public class CachedKeyTest {
     }
   }
 
-  @SuppressWarnings("resource")
   public void constructorRejectNullExecutor() {
     try {
       new CachedKey(createValidDek(), TEST_EDEK, null, secureRandom, encryptionService, metadata);
@@ -118,7 +111,6 @@ public class CachedKeyTest {
     }
   }
 
-  @SuppressWarnings("resource")
   public void constructorRejectNullSecureRandom() {
     try {
       new CachedKey(createValidDek(), TEST_EDEK, executor, null, encryptionService, metadata);
@@ -128,7 +120,6 @@ public class CachedKeyTest {
     }
   }
 
-  @SuppressWarnings("resource")
   public void constructorRejectNullEncryptionService() {
     try {
       new CachedKey(createValidDek(), TEST_EDEK, executor, secureRandom, null, metadata);
@@ -138,7 +129,6 @@ public class CachedKeyTest {
     }
   }
 
-  @SuppressWarnings("resource")
   public void constructorRejectNullMetadata() {
     try {
       new CachedKey(createValidDek(), TEST_EDEK, executor, secureRandom, encryptionService, null);
@@ -148,18 +138,16 @@ public class CachedKeyTest {
     }
   }
 
-  // Getter tests
-
   public void getEdekReturnsCorrectValue() {
-    CachedKey cachedKey = createCachedKey();
-    assertEquals(cachedKey.getEdek(), TEST_EDEK);
-    cachedKey.close();
+    try (CachedKey cachedKey = createCachedKey()) {
+      assertEquals(cachedKey.getEdek(), TEST_EDEK);
+    }
   }
 
   public void isClosedReturnsFalseInitially() {
-    CachedKey cachedKey = createCachedKey();
-    assertFalse(cachedKey.isClosed());
-    cachedKey.close();
+    try (CachedKey cachedKey = createCachedKey()) {
+      assertFalse(cachedKey.isClosed());
+    }
   }
 
   public void isClosedReturnsTrueAfterClose() {
@@ -167,8 +155,6 @@ public class CachedKeyTest {
     cachedKey.close();
     assertTrue(cachedKey.isClosed());
   }
-
-  // Close tests
 
   public void closeIsIdempotent() {
     CachedKey cachedKey = createCachedKey();
@@ -180,17 +166,13 @@ public class CachedKeyTest {
     assertTrue(cachedKey.isClosed());
   }
 
-  // Operation count tests
-
   public void operationCountStartsAtZero() {
-    CachedKey cachedKey = createCachedKey();
-    assertEquals(cachedKey.getOperationCount(), 0);
-    assertEquals(cachedKey.getEncryptCount(), 0);
-    assertEquals(cachedKey.getDecryptCount(), 0);
-    cachedKey.close();
+    try (CachedKey cachedKey = createCachedKey()) {
+      assertEquals(cachedKey.getOperationCount(), 0);
+      assertEquals(cachedKey.getEncryptCount(), 0);
+      assertEquals(cachedKey.getDecryptCount(), 0);
+    }
   }
-
-  // Encrypt validation tests
 
   public void encryptFailsWhenClosed() {
     CachedKey cachedKey = createCachedKey();
@@ -237,8 +219,6 @@ public class CachedKeyTest {
     }
   }
 
-  // Decrypt validation tests
-
   public void decryptFailsWhenClosed() {
     CachedKey cachedKey = createCachedKey();
     cachedKey.close();
@@ -255,23 +235,19 @@ public class CachedKeyTest {
   }
 
   public void decryptFailsWhenEdekMismatch() {
-    CachedKey cachedKey = createCachedKey();
+    try (CachedKey cachedKey = createCachedKey()) {
+      EncryptedDocument encDoc =
+          new EncryptedDocument(java.util.Collections.emptyMap(), DIFFERENT_EDEK);
 
-    EncryptedDocument encDoc =
-        new EncryptedDocument(java.util.Collections.emptyMap(), DIFFERENT_EDEK);
-
-    try {
-      cachedKey.decrypt(encDoc, metadata).join();
-      fail("Should have thrown CompletionException");
-    } catch (CompletionException e) {
-      assertTrue(e.getCause() instanceof TscException);
-      assertTrue(e.getCause().getMessage().contains("EDEK does not match"));
-    } finally {
-      cachedKey.close();
+      try {
+        cachedKey.decrypt(encDoc, metadata).join();
+        fail("Should have thrown CompletionException");
+      } catch (CompletionException e) {
+        assertTrue(e.getCause() instanceof TscException);
+        assertTrue(e.getCause().getMessage().contains("EDEK does not match"));
+      }
     }
   }
-
-  // DecryptStream validation tests
 
   public void decryptStreamFailsWhenClosed() {
     CachedKey cachedKey = createCachedKey();
@@ -290,23 +266,19 @@ public class CachedKeyTest {
   }
 
   public void decryptStreamFailsWhenEdekMismatch() {
-    CachedKey cachedKey = createCachedKey();
+    try (CachedKey cachedKey = createCachedKey()) {
+      ByteArrayInputStream input = new ByteArrayInputStream(new byte[0]);
+      ByteArrayOutputStream output = new ByteArrayOutputStream();
 
-    ByteArrayInputStream input = new ByteArrayInputStream(new byte[0]);
-    ByteArrayOutputStream output = new ByteArrayOutputStream();
-
-    try {
-      cachedKey.decryptStream(DIFFERENT_EDEK, input, output, metadata).join();
-      fail("Should have thrown CompletionException");
-    } catch (CompletionException e) {
-      assertTrue(e.getCause() instanceof TscException);
-      assertTrue(e.getCause().getMessage().contains("EDEK does not match"));
-    } finally {
-      cachedKey.close();
+      try {
+        cachedKey.decryptStream(DIFFERENT_EDEK, input, output, metadata).join();
+        fail("Should have thrown CompletionException");
+      } catch (CompletionException e) {
+        assertTrue(e.getCause() instanceof TscException);
+        assertTrue(e.getCause().getMessage().contains("EDEK does not match"));
+      }
     }
   }
-
-  // decryptBatch validation tests
 
   public void decryptBatchFailsWhenClosed() {
     CachedKey cachedKey = createCachedKey();
@@ -325,45 +297,41 @@ public class CachedKeyTest {
   }
 
   public void decryptBatchEdekMismatchGoesToFailures() {
-    CachedKey cachedKey = createCachedKey();
+    try (CachedKey cachedKey = createCachedKey()) {
+      Map<String, EncryptedDocument> docs = new HashMap<>();
+      docs.put("matching", new EncryptedDocument(java.util.Collections.emptyMap(), TEST_EDEK));
+      docs.put("mismatched",
+          new EncryptedDocument(java.util.Collections.emptyMap(), DIFFERENT_EDEK));
 
-    Map<String, EncryptedDocument> docs = new HashMap<>();
-    docs.put("matching", new EncryptedDocument(java.util.Collections.emptyMap(), TEST_EDEK));
-    docs.put("mismatched", new EncryptedDocument(java.util.Collections.emptyMap(), DIFFERENT_EDEK));
+      BatchResult<PlaintextDocument> result = cachedKey.decryptBatch(docs, metadata).join();
 
-    BatchResult<PlaintextDocument> result = cachedKey.decryptBatch(docs, metadata).join();
-
-    // The matching doc with empty fields should succeed (no fields to decrypt)
-    assertTrue(result.getSuccesses().containsKey("matching"));
-    // The mismatched doc should be in failures
-    assertTrue(result.getFailures().containsKey("mismatched"));
-    assertTrue(result.getFailures().get("mismatched").getMessage().contains("EDEK does not match"));
-    // The matching doc should NOT be in failures
-    assertFalse(result.getFailures().containsKey("matching"));
-
-    cachedKey.close();
+      // The matching doc with empty fields should succeed (no fields to decrypt)
+      assertTrue(result.getSuccesses().containsKey("matching"));
+      // The mismatched doc should be in failures
+      assertTrue(result.getFailures().containsKey("mismatched"));
+      assertTrue(
+          result.getFailures().get("mismatched").getMessage().contains("EDEK does not match"));
+      // The matching doc should not be in failures
+      assertFalse(result.getFailures().containsKey("matching"));
+    }
   }
-
-  // DEK copying test
 
   public void constructorCopiesDekToPreventExternalModification() throws Exception {
     byte[] originalDek = createValidDek();
-    CachedKey cachedKey =
-        new CachedKey(originalDek, TEST_EDEK, executor, secureRandom, encryptionService, metadata);
+    try (CachedKey cachedKey = new CachedKey(originalDek, TEST_EDEK, executor, secureRandom,
+        encryptionService, metadata)) {
+      // Modify the original array
+      Arrays.fill(originalDek, (byte) 0x00);
 
-    // Modify the original array
-    Arrays.fill(originalDek, (byte) 0x00);
+      Field dekField = CachedKey.class.getDeclaredField("dek");
+      dekField.setAccessible(true);
+      byte[] internalDek = (byte[]) dekField.get(cachedKey);
 
-    // Use reflection to verify internal DEK still has original values
-    Field dekField = CachedKey.class.getDeclaredField("dek");
-    dekField.setAccessible(true);
-    byte[] internalDek = (byte[]) dekField.get(cachedKey);
-
-    // Internal DEK should still be 0x42, not 0x00
-    for (byte b : internalDek) {
-      assertEquals(b, (byte) 0x42, "Internal DEK should not be affected by external modification");
+      // Internal DEK should still be 0x42, not 0x00
+      for (byte b : internalDek) {
+        assertEquals(b, (byte) 0x42,
+            "Internal DEK should not be affected by external modification");
+      }
     }
-
-    cachedKey.close();
   }
 }

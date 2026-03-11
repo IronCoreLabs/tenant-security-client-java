@@ -199,8 +199,6 @@ public final class CachedKey implements CachedEncryptor, CachedDecryptor {
     });
   }
 
-  // === Encrypt operations ===
-
   @Override
   public CompletableFuture<EncryptedDocument> encrypt(Map<String, byte[]> document,
       DocumentMetadata metadata) {
@@ -232,8 +230,6 @@ public final class CachedKey implements CachedEncryptor, CachedDecryptor {
     }, result -> result.getSuccesses().size(), encryptCount,
         TenantSecurityErrorCodes.DOCUMENT_ENCRYPT_FAILED);
   }
-
-  // === Decrypt operations ===
 
   private CompletableFuture<PlaintextDocument> validateEdekAndDecrypt(
       EncryptedDocument encryptedDocument) {
