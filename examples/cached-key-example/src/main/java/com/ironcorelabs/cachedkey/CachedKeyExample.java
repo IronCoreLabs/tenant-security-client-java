@@ -15,7 +15,7 @@ import java.util.concurrent.ExecutionException;
  */
 public class CachedKeyExample {
 
-  private static final String TSP_ADDR = "http://localhost:7777";
+  private static final String TSP_ADDR = "http://localhost:32804";
 
   public static void main(String[] args) throws Exception {
 
