@@ -1,5 +1,10 @@
 # Changelog
 
+## v8.1.0
+
+- Add `CachedKey`, which fetches then holds a cached DEK (Document Encryption Key) for repeated encrypt and decrypt operations without making additional TSP wrap/unwrap calls.
+  This is useful for many cryptographic operations using the same key in quick succession, such as inside a database transaction. Note that this key automatically expires after a short period of time.
+
 ## v8.0.1
 
 - We’ve removed the direct constructors for `TenantSecurityClient` and replaced them with a builder-based API. The static TenantSecurityClient.create method is still provided for convenience.

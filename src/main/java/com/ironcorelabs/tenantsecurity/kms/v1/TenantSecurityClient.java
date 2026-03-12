@@ -14,10 +14,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import com.ironcorelabs.tenantsecurity.kms.v1.exception.TenantSecurityException;
-import com.ironcorelabs.tenantsecurity.kms.v1.exception.TscException;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.EventMetadata;
 import com.ironcorelabs.tenantsecurity.logdriver.v1.SecurityEvent;
 import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
@@ -27,7 +27,7 @@ import com.ironcorelabs.tenantsecurity.utils.CompletableFutures;
  *
  * @author IronCore Labs
  */
-public final class TenantSecurityClient implements Closeable {
+public final class TenantSecurityClient implements Closeable, DocumentDecryptor, DocumentEncryptor {
   private final SecureRandom secureRandom;
 
   // Use fixed size thread pool for CPU bound operations (crypto ops). Defaults to
@@ -232,61 +232,6 @@ public final class TenantSecurityClient implements Closeable {
   }
 
   /**
-   * Encrypt the provided map of fields using the provided encryption key (DEK) and return the
-   * resulting encrypted document.
-   */
-  private CompletableFuture<EncryptedDocument> encryptFields(Map<String, byte[]> document,
-      DocumentMetadata metadata, byte[] dek, String edek) {
-    // First, iterate over the map of documents and kick off the encrypt operation
-    // Future for each one. As part of doing this, we kick off the operation on to
-    // another thread so they run in parallel.
-    Map<String, CompletableFuture<byte[]>> encryptOps =
-        document.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> {
-          // Do this mapping in the .collect because we can just map the value. If we
-          // tried doing this in a .map above the .collect we'd have to return another
-          // Entry which is more complicated
-          return CompletableFuture.supplyAsync(() -> CryptoUtils
-              .encryptBytes(entry.getValue(), metadata, dek, this.secureRandom).join(),
-              encryptionExecutor);
-        }));
-
-    return CompletableFutures.tryCatchNonFatal(() -> {
-      // Now iterate over our map of keys to Futures and call join on all of them. We
-      // do this in a separate stream() because if we called join() above it'd block
-      // each iteration and cause them to be run in CompletableFutures.sequence.
-      Map<String, byte[]> encryptedBytes = encryptOps.entrySet().stream()
-          .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().join()));
-      return new EncryptedDocument(encryptedBytes, edek);
-    });
-  }
-
-  /**
-   * Encrypt the provided map of encrypted fields using the provided DEK and return the resulting
-   * decrypted document.
-   */
-  private CompletableFuture<PlaintextDocument> decryptFields(Map<String, byte[]> document,
-      byte[] dek, String edek) {
-    // First map over the encrypted document map and convert the values from
-    // encrypted bytes to Futures of decrypted bytes. Make sure each decrypt happens
-    // on it's own thread to run them in parallel.
-    Map<String, CompletableFuture<byte[]>> decryptOps =
-        document.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry ->
-        // Do this mapping in the .collect because we can just map the value. If we
-        // tried doing this in a .map above the .collect we'd have to return another
-        // Entry which is more complicated
-        CompletableFuture.supplyAsync(
-            () -> CryptoUtils.decryptDocument(entry.getValue(), dek).join(), encryptionExecutor)));
-    // Then iterate over the map of Futures and join them to get the decrypted bytes
-    // out. Return the map with the same keys passed in, but the values will now be
-    // decrypted.
-    return CompletableFutures.tryCatchNonFatal(() -> {
-      Map<String, byte[]> decryptedBytes = decryptOps.entrySet().stream()
-          .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().join()));
-      return new PlaintextDocument(decryptedBytes, edek);
-    });
-  }
-
-  /**
    * Given a map of document IDs to plaintext bytes to encrypt and a map of document IDs to a fresh
    * DEK, iterate over the DEKs and encrypt the document with the same key.
    */
@@ -298,32 +243,12 @@ public final class TenantSecurityClient implements Closeable {
             .collect(Collectors.toConcurrentMap(ConcurrentMap.Entry::getKey, dekResult -> {
               String documentId = dekResult.getKey();
               WrappedDocumentKey documentKeys = dekResult.getValue();
-              return encryptFields(documents.get(documentId), metadata, documentKeys.getDekBytes(),
-                  documentKeys.getEdek());
+              return DocumentCryptoOps.encryptFields(documents.get(documentId), metadata,
+                  documentKeys.getDekBytes(), documentKeys.getEdek(), encryptionExecutor,
+                  secureRandom);
             }));
-    return cryptoOperationToBatchResult(encryptResults,
+    return DocumentCryptoOps.cryptoOperationToBatchResult(encryptResults,
         TenantSecurityErrorCodes.DOCUMENT_ENCRYPT_FAILED);
-  }
-
-  /**
-   * Collect a map from String to CompletableFuture<T> into a BatchResult. T will be either an
-   * EncryptedDocument or a PlaintextDocument. CompletableFuture failures will be wrapped in
-   * TscExceptions with the provided errorCode and the underlying Throwable cause.
-   */
-  private <T> BatchResult<T> cryptoOperationToBatchResult(
-      ConcurrentMap<String, CompletableFuture<T>> operationResults,
-      TenantSecurityErrorCodes errorCode) {
-    ConcurrentMap<String, T> successes = new ConcurrentHashMap<>(operationResults.size());
-    ConcurrentMap<String, TenantSecurityException> failures = new ConcurrentHashMap<>();
-    operationResults.entrySet().parallelStream().forEach(entry -> {
-      try {
-        T doc = entry.getValue().join();
-        successes.put(entry.getKey(), doc);
-      } catch (Exception e) {
-        failures.put(entry.getKey(), new TscException(errorCode, e));
-      }
-    });
-    return new BatchResult<T>(successes, failures);
   }
 
   /**
@@ -339,10 +264,11 @@ public final class TenantSecurityClient implements Closeable {
             .collect(Collectors.toConcurrentMap(ConcurrentMap.Entry::getKey, dekResult -> {
               String documentId = dekResult.getKey();
               UnwrappedDocumentKey documentKeys = dekResult.getValue();
-              return encryptFields(documents.get(documentId).getDecryptedFields(), metadata,
-                  documentKeys.getDekBytes(), documents.get(documentId).getEdek());
+              return DocumentCryptoOps.encryptFields(documents.get(documentId).getDecryptedFields(),
+                  metadata, documentKeys.getDekBytes(), documents.get(documentId).getEdek(),
+                  encryptionExecutor, secureRandom);
             }));
-    return cryptoOperationToBatchResult(encryptResults,
+    return DocumentCryptoOps.cryptoOperationToBatchResult(encryptResults,
         TenantSecurityErrorCodes.DOCUMENT_ENCRYPT_FAILED);
   }
 
@@ -359,10 +285,10 @@ public final class TenantSecurityClient implements Closeable {
               String documentId = dekResult.getKey();
               UnwrappedDocumentKey documentKeys = dekResult.getValue();
               EncryptedDocument eDoc = documents.get(documentId);
-              return decryptFields(eDoc.getEncryptedFields(), documentKeys.getDekBytes(),
-                  eDoc.getEdek());
+              return DocumentCryptoOps.decryptFields(eDoc.getEncryptedFields(),
+                  documentKeys.getDekBytes(), eDoc.getEdek(), encryptionExecutor);
             }));
-    return cryptoOperationToBatchResult(decryptResults,
+    return DocumentCryptoOps.cryptoOperationToBatchResult(decryptResults,
         TenantSecurityErrorCodes.DOCUMENT_DECRYPT_FAILED);
   }
 
@@ -408,6 +334,7 @@ public final class TenantSecurityClient implements Closeable {
    * @param metadata Metadata about the document being encrypted.
    * @return The edek which can be used to decrypt the resulting stream
    */
+  @Override
   public CompletableFuture<StreamingResponse> encryptStream(InputStream input, OutputStream output,
       DocumentMetadata metadata) {
     return this.encryptionService.wrapKey(metadata).thenApplyAsync(
@@ -434,6 +361,7 @@ public final class TenantSecurityClient implements Closeable {
    * @param metadata Metadata about the document being encrypted.
    * @return Future which will complete when input has been decrypted.
    */
+  @Override
   public CompletableFuture<Void> decryptStream(String edek, InputStream input, OutputStream output,
       DocumentMetadata metadata) {
     return this.encryptionService.unwrapKey(edek, metadata).thenApplyAsync(
@@ -453,11 +381,13 @@ public final class TenantSecurityClient implements Closeable {
    * @return Encrypted document and base64 encrypted document key (EDEK) wrapped in a
    *         EncryptedResult class.
    */
+  @Override
   public CompletableFuture<EncryptedDocument> encrypt(Map<String, byte[]> document,
       DocumentMetadata metadata) {
     return this.encryptionService.wrapKey(metadata)
-        .thenComposeAsync(newDocumentKeys -> encryptFields(document, metadata,
-            newDocumentKeys.getDekBytes(), newDocumentKeys.getEdek()));
+        .thenComposeAsync(newDocumentKeys -> DocumentCryptoOps.encryptFields(document, metadata,
+            newDocumentKeys.getDekBytes(), newDocumentKeys.getEdek(), encryptionExecutor,
+            secureRandom));
   }
 
   /**
@@ -477,9 +407,10 @@ public final class TenantSecurityClient implements Closeable {
    */
   public CompletableFuture<EncryptedDocument> encrypt(PlaintextDocument document,
       DocumentMetadata metadata) {
-    return this.encryptionService.unwrapKey(document.getEdek(), metadata).thenComposeAsync(
-        dek -> encryptFields(document.getDecryptedFields(), metadata, dek, document.getEdek()),
-        encryptionExecutor);
+    return this.encryptionService.unwrapKey(document.getEdek(), metadata)
+        .thenComposeAsync(dek -> DocumentCryptoOps.encryptFields(document.getDecryptedFields(),
+            metadata, dek, document.getEdek(), encryptionExecutor, secureRandom),
+            encryptionExecutor);
   }
 
   /**
@@ -494,6 +425,7 @@ public final class TenantSecurityClient implements Closeable {
    * @return Collection of successes and failures that occurred during operation. The keys of each
    *         map returned will be the same keys provided in the original plaintextDocuments map.
    */
+  @Override
   public CompletableFuture<BatchResult<EncryptedDocument>> encryptBatch(
       Map<String, Map<String, byte[]>> plaintextDocuments, DocumentMetadata metadata) {
     return this.encryptionService.batchWrapKeys(plaintextDocuments.keySet(), metadata)
@@ -546,11 +478,187 @@ public final class TenantSecurityClient implements Closeable {
    * @param metadata Metadata about the document being decrypted.
    * @return PlaintextDocument which contains each documents decrypted field bytes.
    */
+  @Override
   public CompletableFuture<PlaintextDocument> decrypt(EncryptedDocument encryptedDocument,
       DocumentMetadata metadata) {
-    return this.encryptionService.unwrapKey(encryptedDocument.getEdek(), metadata).thenComposeAsync(
-        decryptedDocumentAESKey -> decryptFields(encryptedDocument.getEncryptedFields(),
-            decryptedDocumentAESKey, encryptedDocument.getEdek()));
+    return this.encryptionService.unwrapKey(encryptedDocument.getEdek(), metadata)
+        .thenComposeAsync(decryptedDocumentAESKey -> DocumentCryptoOps.decryptFields(
+            encryptedDocument.getEncryptedFields(), decryptedDocumentAESKey,
+            encryptedDocument.getEdek(), encryptionExecutor));
+  }
+
+  private CompletableFuture<CachedKey> newCachedKeyFromUnwrap(String edek,
+      DocumentMetadata metadata) {
+    return this.encryptionService.unwrapKey(edek, metadata).thenApply(dekBytes -> {
+      CachedKey cachedKey = new CachedKey(dekBytes, edek, this.encryptionExecutor,
+          this.secureRandom, this.encryptionService, metadata);
+      CachedKey.zeroDek(dekBytes);
+      return cachedKey;
+    });
+  }
+
+  private CompletableFuture<CachedKey> newCachedKeyFromWrap(DocumentMetadata metadata) {
+    return this.encryptionService.wrapKey(metadata).thenApply(wrappedKey -> {
+      byte[] dekBytes = wrappedKey.getDekBytes();
+      CachedKey cachedKey = new CachedKey(dekBytes, wrappedKey.getEdek(), this.encryptionExecutor,
+          this.secureRandom, this.encryptionService, metadata);
+      CachedKey.zeroDek(dekBytes);
+      return cachedKey;
+    });
+  }
+
+  /**
+   * Execute an operation on a cached resource with automatic lifecycle management. The resource is
+   * closed (and DEK zeroed) when the operation completes, whether successfully or with an error.
+   */
+  private <K extends CachedKeyLifecycle, T> CompletableFuture<T> withCachedResource(
+      CompletableFuture<K> resource, Function<K, CompletableFuture<T>> operation) {
+    return resource.thenCompose(k -> operation.apply(k).whenComplete((result, error) -> k.close()));
+  }
+
+  /**
+   * Create a CachedDecryptor for repeated decrypt operations using the same DEK. This unwraps the
+   * EDEK once and caches the resulting DEK for subsequent decrypts.
+   *
+   * <p>
+   * Use this when you need to decrypt multiple documents that share the same EDEK, to avoid
+   * repeated TSP unwrap calls.
+   *
+   * <p>
+   * The returned CachedDecryptor implements Closeable and should be used with try-with-resources to
+   * ensure the DEK is securely zeroed when done.
+   *
+   * @param edek The encrypted document encryption key to unwrap
+   * @param metadata Metadata for the unwrap operation
+   * @return CompletableFuture resolving to a CachedDecryptor
+   */
+  public CompletableFuture<CachedDecryptor> createCachedDecryptor(String edek,
+      DocumentMetadata metadata) {
+    return newCachedKeyFromUnwrap(edek, metadata)
+        // narrow the returned type to be a CachedDecryptor instead of a full CachedKey
+        .thenApply(k -> k);
+  }
+
+  /**
+   * Create a CachedDecryptor from an existing EncryptedDocument. Convenience method that extracts
+   * the EDEK from the document.
+   *
+   * @param encryptedDocument The encrypted document whose EDEK should be unwrapped
+   * @param metadata Metadata for the unwrap operation
+   * @return CompletableFuture resolving to a CachedDecryptor
+   */
+  public CompletableFuture<CachedDecryptor> createCachedDecryptor(
+      EncryptedDocument encryptedDocument, DocumentMetadata metadata) {
+    return createCachedDecryptor(encryptedDocument.getEdek(), metadata);
+  }
+
+  /**
+   * Execute an operation using a CachedDecryptor with automatic lifecycle management. The cached
+   * key is automatically closed (and DEK zeroed) when the operation completes, whether successfully
+   * or with an error.
+   *
+   * @param <T> The type returned by the operation
+   * @param edek The encrypted document encryption key to unwrap
+   * @param metadata Metadata for the unwrap operation
+   * @param operation Function that takes the CachedDecryptor and returns a CompletableFuture
+   * @return CompletableFuture resolving to the operation's result
+   */
+  public <T> CompletableFuture<T> withCachedDecryptor(String edek, DocumentMetadata metadata,
+      Function<CachedDecryptor, CompletableFuture<T>> operation) {
+    return withCachedResource(createCachedDecryptor(edek, metadata), operation);
+  }
+
+  /**
+   * Create a CachedEncryptor for repeated encrypt operations using the same DEK. This wraps a new
+   * key once and caches the resulting DEK/EDEK pair for subsequent encrypts. All documents
+   * encrypted with this instance will share the same DEK/EDEK pair.
+   *
+   * <p>
+   * Use this when you need to encrypt multiple documents for the same tenant in quick succession,
+   * to avoid repeated TSP wrap calls.
+   *
+   * <p>
+   * The returned CachedEncryptor implements Closeable and should be used with try-with-resources to
+   * ensure the DEK is securely zeroed when done.
+   *
+   * @param metadata Metadata for the wrap operation
+   * @return CompletableFuture resolving to a CachedEncryptor
+   */
+  public CompletableFuture<CachedEncryptor> createCachedEncryptor(DocumentMetadata metadata) {
+    return newCachedKeyFromWrap(metadata)
+        // narrow the returned type to be a CachedEncryptor instead of a full CachedKey
+        .thenApply(k -> k);
+  }
+
+  /**
+   * Execute an operation using a CachedEncryptor with automatic lifecycle management. The cached
+   * key is automatically closed (and DEK zeroed) when the operation completes, whether successfully
+   * or with an error.
+   *
+   * @param <T> The type returned by the operation
+   * @param metadata Metadata for the wrap operation
+   * @param operation Function that takes the CachedEncryptor and returns a CompletableFuture
+   * @return CompletableFuture resolving to the operation's result
+   */
+  public <T> CompletableFuture<T> withCachedEncryptor(DocumentMetadata metadata,
+      Function<CachedEncryptor, CompletableFuture<T>> operation) {
+    return withCachedResource(createCachedEncryptor(metadata), operation);
+  }
+
+  /**
+   * Create a CachedKey for both encrypt and decrypt operations. Wraps a new key and caches the
+   * resulting DEK/EDEK pair.
+   *
+   * <p>
+   * Use this when you need both encrypt and decrypt capabilities with the same cached key. If you
+   * only need encrypt or decrypt, prefer {@link #createCachedEncryptor(DocumentMetadata)} or
+   * {@link #createCachedDecryptor(String, DocumentMetadata)} for narrower type safety.
+   *
+   * @param metadata Metadata for the wrap operation
+   * @return CompletableFuture resolving to a CachedKey
+   */
+  public CompletableFuture<CachedKey> createCachedKey(DocumentMetadata metadata) {
+    return newCachedKeyFromWrap(metadata);
+  }
+
+  /**
+   * Create a CachedKey for both encrypt and decrypt operations by unwrapping an existing EDEK.
+   *
+   * @param edek The encrypted document encryption key to unwrap
+   * @param metadata Metadata for the unwrap operation
+   * @return CompletableFuture resolving to a CachedKey
+   */
+  public CompletableFuture<CachedKey> createCachedKey(String edek, DocumentMetadata metadata) {
+    return newCachedKeyFromUnwrap(edek, metadata);
+  }
+
+  /**
+   * Execute an operation using a CachedKey with automatic lifecycle management. Wraps a new key and
+   * provides full encrypt + decrypt access.
+   *
+   * @param <T> The type returned by the operation
+   * @param metadata Metadata for the wrap operation
+   * @param operation Function that takes the CachedKey and returns a CompletableFuture
+   * @return CompletableFuture resolving to the operation's result
+   */
+  public <T> CompletableFuture<T> withCachedKey(DocumentMetadata metadata,
+      Function<CachedKey, CompletableFuture<T>> operation) {
+    return withCachedResource(createCachedKey(metadata), operation);
+  }
+
+  /**
+   * Execute an operation using a CachedKey with automatic lifecycle management. Unwraps an existing
+   * EDEK and provides full encrypt + decrypt access.
+   *
+   * @param <T> The type returned by the operation
+   * @param edek The encrypted document encryption key to unwrap
+   * @param metadata Metadata for the unwrap operation
+   * @param operation Function that takes the CachedKey and returns a CompletableFuture
+   * @return CompletableFuture resolving to the operation's result
+   */
+  public <T> CompletableFuture<T> withCachedKey(String edek, DocumentMetadata metadata,
+      Function<CachedKey, CompletableFuture<T>> operation) {
+    return withCachedResource(createCachedKey(edek, metadata), operation);
   }
 
   /**
@@ -581,6 +689,7 @@ public final class TenantSecurityClient implements Closeable {
    * @return Collection of successes and failures that occurred during operation. The keys of each
    *         map returned will be the same keys provided in the original encryptedDocuments map.
    */
+  @Override
   public CompletableFuture<BatchResult<PlaintextDocument>> decryptBatch(
       Map<String, EncryptedDocument> encryptedDocuments, DocumentMetadata metadata) {
     Map<String, String> edekMap = encryptedDocuments.entrySet().stream()

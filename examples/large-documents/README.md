@@ -11,8 +11,7 @@ fields that share a DEK. The example code shows two scenarios:
 - encrypting a large document as many subdocs, using the disk for persistence
 - retrieving and decrypting subdocs individually
 
-To run the example, you will need to have Java and Maven installed on your computer. Try a `java -version` to see
-what version you are using. We tested the example code using 1.8.
+To run the example, you will need to have Java JRE 17+ and Maven installed on your computer.
 
 If java is ready to go, execute these commands:
 

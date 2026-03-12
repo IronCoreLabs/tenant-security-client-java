@@ -55,11 +55,12 @@ final class TenantSecurityRequest implements Closeable {
   private final GenericUrl rekeyEndpoint;
   private final GenericUrl securityEventEndpoint;
   private final GenericUrl deriveKeyEndpoint;
+  private final GenericUrl reportOperationsEndpoint;
   private final HttpRequestFactory requestFactory;
   private final int timeout;
 
   // TSC version that will be sent to the TSP.
-  static final String sdkVersion = "8.0.1";
+  static final String sdkVersion = "8.1.0-SNAPSHOT";
 
   TenantSecurityRequest(String tspDomain, String apiKey, int requestThreadSize, int timeout) {
     HttpHeaders headers = new HttpHeaders();
@@ -79,6 +80,7 @@ final class TenantSecurityRequest implements Closeable {
     this.rekeyEndpoint = new GenericUrl(tspApiPrefix + "document/rekey");
     this.securityEventEndpoint = new GenericUrl(tspApiPrefix + "event/security-event");
     this.deriveKeyEndpoint = new GenericUrl(tspApiPrefix + "key/derive-with-secret-path");
+    this.reportOperationsEndpoint = new GenericUrl(tspApiPrefix + "document/report-operations");
 
     this.webRequestExecutor = Executors.newFixedThreadPool(requestThreadSize);
     this.requestFactory = provideHttpRequestFactory(requestThreadSize, requestThreadSize);
@@ -291,6 +293,51 @@ final class TenantSecurityRequest implements Closeable {
         "Unable to make request to Tenant Security Proxy security event endpoint. Endpoint requested: %s",
         this.securityEventEndpoint);
     return this.makeRequestAndParseFailure(this.securityEventEndpoint, postData, error);
+  }
+
+  /**
+   * Report cached DEK operations to the TSP. Fire-and-forget — callers should not block on the
+   * result.
+   *
+   * @param metadata Metadata associated with the operations.
+   * @param edek The EDEK that was cached.
+   * @param wraps Number of encrypt operations performed with the cached key.
+   * @param unwraps Number of decrypt operations performed with the cached key.
+   * @return Void on success. Failures come back as exceptions.
+   */
+  CompletableFuture<Void> reportOperations(DocumentMetadata metadata, String edek, int wraps,
+      int unwraps) {
+    Map<String, Object> postData = metadata.getAsPostData();
+    Map<String, Object> cachedOps = new HashMap<>();
+    cachedOps.put("wraps", wraps);
+    cachedOps.put("unwraps", unwraps);
+    Map<String, Object> operations = new HashMap<>();
+    operations.put(edek, cachedOps);
+    postData.put("operations", operations);
+    String error = String.format(
+        "Unable to make request to Tenant Security Proxy report-operations endpoint. Endpoint requested: %s",
+        this.reportOperationsEndpoint);
+    return this.makeRequestAndParseFailure(this.reportOperationsEndpoint, postData, error)
+        .exceptionallyCompose(t -> {
+          if (isRetryable(t)) {
+            return this.makeRequestAndParseFailure(this.reportOperationsEndpoint, postData, error);
+          }
+          return CompletableFuture.failedFuture(t);
+        });
+  }
+
+  /**
+   * Check if a failure is retryable. Server errors (5xx) and connection failures (status 0) are
+   * retryable. Client errors (4xx) are not — the request itself is wrong and will fail identically
+   * on retry.
+   */
+  private static boolean isRetryable(Throwable t) {
+    Throwable cause = t instanceof CompletionException ? t.getCause() : t;
+    if (cause instanceof TspServiceException) {
+      int status = ((TspServiceException) cause).getHttpResponseCode();
+      return status == 0 || status >= 500;
+    }
+    return false;
   }
 
   /**

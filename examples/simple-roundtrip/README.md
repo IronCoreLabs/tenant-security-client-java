@@ -10,7 +10,7 @@ to use the Tenant Security Client (TSC) SDK to encrypt and decrypt data. The exa
 - encryption and decryption of a record that you might store in a key-value store or a database
 - encryption and decryption of a file, using the file-system for storage
 
-To run the example, you will need to have a Java JRE 8+ and Maven installed on your computer.
+To run the example, you will need to have a Java JRE 17+ and Maven installed on your computer.
 
 ```bash
 export API_KEY='0WUaXesNgbTAuLwn'
