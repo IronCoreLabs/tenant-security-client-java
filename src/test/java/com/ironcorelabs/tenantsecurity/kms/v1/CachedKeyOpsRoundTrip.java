@@ -50,7 +50,7 @@ public class CachedKeyOpsRoundTrip {
     Map<String, byte[]> doc2 = new HashMap<>();
     doc2.put("other", "Other document data".getBytes("UTF-8"));
 
-    try (TenantSecurityClient client = getClient().get();) {
+    try (TenantSecurityClient client = getClient().get()) {
       try (CachedEncryptor encryptor = client.createCachedEncryptor(metadata).get()) {
         assertFalse(encryptor.isClosed());
         assertFalse(encryptor.isExpired());
