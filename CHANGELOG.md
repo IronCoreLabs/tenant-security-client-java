@@ -1,6 +1,6 @@
 # Changelog
 
-## v8.1.0
+## v8.1.0-SNAPSHOT
 
 - Add `CachedKey`, which fetches then holds a cached DEK (Document Encryption Key) for repeated encrypt and decrypt operations without making additional TSP wrap/unwrap calls.
   This is useful for many cryptographic operations using the same key in quick succession, such as inside a database transaction. Note that this key automatically expires after a short period of time.
