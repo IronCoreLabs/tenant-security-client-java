@@ -108,8 +108,7 @@ final class TenantSecurityRequest implements Closeable {
         // Clone the headers on use. Otherwise Google will keep appending their custom
         // user agent string and it will grow big enough to cause header overflow
         // errors.
-        .setHeaders(this.httpHeaders.clone())
-        .setReadTimeout(this.readTimeout)
+        .setHeaders(this.httpHeaders.clone()).setReadTimeout(this.readTimeout)
         .setConnectTimeout(this.connectTimeout)
         // We want to parse out error codes, so don't throw when we get a non-200
         // response code
