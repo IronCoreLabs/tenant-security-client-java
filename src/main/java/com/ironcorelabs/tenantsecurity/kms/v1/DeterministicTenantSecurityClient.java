@@ -55,8 +55,8 @@ public final class DeterministicTenantSecurityClient implements Closeable {
   }
 
   /**
-   * Constructor for DeterministicTenantSecurityClient class that allows for modifying the random
-   * number generator used for encryption. Sets a default connect and read timeout of 20s.
+   * Constructor for DeterministicTenantSecurityClient class that allows for configuring the request
+   * and AES thread pool sizes. Sets a default connect and read timeout of 20s.
    *
    * @param tspDomain Domain where the Tenant Security Proxy is running.
    * @param apiKey Key to use for requests to the Tenant Security Proxy.
@@ -70,8 +70,9 @@ public final class DeterministicTenantSecurityClient implements Closeable {
   }
 
   /**
-   * Constructor for DeterministicTenantSecurityClient class that allows for modifying the random
-   * number generator used for encryption.
+   * Constructor for DeterministicTenantSecurityClient class that allows for configuring the request
+   * and AES thread pool sizes and a shared timeout. The provided timeout is used for both the
+   * connect and read timeouts; use the 6-argument constructor to set them independently.
    *
    * @param tspDomain Domain where the Tenant Security Proxy is running.
    * @param apiKey Key to use for requests to the Tenant Security Proxy.
@@ -82,6 +83,23 @@ public final class DeterministicTenantSecurityClient implements Closeable {
    */
   public DeterministicTenantSecurityClient(String tspDomain, String apiKey, int requestThreadSize,
       int aesThreadSize, int timeout) throws Exception {
+    this(tspDomain, apiKey, requestThreadSize, aesThreadSize, timeout, timeout);
+  }
+
+  /**
+   * Constructor for DeterministicTenantSecurityClient class with independent connect and read
+   * timeouts.
+   *
+   * @param tspDomain Domain where the Tenant Security Proxy is running.
+   * @param apiKey Key to use for requests to the Tenant Security Proxy.
+   * @param requestThreadSize Number of threads to use for fixed-size web request thread pool
+   * @param aesThreadSize Number of threads to use for fixed-size AES operations threadpool
+   * @param readTimeout Request to TSP read timeout in ms.
+   * @param connectTimeout Request to TSP connect timeout in ms.
+   * @throws Exception If the provided domain is invalid.
+   */
+  public DeterministicTenantSecurityClient(String tspDomain, String apiKey, int requestThreadSize,
+      int aesThreadSize, int readTimeout, int connectTimeout) throws Exception {
     // Use the URL class to validate the form of the provided TSP domain URL
     new URL(tspDomain);
     if (apiKey == null || apiKey.isEmpty()) {
@@ -95,14 +113,18 @@ public final class DeterministicTenantSecurityClient implements Closeable {
       throw new IllegalArgumentException(
           "Value provided for AES threadpool size must be greater than 0!");
     }
-    if (timeout < 1) {
-      throw new IllegalArgumentException("Value provided for timeout must be greater than 0!");
+    if (readTimeout < 1) {
+      throw new IllegalArgumentException("Value provided for readTimeout must be greater than 0!");
+    }
+    if (connectTimeout < 1) {
+      throw new IllegalArgumentException(
+          "Value provided for connectTimeout must be greater than 0!");
     }
 
     this.encryptionExecutor = Executors.newFixedThreadPool(aesThreadSize);
 
-    this.encryptionService =
-        new TenantSecurityRequest(tspDomain, apiKey, requestThreadSize, timeout);
+    this.encryptionService = new TenantSecurityRequest(tspDomain, apiKey, requestThreadSize,
+        readTimeout, connectTimeout);
   }
 
   DeterministicTenantSecurityClient(ExecutorService aesThreadExecutor,

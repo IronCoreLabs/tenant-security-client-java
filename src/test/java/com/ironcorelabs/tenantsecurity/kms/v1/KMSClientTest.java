@@ -41,4 +41,22 @@ public class KMSClientTest {
     new TenantSecurityClient.Builder("https://localhost", "apiKey").aesThreadSize(0).build()
         .close();
   }
+
+  @Test(expectedExceptions = IllegalArgumentException.class)
+  public void invalidConnectTimeoutZero() throws Exception {
+    new TenantSecurityClient.Builder("https://localhost", "apiKey").connectTimeoutMs(0).build()
+        .close();
+  }
+
+  @Test(expectedExceptions = IllegalArgumentException.class)
+  public void invalidConnectTimeoutNegative() throws Exception {
+    new TenantSecurityClient.Builder("https://localhost", "apiKey").connectTimeoutMs(-1).build()
+        .close();
+  }
+
+  // Sanity check that an independently-configured connect timeout builds successfully.
+  public void independentConnectAndReadTimeouts() throws Exception {
+    new TenantSecurityClient.Builder("https://localhost", "apiKey").timeoutMs(30000)
+        .connectTimeoutMs(2000).build().close();
+  }
 }
