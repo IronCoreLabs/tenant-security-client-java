@@ -3,6 +3,7 @@
 We deploy the SDK to [Maven Central](https://search.maven.org/artifact/com.ironcorelabs/tenant-security-java/).
 
 - Update the `<version>` in [pom.xml](./pom.xml).
+- Update the `<project.build.outputTimestamp>` property in [pom.xml](./pom.xml) to the current UTC timestamp. Generate the exact string with `date -u +"%Y-%m-%dT%H:%M:%SZ"`. This keeps the build reproducible and satisfies `maven-javadoc-plugin`'s timestamp range check.
 - Update the `sdkVersion` in [TenantSecurityRequest.java](./src/main/java/com/ironcorelabs/tenantsecurity/kms/v1/TenantSecurityRequest.java) to match the pom.xml.
 - Add an entry to [CHANGELOG.md](./CHANGELOG.md).
 - Commit the changes to the `main` branch and add a git tag with the `version` in it. Wait until the release has succeeded to push the changes.
