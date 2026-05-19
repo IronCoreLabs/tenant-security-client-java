@@ -57,12 +57,18 @@ final class TenantSecurityRequest implements Closeable {
   private final GenericUrl deriveKeyEndpoint;
   private final GenericUrl reportOperationsEndpoint;
   private final HttpRequestFactory requestFactory;
-  private final int timeout;
+  private final int readTimeout;
+  private final int connectTimeout;
 
   // TSC version that will be sent to the TSP.
   static final String sdkVersion = "8.1.0-SNAPSHOT";
 
   TenantSecurityRequest(String tspDomain, String apiKey, int requestThreadSize, int timeout) {
+    this(tspDomain, apiKey, requestThreadSize, timeout, timeout);
+  }
+
+  TenantSecurityRequest(String tspDomain, String apiKey, int requestThreadSize, int readTimeout,
+      int connectTimeout) {
     HttpHeaders headers = new HttpHeaders();
     // Instead of calling `put` which causes issues with older versions of the google http library
     // call the set for each of these.
@@ -84,7 +90,8 @@ final class TenantSecurityRequest implements Closeable {
 
     this.webRequestExecutor = Executors.newFixedThreadPool(requestThreadSize);
     this.requestFactory = provideHttpRequestFactory(requestThreadSize, requestThreadSize);
-    this.timeout = timeout;
+    this.readTimeout = readTimeout;
+    this.connectTimeout = connectTimeout;
   }
 
   public void close() throws IOException {
@@ -101,8 +108,8 @@ final class TenantSecurityRequest implements Closeable {
         // Clone the headers on use. Otherwise Google will keep appending their custom
         // user agent string and it will grow big enough to cause header overflow
         // errors.
-        .setHeaders(this.httpHeaders.clone()).setReadTimeout(this.timeout)
-        .setConnectTimeout(this.timeout)
+        .setHeaders(this.httpHeaders.clone()).setReadTimeout(this.readTimeout)
+        .setConnectTimeout(this.connectTimeout)
         // We want to parse out error codes, so don't throw when we get a non-200
         // response code
         .setThrowExceptionOnExecuteError(false);

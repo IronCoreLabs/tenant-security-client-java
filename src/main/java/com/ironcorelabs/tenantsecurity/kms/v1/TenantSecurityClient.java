@@ -59,10 +59,16 @@ public final class TenantSecurityClient implements Closeable, DocumentDecryptor,
     if (builder.timeout < 1) {
       throw new IllegalArgumentException("Value provided for timeout must be greater than 0!");
     }
+    if (builder.connectTimeout != null && builder.connectTimeout < 1) {
+      throw new IllegalArgumentException(
+          "Value provided for connectTimeout must be greater than 0!");
+    }
+    int effectiveConnectTimeout =
+        builder.connectTimeout != null ? builder.connectTimeout : builder.timeout;
 
     this.encryptionExecutor = Executors.newFixedThreadPool(builder.aesThreadSize);
     this.encryptionService = new TenantSecurityRequest(builder.tspDomain, builder.apiKey,
-        builder.requestThreadSize, builder.timeout);
+        builder.requestThreadSize, builder.timeout, effectiveConnectTimeout);
     this.deterministicClient =
         new DeterministicTenantSecurityClient(this.encryptionExecutor, this.encryptionService);
 
@@ -113,6 +119,9 @@ public final class TenantSecurityClient implements Closeable, DocumentDecryptor,
     private int requestThreadSize = DEFAULT_REQUEST_THREADPOOL_SIZE;
     private int aesThreadSize = DEFAULT_AES_THREADPOOL_SIZE;
     private int timeout = DEFAULT_TIMEOUT_MS;
+    // When left null, the connect timeout follows `timeout` to preserve pre-existing behavior
+    // where a single setting controlled both.
+    private Integer connectTimeout = null;
     private boolean allowInsecureHttp = false;
     // If this is null when build is called we set it to the default. Don't set it here
     // in case the default isn't available on their OS.
@@ -155,13 +164,31 @@ public final class TenantSecurityClient implements Closeable, DocumentDecryptor,
     }
 
     /**
-     * Sets the timeout in milliseconds for communicating with the TSP.
+     * Sets the read timeout in milliseconds for requests to the TSP, and serves as the fallback for
+     * the connect timeout when {@link #connectTimeoutMs(int)} is not called. In other words, unless
+     * {@link #connectTimeoutMs(int)} is also set, the value provided here controls both the connect
+     * and the read timeout (preserving the single-timeout behavior of earlier releases). To
+     * configure them independently, call {@link #connectTimeoutMs(int)} as well.
      *
-     * @param timeout Timeout in milliseconds for the TSP requests.
+     * @param timeout Read timeout in milliseconds for TSP requests.
      * @return The builder
      */
     public Builder timeoutMs(int timeout) {
       this.timeout = timeout;
+      return this;
+    }
+
+    /**
+     * Sets the connect timeout in milliseconds for requests to the TSP. When not set, the connect
+     * timeout follows the value provided to {@link #timeoutMs(int)}. Configure this independently
+     * to, for example, fail fast on unreachable hosts while still allowing a longer read timeout
+     * for slow responses.
+     *
+     * @param connectTimeout Connect timeout in milliseconds for TSP requests.
+     * @return The builder
+     */
+    public Builder connectTimeoutMs(int connectTimeout) {
+      this.connectTimeout = connectTimeout;
       return this;
     }
 
