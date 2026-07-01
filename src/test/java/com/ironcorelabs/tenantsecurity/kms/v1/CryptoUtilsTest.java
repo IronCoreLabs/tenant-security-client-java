@@ -1,6 +1,7 @@
 package com.ironcorelabs.tenantsecurity.kms.v1;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNull;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -8,6 +9,7 @@ import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.stream.IntStream;
+import javax.crypto.Cipher;
 import org.testng.annotations.Test;
 
 @Test(groups = {"unit"})
@@ -259,4 +261,42 @@ public class CryptoUtilsTest {
     byte[] buffer = new byte[0];
     assertEquals(CryptoUtils.readNBytes(new ByteArrayInputStream(buffer), 10), new byte[0]);
   }
+
+  // Documents the Javadoc behavior that motivates the null guards around
+  // cipher.update in encryptStreamInternal / decryptStreamInternal. Per Cipher.update's
+  // Javadoc, an empty input returns null. BC-FIPS extends this to all GCM update calls
+  // because it buffers AEAD data until doFinal verifies the tag (see issue #167).
+  public void cipherUpdateWithEmptyArrayReturnsNull() throws Exception {
+    byte[] documentKey = new byte[32];
+    secureRandom.nextBytes(documentKey);
+    byte[] iv = new byte[CryptoUtils.IV_BYTE_LENGTH];
+    secureRandom.nextBytes(iv);
+    Cipher cipher = CryptoUtils.getNewAesCipher(documentKey, iv, true);
+    assertNull(cipher.update(new byte[0]));
+  }
+
+  // Regression for issue #167. Simulates BC-FIPS GCM behavior with a custom JCE
+  // provider that buffers AEAD data and returns null from every Cipher.update call
+  // until doFinal. Before the fix, encryptStreamInternal NPE'd on output.write(null).
+  public void streamingRoundtripWithBufferingProvider() throws Exception {
+    java.security.Provider provider = new BufferingGcmProvider();
+    java.security.Security.insertProviderAt(provider, 1);
+    try {
+      byte[] documentKey = new byte[32];
+      secureRandom.nextBytes(documentKey);
+      byte[] plaintext = "foo".getBytes("UTF-8");
+      ByteArrayInputStream inputStream = new ByteArrayInputStream(plaintext);
+      ByteArrayOutputStream encryptOutputStream = new ByteArrayOutputStream();
+      CryptoUtils.encryptStreamInternal(documentKey, metadata, inputStream, encryptOutputStream,
+          secureRandom).get();
+      byte[] encryptedBytes = encryptOutputStream.toByteArray();
+      ByteArrayOutputStream decryptedStream = new ByteArrayOutputStream();
+      ByteArrayInputStream encryptedStream = new ByteArrayInputStream(encryptedBytes);
+      CryptoUtils.decryptStreamInternal(documentKey, encryptedStream, decryptedStream).get();
+      assertEquals(decryptedStream.toByteArray(), plaintext);
+    } finally {
+      java.security.Security.removeProvider(provider.getName());
+    }
+  }
+
 }
