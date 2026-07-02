@@ -77,8 +77,12 @@ class CryptoUtils {
         output.write(headerBytes);
         output.write(iv);
         while ((bytesRead = readNBytes(input, STREAM_CHUNKING)).length != 0) {
+          // Cipher.update may return null per its Javadoc. BC-FIPS buffers AEAD data until
+          // doFinal so ciphertext and tag are released together.
           byte[] encryptedBytes = cipher.update(bytesRead);
-          output.write(encryptedBytes);
+          if (encryptedBytes != null) {
+            output.write(encryptedBytes);
+          }
         }
         // Final bytes, which might be buffered data or just the GCM tag.
         byte[] finalBytes = cipher.doFinal();
@@ -104,7 +108,10 @@ class CryptoUtils {
           Cipher cipher = getNewAesCipher(documentKey, iv, false);
           byte[] currentChunk = new byte[0];
           while ((currentChunk = readNBytes(encryptedStream, STREAM_CHUNKING)).length > 0) {
-            decryptedStream.write(cipher.update(currentChunk));
+            byte[] decryptedChunk = cipher.update(currentChunk);
+            if (decryptedChunk != null) {
+              decryptedStream.write(decryptedChunk);
+            }
           }
           decryptedStream.write(cipher.doFinal());
           return null;
