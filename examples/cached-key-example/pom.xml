@@ -30,7 +30,7 @@
     <dependency>
       <groupId>com.ironcorelabs</groupId>
       <artifactId>tenant-security-java</artifactId>
-      <version>8.1.0</version>
+      <version>8.1.1</version>
     </dependency>
   </dependencies>
 
