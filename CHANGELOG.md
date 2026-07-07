@@ -1,5 +1,9 @@
 # Changelog
 
+## v8.1.1
+
+- Fix issue where encrypt could fail if using FIPS bouncy castle jars.
+
 ## v8.1.0
 
 - Add `CachedKey`, which fetches then holds a cached DEK (Document Encryption Key) for repeated encrypt and decrypt operations without making additional TSP wrap/unwrap calls.
