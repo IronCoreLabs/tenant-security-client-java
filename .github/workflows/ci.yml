@@ -42,7 +42,7 @@ jobs:
           ${{ secrets.TSP_ENV_INTEGRATION }}
           EOF
       - name: Start the TSP
-        uses: IronCoreLabs/workflows/.github/actions/start-tsp@start-tsp-v1
+        uses: IronCoreLabs/workflows/.github/actions/start-tsp@start-tsp-v1.0.0
         with:
           gcloud-auth: ${{ secrets.GCLOUD_AUTH }}
           env-file-path: .env.integration
