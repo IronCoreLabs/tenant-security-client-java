@@ -16,7 +16,7 @@ jobs:
         uses: actions/setup-java@v6.0.0
         with:
           java-version: 17
-          distribution: adopt
+          distribution: temurin
       - name: cache mvn repository
         uses: actions/cache@v6
         with:
@@ -85,6 +85,6 @@ jobs:
         uses: actions/setup-java@v6.0.0
         with:
           java-version: 17
-          distribution: adopt
+          distribution: temurin
       - name: Check formatting
         run: mvn formatter:validate
