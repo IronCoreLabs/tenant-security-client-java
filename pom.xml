@@ -163,9 +163,9 @@
         <version>2.23.0</version>
         <configuration>
           <configFile>${project.basedir}/formatter-config.xml</configFile>
-          <compilerSource>1.11</compilerSource>
-          <compilerCompliance>1.11</compilerCompliance>
-          <compilerTargetPlatform>1.11</compilerTargetPlatform>
+          <compilerSource>17</compilerSource>
+          <compilerCompliance>17</compilerCompliance>
+          <compilerTargetPlatform>17</compilerTargetPlatform>
         </configuration>
       </plugin>
       <plugin>
