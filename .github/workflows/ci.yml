@@ -10,6 +10,10 @@ on:
 jobs:
   build_and_test:
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v7
       - name: set up jdk 17
@@ -42,9 +46,8 @@ jobs:
           ${{ secrets.TSP_ENV_INTEGRATION }}
           EOF
       - name: Start the TSP
-        uses: IronCoreLabs/workflows/.github/actions/start-tsp@start-tsp-v1.0.0
+        uses: IronCoreLabs/workflows/.github/actions/start-tsp@start-tsp-v2.0.0
         with:
-          gcloud-auth: ${{ secrets.GCLOUD_AUTH }}
           env-file-path: .env.integration
       - name: integration test
         run: env $(cat .env.integration) ./test-suites/allTest.sh
