@@ -1,5 +1,10 @@
 # Changelog
 
+## v8.1.2
+
+- Update the Google Cloud libraries BOM to 26.94.0.
+- Update protobuf-java to 3.25.9, TestNG to 7.12.0, and siv-mode to 1.6.1.
+
 ## v8.1.1
 
 - Fix issue where encrypt could fail if using FIPS bouncy castle jars.

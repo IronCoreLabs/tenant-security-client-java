@@ -73,7 +73,9 @@ public class IntegrationBenchmark {
       String tenant_id = envVars.getOrDefault("TENANT_ID", TENANT_ID);
       metadata =
           new DocumentMetadata(tenant_id, "benchmark", "sample", new HashMap(), "customRayID");
-      client = new TenantSecurityClient(tsp_address + ":" + tsp_port, api_key);
+      // The demo TSP serves plain http, so the default https requirement has to be waived.
+      client = new TenantSecurityClient.Builder(tsp_address + ":" + tsp_port, api_key)
+          .allowInsecureHttp(true).build();
       smallDocumentMap = generatePlaintextDocument(1, 1);
       mediumDocumentMap = generatePlaintextDocument(100, 1);
       largeDocumentMap = generatePlaintextDocument(10_000, 1);
