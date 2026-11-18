@@ -32,7 +32,7 @@ We deploy the SDK to [Maven Central](https://search.maven.org/artifact/com.ironc
   <localRepository>${user.home}/.m2/repository</localRepository>
   <servers>
     <server>
-      <id>centrals</id>
+      <id>central</id>
       <username>*********</username>
       <password>***************************</password>
     </server>
