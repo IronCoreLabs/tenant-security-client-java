@@ -105,6 +105,18 @@ public class ErrorResponseTest {
     TenantSecurityException fooException = foo.toTenantSecurityException(staticHttpCode);
     assertKmsException(staticMsg, staticHttpCode, fooException,
         TenantSecurityErrorCodes.KMS_ACCOUNT_ISSUE);
+    ErrorResponse kmsRoleMisconfiguredError =
+        new ErrorResponse(
+            TenantSecurityErrorCodes.KMS_ROLE_ASSUMPTION_MISCONFIGURED.getCode(), staticMsg);
+
+    TenantSecurityException kmsRoleMisconfiguredException =
+        kmsRoleMisconfiguredError.toTenantSecurityException(staticHttpCode);
+
+    assertKmsException(
+        staticMsg,
+        staticHttpCode,
+        kmsRoleMisconfiguredException,
+        TenantSecurityErrorCodes.KMS_ROLE_ASSUMPTION_MISCONFIGURED);
 
     ErrorResponse kmsUnreachableError =
         new ErrorResponse(TenantSecurityErrorCodes.KMS_UNREACHABLE.getCode(), staticMsg);
